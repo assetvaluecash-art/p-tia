@@ -1,0 +1,362 @@
+version: 1.0.0
+domains:
+- name: health_insurance
+  display_name: Health Insurance
+  description: Health insurance covering health plan administration, member services, claims, and provider and network
+    management.
+  spine:
+  - ProductLine: Health Plan & Member Services
+    functions:
+    - Function: Member Enrollment
+      subfunctions:
+      - Member Application
+      - Enrollment Processing
+      - Coverage Effective Date Management
+      - Member ID Administration
+      - Dependent Enrollment
+      - Enrollment Changes
+      - Disenrollment
+    - Function: Eligibility Management
+      subfunctions:
+      - Eligibility Verification
+      - Coverage Validation
+      - Benefit Eligibility
+      - Member Status Management
+      - Eligibility History
+      - Eligibility Exceptions
+    - Function: Plan & Benefit Administration
+      subfunctions:
+      - Plan Configuration
+      - Benefit Configuration
+      - Benefit Limits
+      - Cost Share Configuration
+      - Deductible Configuration
+      - Copayment Configuration
+      - Coinsurance Configuration
+      - Benefit Exclusions
+    - Function: Member Servicing
+      subfunctions:
+      - Member Profile Maintenance
+      - Address & Contact Management
+      - ID Card Management
+      - Member Communications
+      - Grievance Intake
+      - Service Requests
+    - Function: Premium & Billing
+      subfunctions:
+      - Premium Calculation
+      - Premium Billing
+      - Payment Processing
+      - Billing Adjustments
+      - Premium Reconciliation
+      - Delinquency Management
+      - Refund Processing
+  - ProductLine: Claims
+    functions:
+    - Function: Claims Intake
+      subfunctions:
+      - Claim Submission
+      - Claim Registration
+      - Claim Validation
+      - Claim Data Capture
+      - Claim Attachment Management
+      - Claim Status Management
+    - Function: Claims Adjudication
+      subfunctions:
+      - Member Eligibility Validation
+      - Benefit Validation
+      - Provider Validation
+      - Coverage Determination
+      - Clinical Policy Review
+      - Claim Editing
+      - Adjudication Rules
+      - Manual Review
+    - Function: Claims Pricing
+      subfunctions:
+      - Contract Pricing
+      - Fee Schedule Application
+      - Allowed Amount Calculation
+      - Cost Share Calculation
+      - Deductible Application
+      - Copayment Calculation
+      - Coinsurance Calculation
+    - Function: Claims Payment
+      subfunctions:
+      - Payment Determination
+      - Provider Payment
+      - Member Reimbursement
+      - Payment Advice
+      - Payment Adjustment
+      - Payment Reversal
+      - Payment Reconciliation
+    - Function: Claims Recovery
+      subfunctions:
+      - Overpayment Detection
+      - Recovery Initiation
+      - Recovery Adjustment
+      - Coordination of Benefits
+      - Third Party Liability
+      - Recovery Reconciliation
+    - Function: Claims Appeals
+      subfunctions:
+      - Appeal Intake
+      - Appeal Review
+      - Clinical Appeal Review
+      - Appeal Decision
+      - Appeal Communication
+      - External Review
+  - ProductLine: Provider & Network
+    functions:
+    - Function: Provider Management
+      subfunctions:
+      - Provider Registration
+      - Provider Profile Management
+      - Provider Demographics
+      - Provider Status Management
+      - Provider Relationship Management
+    - Function: Provider Credentialing
+      subfunctions:
+      - Credential Collection
+      - License Verification
+      - Credential Review
+      - Credential Approval
+      - Credential Renewal
+      - Credential Monitoring
+    - Function: Provider Contracting
+      subfunctions:
+      - Contract Creation
+      - Contract Negotiation
+      - Contract Terms Management
+      - Rate Agreement
+      - Contract Amendment
+      - Contract Termination
+    - Function: Provider Network Management
+      subfunctions:
+      - Network Configuration
+      - Provider Network Assignment
+      - Network Participation
+      - Network Adequacy
+      - Network Changes
+      - Network Termination
+    - Function: Provider Directory
+      subfunctions:
+      - Directory Provider Data
+      - Provider Search
+      - Directory Publication
+      - Directory Updates
+      - Directory Validation
+      - Provider Data Quality
+- name: care
+  display_name: Care
+  description: Care covering provider and network management, care management, primary care, and home and post-acute
+    care.
+  spine:
+  - ProductLine: Provider & Network
+    functions:
+    - Function: Provider Management
+      subfunctions:
+      - Provider Registration
+      - Provider Profile Management
+      - Provider Demographics
+      - Provider Status Management
+      - Provider Relationship Management
+    - Function: Provider Credentialing
+      subfunctions:
+      - Credential Collection
+      - License Verification
+      - Credential Review
+      - Credential Approval
+      - Credential Renewal
+      - Credential Monitoring
+    - Function: Provider Contracting
+      subfunctions:
+      - Contract Creation
+      - Contract Negotiation
+      - Contract Terms Management
+      - Rate Agreement
+      - Contract Amendment
+      - Contract Termination
+    - Function: Provider Network Management
+      subfunctions:
+      - Network Configuration
+      - Provider Network Assignment
+      - Network Participation
+      - Network Adequacy
+      - Network Changes
+      - Network Termination
+    - Function: Provider Directory
+      subfunctions:
+      - Directory Provider Data
+      - Provider Search
+      - Directory Publication
+      - Directory Updates
+      - Directory Validation
+      - Provider Data Quality
+  - ProductLine: Care Management
+    functions:
+    - Function: Utilization Management
+      subfunctions:
+      - Utilization Review
+      - Medical Necessity Review
+      - Concurrent Review
+      - Retrospective Review
+      - Utilization Rules
+      - Care Setting Review
+    - Function: Prior Authorization
+      subfunctions:
+      - Authorization Request
+      - Clinical Documentation
+      - Medical Necessity Assessment
+      - Authorization Decision
+      - Authorization Extension
+      - Authorization Denial
+      - Authorization Appeal
+    - Function: Case Management
+      subfunctions:
+      - Case Identification
+      - Member Assessment
+      - Care Plan Creation
+      - Care Plan Monitoring
+      - Care Coordination
+      - Case Closure
+    - Function: Disease Management
+      subfunctions:
+      - Population Identification
+      - Risk Stratification
+      - Condition Assessment
+      - Clinical Intervention
+      - Member Engagement
+      - Outcome Monitoring
+    - Function: Care Coordination
+      subfunctions:
+      - Care Team Management
+      - Referral Coordination
+      - Transition of Care
+      - Discharge Planning
+      - Follow-Up Management
+      - Care Gap Management
+  - ProductLine: Primary Care
+    functions:
+    - Function: Primary Care Access
+      subfunctions:
+      - Provider Selection
+      - Appointment Scheduling
+      - Primary Care Assignment
+      - Access Management
+      - Visit Registration
+    - Function: Primary Care Delivery
+      subfunctions:
+      - Preventive Care
+      - Routine Examination
+      - Chronic Condition Management
+      - Acute Care
+      - Care Plan Management
+      - Clinical Follow-Up
+    - Function: Clinical Coordination
+      subfunctions:
+      - Specialist Referral
+      - Diagnostic Coordination
+      - Care Transition
+      - Care Team Coordination
+      - Clinical Information Exchange
+    - Function: Population Health
+      subfunctions:
+      - Population Identification
+      - Risk Stratification
+      - Health Gap Identification
+      - Preventive Outreach
+      - Outcome Monitoring
+  - ProductLine: Home & Post-Acute Care
+    functions:
+    - Function: Home Health
+      subfunctions:
+      - Home Health Referral
+      - Eligibility Assessment
+      - Care Plan Development
+      - Home Visit Management
+      - Clinical Documentation
+      - Home Health Authorization
+    - Function: Post-Acute Care
+      subfunctions:
+      - Post-Acute Referral
+      - Facility Selection
+      - Transition Management
+      - Rehabilitation Coordination
+      - Skilled Care Coordination
+      - Post-Acute Authorization
+    - Function: Home Care Coordination
+      subfunctions:
+      - Member Assessment
+      - Caregiver Coordination
+      - Service Scheduling
+      - Care Plan Monitoring
+      - Escalation Management
+      - Service Closure
+- name: pharmacy
+  display_name: Pharmacy
+  description: Pharmacy covering pharmacy and pharmacy benefits.
+  spine:
+  - ProductLine: Pharmacy & Pharmacy Benefits
+    functions:
+    - Function: Pharmacy Benefit Administration
+      subfunctions:
+      - Benefit Configuration
+      - Pharmacy Benefit Design
+      - Member Pharmacy Eligibility
+      - Cost Share Configuration
+      - Coverage Rules
+      - Pharmacy Benefit Limits
+    - Function: Formulary Management
+      subfunctions:
+      - Formulary Configuration
+      - Drug List Management
+      - Drug Tier Configuration
+      - Coverage Restrictions
+      - Formulary Review
+      - Formulary Updates
+      - Formulary Communication
+    - Function: Pharmacy Claims
+      subfunctions:
+      - Prescription Claim Submission
+      - Pharmacy Eligibility Validation
+      - Drug Coverage Validation
+      - Pharmacy Claim Adjudication
+      - Drug Pricing
+      - Pharmacy Claim Payment
+      - Claim Reversal
+      - Claim Adjustment
+    - Function: Prescription Management
+      subfunctions:
+      - Prescription Intake
+      - Prescription Validation
+      - Prescription Fulfillment
+      - Dispensing
+      - Refill Management
+      - Prescription Delivery
+      - Prescription Status Management
+    - Function: Pharmacy Utilization Management
+      subfunctions:
+      - Drug Utilization Review
+      - Prior Authorization
+      - Step Therapy
+      - Quantity Limits
+      - Age Restrictions
+      - Drug Interaction Review
+      - Clinical Review
+    - Function: Medication Management
+      subfunctions:
+      - Medication Review
+      - Medication Adherence
+      - Medication Reconciliation
+      - Medication Therapy Management
+      - Specialty Medication Management
+      - Patient Medication Support
+    - Function: Pharmacy Network Management
+      subfunctions:
+      - Pharmacy Network Configuration
+      - Pharmacy Contracting
+      - Preferred Pharmacy Management
+      - Retail Pharmacy Network
+      - Specialty Pharmacy Network
+      - Mail Order Pharmacy
+      - Network Reimbursement

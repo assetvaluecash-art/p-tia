@@ -1,0 +1,99 @@
+# KnowledgeFabric Ingestion Service Dependencies
+# ==============================================
+# NOTE: Versions pinned for reproducible builds. Update periodically.
+# Last updated: 2024-12-14
+
+protobuf>=3.20,<6
+
+# Core Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+
+# Ray for job scheduling
+ray[default]==2.9.3
+
+# Ray CLI compatibility (Click 8.3.0+ breaks Ray's CLI)
+click==8.1.7
+
+# Database Clients
+psycopg[binary,pool]==3.2.3
+weaviate-client==3.26.7
+neo4j==5.27.0
+
+# PDF processing dependencies (compatible with unstructured)
+pdfminer.six==20231228
+pdfplumber==0.11.4
+pypdf==4.3.1
+
+# ML/Embeddings
+transformers==4.47.1
+torch==2.5.1
+sentence-transformers==3.3.1
+numpy==1.26.4
+
+# Document Parsing - FULL unstructured with all extras
+python-docx==1.1.2
+pymupdf==1.25.1
+openpyxl==3.1.5
+python-pptx==1.0.2
+pillow>=7.1.0,<12
+unstructured[pdf,docx,pptx,xlsx]==0.16.11
+
+# SpaCy NLP models (required for PII detection)
+spacy>=3.7.0
+
+# Additional unstructured dependencies (automatically included with extras above)
+# pi-heif, python-magic, opencv-python, pandas, etc. are now handled by unstructured[pdf,docx,pptx,xlsx]
+
+# OCR support for pre-extracting text from tall smask PDF images (context injection for Vision LM)
+# System binary required: sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
+pytesseract>=0.3.10
+
+# System dependencies (install via apt-get):
+#   - imagemagick (sudo apt-get install imagemagick) - for EMF conversion fallback
+#   - libreoffice-nogui (sudo apt-get install libreoffice-nogui) - for EMF conversion
+#   - libwmf-bin libwmf-dev (for EMF support in ImageMagick, requires ImageMagick recompilation)
+#   - tesseract-ocr tesseract-ocr-eng (sudo apt-get install tesseract-ocr tesseract-ocr-eng) - for OCR context
+# See SYSTEM_DEPENDENCIES.md for full list
+
+# PII Detection
+presidio-analyzer==2.2.355
+presidio-anonymizer==2.2.355
+faker==33.1.0
+
+# LLM
+requests==2.32.3
+
+# Configuration
+pyyaml==6.0.2
+python-dotenv==1.0.1
+
+# Logging
+structlog==24.4.0
+
+# Streamlit Scheduler UI
+streamlit==1.41.1
+
+# Graph Visualization
+pyvis==0.3.2
+
+# Report templates (E2E, etc.)
+jinja2>=3.1.0,<4
+
+# OpenTelemetry - Observability
+opentelemetry-api==1.29.0
+opentelemetry-sdk==1.29.0
+opentelemetry-instrumentation-fastapi==0.50b0
+opentelemetry-instrumentation-httpx==0.50b0
+opentelemetry-exporter-otlp==1.29.0
+prometheus-client==0.21.1
+
+# Testing (dev)
+pytest==8.3.4
+pytest-asyncio==0.25.0
+pytest-cov==6.0.0
+httpx==0.28.1
+
+# Security scanning
+pip-audit==2.7.3

@@ -1,0 +1,36 @@
+# Golden Corpus Test Suite — 16 intent-driven tests (2 per use case)
+# Corpus: BRD1 (SME Loan Fixed/Variable), BRD2 (EMI to Bullet Change),
+#          SMB Process Flow, Create & Disburse BB Loan PDF,
+#          MSME_Lending_normalized_v2.xlsx, Synthetic Defect Log
+
+# --- knowledge_discovery (2) ---
+knowledge_discovery|What do we know about delinquency processing and DPD calculation rules for SME corporate loans?
+knowledge_discovery|What are the functional requirements for bullet repayment structure in corporate lending?
+
+# --- change_impact (2) ---
+change_impact|What is impacted by the repayment structure change from monthly EMI to bullet repayment?
+change_impact|If the SOFR benchmark rate reset frequency changes, what processes and systems are affected?
+
+# --- test_coverage (2) ---
+test_coverage|Are delinquency processing and NPA classification requirements fully covered by test cases?
+test_coverage|Is the repayment schedule generation and payment allocation logic covered by test cases?
+
+# --- regression_scope (2) ---
+regression_scope|If the interest accrual engine is modified, which test cases and modules need retesting?
+regression_scope|If PAYMENTS_SYS integration contract changes, what test cases are affected?
+
+# --- defect_triage (2) ---
+defect_triage|Triage defect SYN-CL-3017 where restructure effective date is not honored by the schedule recalculation
+defect_triage|Triage defect SYN-CL-3063 about non-amendment rule bypass allowing repayment type switch to bullet
+
+# --- root_cause (2) ---
+root_cause|What is the root cause chain for ACT/360 versus ACT/365 day-count convention mismatches in interest calculation?
+root_cause|What caused the late fee cap to apply per installment instead of per loan across multiple releases?
+
+# --- compliance_control (2) ---
+compliance_control|What controls ensure SOX compliance for interest rate overrides and configurable parameter changes?
+compliance_control|What regulatory requirements govern KYC, beneficial ownership verification, and OFAC screening during loan origination?
+
+# --- cross_domain_impact (2) ---
+cross_domain_impact|What downstream impact does NAB classification at 90+ DPD have on reporting, GL posting, and regulatory compliance?
+cross_domain_impact|What is the blast radius of GL posting failures on loan servicing, reconciliation, and financial reporting?

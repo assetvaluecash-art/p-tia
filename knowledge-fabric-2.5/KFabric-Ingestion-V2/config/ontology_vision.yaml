@@ -1,0 +1,190 @@
+# Minimal Vision Ontology for Image/Diagram Processing
+# Subset of enterprise_banking_ontology.yaml optimized for vision IE
+version: 0.1
+
+# Shown in prompt: this is a master list; each image may have only some of these types
+preamble: "This is a master list for identification. Each image may contain only some of these types - extract what you see."
+
+# Block categories for vision (classify image type)
+block_categories:
+  - name: Diagram_Process
+    description: "Process flow diagram with states, activities, decisions, swimlanes"
+    example: "LC lifecycle swimlane, order flow diagram"
+  - name: Diagram_Architecture
+    description: "System architecture or context diagram"
+    example: "TradeFlow context diagram, integration architecture"
+  - name: Form
+    description: "Form with fields (e.g. SWIFT fields, application form)"
+    example: "LC application form, F50 Applicant field"
+  - name: Table
+    description: "Table with rows and columns (e.g. Actor-Comment-Control)"
+    example: "RACI matrix, actor responsibility table"
+  - name: Mixed
+    description: "Combination of diagram, form, or table elements"
+    example: "Form with embedded flowchart"
+
+# Block category to KG node type mapping
+block_category_to_node:
+  Diagram_Process: ProcessDiagram
+  Diagram_Architecture: ArchitectureDiagram
+  Form: ProcessDiagram
+  Table: ProcessDiagram
+  Mixed: ProcessDiagram
+
+# Minimal diagram-relevant node types for vision extraction
+node_types:
+  - name: Process
+    description: "Named business process visible in diagram"
+    examples: ["DriftDetection", "Rebalancing", "Issue LC", "Advise LC"]
+  
+  - name: System
+    description: "Named application or deployable service (use for runnable systems, APIs, backends)"
+    examples: ["AcctSvc", "PortSvc", "TradeFlow", "Core Banking", "Jira", "Model Router"]
+  
+  - name: Component
+    description: "Diagram box, UI element, or label that is not a standalone deployable system"
+    examples: ["Tab Arrangement", "Payment Order Panel", "Customer Enquiry Section"]
+  
+  - name: DataEntity
+    description: "Business data structure or domain object"
+    examples: ["Portfolio", "ClientAccount", "TradeOrder", "LC Record"]
+  
+  - name: Party
+    description: "Entity or role in a transaction"
+    examples: ["Applicant", "Beneficiary", "Issuing Bank"]
+  
+  - name: ProcessDiagram
+    description: "Visual process flow diagram"
+    examples: ["LC Lifecycle Swimlane", "Payment Flow Diagram"]
+  
+  - name: ArchitectureDiagram
+    description: "System architecture diagram"
+    examples: ["TradeFlow Context Diagram", "Integration Architecture"]
+  
+  - name: Actor
+    description: "Individual person, user, or stakeholder performing business activities"
+    examples: ["Portfolio Manager", "Trader", "Back Office User", "Relationship Manager", "RM", "TR", "BO", "COMP", "AVQ"]
+  
+  - name: Activity
+    description: "Business activity, action, or task performed by a person or system"
+    examples: ["Trade Execution", "Compliance Check", "Client Onboarding", "Risk Assessment"]
+  
+  - name: ProductLine
+    description: "Top-level business product or service line"
+    examples: ["Lending", "Trade Finance", "Payments"]
+  
+  - name: Function
+    description: "Business capability within a ProductLine"
+    examples: ["Loan origination", "Disbursement", "Letter of Credit"]
+  
+  - name: SubFunction
+    description: "Operational sub-area within a Function"
+    examples: ["KYC", "LC Issuance", "Sanctions screening"]
+
+  - name: Decision
+    description: "XOR or inclusive gateway — diamond shape or bold-X circle in BPMN process flow. Use for ALL branch/decision points; never use Process for these."
+    examples: ["Loan Approved?", "Documents Complete?", "Credit Check Pass?", "X gateway after Validate", "Approval Required?"]
+
+# Minimal relationship types for vision extraction
+relationship_types:
+  - name: NEXT_STEP
+    from: Process
+    to: Process
+    description: "Process follows another in flow"
+    verb: "is followed by"
+  
+  - name: PROCESS_EXECUTED_VIA_SYSTEM
+    from: Process
+    to: System
+    description: "Process runs in a System"
+    verb: "runs on system"
+  
+  - name: DEPENDS_ON
+    from: System
+    to: System
+    description: "System depends on another System"
+    verb: "depends on"
+  
+  - name: DIAGRAM_DEPICTS_PROCESS
+    from: ProcessDiagram
+    to: Process
+    description: "Diagram depicts a Process"
+    verb: "is depicted in diagram"
+  
+  - name: DIAGRAM_DEPICTS_ARCHITECTURE
+    from: ArchitectureDiagram
+    to: System
+    description: "Diagram depicts System architecture"
+    verb: "depicts architecture"
+  
+  - name: DIAGRAM_CONTAINS_COMPONENT
+    from: ArchitectureDiagram
+    to: Component
+    description: "Diagram contains a Component (box, panel, label)"
+    verb: "contains component"
+  
+  - name: ACTED_BY
+    from: Activity
+    to: Actor
+    description: "Activity is performed or executed by an Actor"
+    verb: "is acted by"
+  
+  - name: PERFORMED_BY
+    from: Process
+    to: Actor
+    description: "Process step is owned or performed by an Actor or swimlane role"
+    verb: "is performed by"
+
+  - name: CONDITION_IF_YES
+    from: Decision
+    to: Process
+    description: "Process step taken from a gateway when condition is true / yes / approved"
+    verb: "if yes, leads to"
+  
+  - name: CONDITION_IF_NO
+    from: Decision
+    to: Process
+    description: "Process step taken from a gateway when condition is false / no / rejected"
+    verb: "if no, leads to"
+  
+  - name: GATEWAY_TO
+    from: Process
+    to: Decision
+    description: "Process step flows into a Decision gateway"
+    verb: "leads to gateway"
+  
+  - name: PART_OF
+    from: Function
+    to: ProductLine
+    description: "Function belongs to ProductLine"
+    verb: "is part of"
+  
+  - name: PART_OF
+    from: SubFunction
+    to: Function
+    description: "SubFunction belongs to Function"
+    verb: "is part of"
+  
+  - name: IMPACTS
+    from: SubFunction
+    to: SubFunction
+    description: "SubFunction impacts another SubFunction"
+    verb: "impacts"
+  
+  - name: DEPENDS_ON
+    from: SubFunction
+    to: SubFunction
+    description: "SubFunction depends on another SubFunction"
+    verb: "depends on"
+  
+  - name: SUPPORTS
+    from: SubFunction
+    to: SubFunction
+    description: "SubFunction supports another SubFunction"
+    verb: "supports"
+  
+  - name: FEEDS_INTO
+    from: SubFunction
+    to: SubFunction
+    description: "SubFunction feeds into another SubFunction"
+    verb: "feeds into"

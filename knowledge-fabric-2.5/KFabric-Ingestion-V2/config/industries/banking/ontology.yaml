@@ -1,0 +1,1354 @@
+version: 5.0.1
+domains:
+- name: corporate_commercial
+  display_name: Corporate / Commercial / Institutional Banking
+  description: Corporate, commercial, and institutional banking services for businesses, including lending, trade finance,
+    treasury, cash management, and large-value payment and liquidity operations.
+  spine:
+  - ProductLine: Lending
+    functions:
+    - Function: Loan Origination
+      subfunctions:
+      - Multi-Stage Application Workflow
+      - Document Capture
+      - Pricing & Risk Assessment
+      - Credit Scoring
+      - Underwriting
+      - Verification & Approval
+      - Deviation Management
+      - Simulation & Auto Policy Check
+    - Function: Credit Limit Management
+      subfunctions:
+      - Limit Definition
+      - Account Linkage
+      - Coverage Definition
+      - Limit Hierarchy
+      - Limit Earmarking
+      - Limit Utilisation
+      - Limit Closure
+    - Function: Collateral Management
+      subfunctions:
+      - Collateral Definition
+      - Asset Linking & De-Linking
+      - Guarantor Linking
+      - Portfolio of Collaterals
+      - Collateral Execution
+      - Collateral Insurance Definition
+      - Pledging & De-Pledging
+      - Collateral Earmarking
+      - Collateral Release
+    - Function: Loan Disbursement
+      subfunctions:
+      - Loan Template Definition
+      - Loan Simulation
+      - Repayment Schedule Generation
+      - Disbursement Initiation
+      - Multi-Beneficiary Disbursement
+      - Customer Communication & Advice Generation
+    - Function: Loan Servicing
+      subfunctions:
+      - Loan Top-Up & Rollover
+      - Disbursement Reschedule
+      - Repayment Processing
+      - Non-Financial Updates
+      - Payment Dues Reschedule
+      - Waivers & Refunds
+      - Loan Securitisation
+      - Bulk Repayment Upload
+      - Interest Rate Setup
+    - Function: Delinquency Management
+      subfunctions:
+      - DPD Calculation
+      - NAB Classification
+      - Delinquency Bucketing
+      - Auto Reminders
+      - Case Prioritisation
+      - Customer Response Management
+      - Collector Load Balancing
+      - Agent Performance Tracking
+      - Legal Repossession
+      - Legal Collection
+      - Debt Portfolio Segmentation
+    - Function: Loan Closure
+      subfunctions:
+      - Prepayment
+      - Closure Simulation
+      - Settlement
+      - Write-off
+  - ProductLine: Corporate Cards
+    functions:
+    - Function: Card Origination
+      subfunctions:
+      - Credit Assessment & Scoring
+      - Application Data Capture
+      - Limits Assignment
+      - KCP Assisted Onboarding
+      - Credit & Company Underwriting
+      - PIN Generation & Management
+      - Workflow & Business Rules Setup
+    - Function: Authorisation
+      subfunctions:
+      - Velocity & Limits Checks
+      - Exchange Rate Processing
+      - Online & Batch Authorisation
+      - Policy Checks
+      - Company & Connection Checks
+      - Store & Forward Processing
+      - Positive & Negative Balance File Processing
+    - Function: Transaction Processing
+      subfunctions:
+      - Scheme File Processing
+      - Fees Charges & Interest
+      - Transaction Posting & Reversals
+      - Billing Cycle
+      - Interchange Clearing
+      - Instalment Processing
+      - Financial Adjustments
+      - Customer Billing & Reconciliation
+    - Function: Payment Processing
+      subfunctions:
+      - Auto Debits
+      - Manual & Digital Payments
+      - Online OTB Replenishment
+      - Overdue & Delinquency Tracking
+      - Write-off Management
+      - Payment Reversals
+    - Function: Customer Services
+      subfunctions:
+      - Card Lifecycle Servicing
+      - Fee Reversals
+      - Lost Re-Issues & Renewals
+      - Balance Transfers
+      - Credit Limits Management
+      - Product Swaps & Upgrades
+      - Non-Financial Updates
+    - Function: Fraud & Risk Management
+      subfunctions:
+      - FEWS Parameters Definition
+      - Risk Rules Configuration
+      - Company & Collection Level Rules
+      - Real Time Fraud Detection
+      - Queue Allocation
+      - Case Review
+      - Follow-Up & Closure
+    - Function: Loyalty Management
+      subfunctions:
+      - Reward Schemes Definition
+      - Transaction & Events Generated Rewards
+      - Accrual & Redemption
+      - Rewards Transfer & Reversals
+      - Rewards Capping & Expiry
+      - Rewards Points Gifting
+      - Co-Brand Conversions
+      - Company Level Rewards
+    - Function: Product Configuration
+      subfunctions:
+      - Multi-Organisation Setup
+      - Card Personalisation
+      - Fee Configuration
+      - Interest Configuration
+      - Statement & Billing Configuration
+      - Risk Parameters
+      - Rewards Configuration
+      - Company & Connection Setup
+    - Function: Collections
+      subfunctions:
+      - Workflow Setup
+      - Portfolio Management
+      - Queue Definition
+      - Customer Segmentation
+      - Worklist Actions
+      - Agency Management
+      - Credit Restructuring
+  - ProductLine: Treasury
+    functions:
+    - Function: Deal Capture
+      subfunctions:
+      - Manual Deal Entry
+      - Automated Deal Feeds
+      - Deal Upload
+      - B2B Deals
+      - Deal Templates
+      - Currency Adjustment
+      - Position Adjustment
+      - Portfolio Transfer
+    - Function: Limits & Control
+      subfunctions:
+      - Pre-Settlement Limits
+      - Open Position Monitoring
+      - Counterparty Limits
+      - Portfolio Limits
+      - Deal Size Limits
+      - Country Limits
+      - What-If Analysis
+      - Concurrent Audit
+    - Function: Settlement
+      subfunctions:
+      - Deal Confirmation
+      - Payment Processing
+      - Authorisation
+      - Enrichment
+      - Delivery
+      - Multiple Standard Settlement
+      - Split Currency Settlement
+      - CLS Settlement
+    - Function: Accounting
+      subfunctions:
+      - Contingent Accounting
+      - Settlement Accounting
+      - Accruals
+      - Liquidation
+      - Maturity Processing
+      - Revaluation
+      - Amortisation
+      - Redemption
+      - Reprice
+    - Function: Cashflow Positions Enquiry
+      subfunctions:
+      - Confirmation Matching
+      - Recon Rules
+      - Nostro Recon
+      - Coupon Recon
+      - Position Recon
+      - Exception Manager
+    - Function: Risk & PL
+      subfunctions:
+      - Interest Rate Risk
+      - Counterparty Risk
+      - Dealer Profit
+      - Portfolio Duration
+      - Portfolio Convexity
+      - FX Revaluation P&L
+      - Risk Adjustments
+    - Function: Analytics
+      subfunctions:
+      - Pre-Deal Limit Checks
+      - Multi-Dealer Analytics
+      - MTM Valuation
+      - RFR Pricing & Analytics
+      - P&L Reporting
+      - Greeks
+      - Scenario Analysis
+    - Function: Portfolio Risk Analytics
+      subfunctions:
+      - Cash Flow Projections
+      - Duration Metrics
+      - VAR Metrics
+      - Performance Attribution
+      - Ratio Analysis
+      - Strategy Attribution
+      - Profitability Monitoring
+      - Variance Analysis
+    - Function: Contextual ALM
+      subfunctions:
+      - Fund Planning & Forecasting
+      - Cashflow Models
+      - Liquidity Risk Management
+      - Interest Rate Risk Management
+      - Fund Analytics & Stress Testing
+    - Function: Basel-III Liquidity Risk
+      subfunctions:
+      - Liquidity Coverage Ratio
+      - Net Stable Funding Ratio
+      - LCR Stress Testing
+      - Monitoring Tools
+  - ProductLine: Payments
+    functions:
+    - Function: Payment Origination
+      subfunctions:
+      - SWIFT & SWIFT Service Bureau
+      - ERP & Treasury Management System
+      - Manually Initiated Funds Transfer
+      - Branch
+      - Mobile
+      - Portal
+      - Host to Host (H2H)
+    - Function: Payment Formats
+      subfunctions:
+      - XML
+      - JSON & CJSON
+      - CSV
+      - Fixed Width
+      - Delimited
+      - Canonical Models
+      - Message & File Transformation
+    - Function: Enrichment & Validation
+      subfunctions:
+      - Syntax Validations
+      - Control Sums
+      - Duplicate Checks
+      - IBAN Validation
+      - Customer Validations
+      - Bank Validations
+      - SWIFT Pre-Validations
+      - Route Derivation
+      - Cut-Off Time
+    - Function: Overlay Services
+      subfunctions:
+      - Confirmation of Payee
+      - Request to Pay
+      - Tokenization
+      - Proxy Services
+      - Remittance Data Management
+      - Contextual Payments Engine
+    - Function: Orchestration
+      subfunctions:
+      - AML Screening
+      - Sanctions Screening
+      - Fraud Detection
+      - Treasury Integration
+      - Accounting Integration
+      - Core Banking Integration
+    - Function: Transaction Limits Management
+      subfunctions:
+      - Account & Limit Structure Setup
+      - Limit Types Configuration
+      - Real-Time Funds Control
+      - Availability Calculation
+      - Manual Referral
+      - Auto Retry
+      - Pay & No-Pay Decisioning
+    - Function: Payment Execution
+      subfunctions:
+      - Bank Liquidity Management
+      - Throttling
+      - Correspondent Banking
+      - Partner Banking
+      - Direct Clearing
+      - Indirect Clearing
+      - Net Settlement
+      - Gross Settlement
+    - Function: Clearing & Settlement
+      subfunctions:
+      - Clearing Handoff
+      - Clearing Acknowledgement
+      - Clearing Recon
+      - Returns Processing
+      - Settlement Account Funding
+      - Nostro Funding
+      - Cheque Clearing
+    - Function: Exception & Investigation
+      subfunctions:
+      - Non-STP Queue
+      - Manual Repair
+      - Auto Repair
+      - Retry Process
+      - Reject Handling
+  - ProductLine: Receivables & Collections
+    functions:
+    - Function: Onboarding
+      subfunctions:
+      - Product Setup
+      - Customer Product Setup
+      - Day Arrangement & Credit Consolidation
+      - Account Template Definition
+      - Advices & Alerts Preferences
+      - Auto Debit Exception Handling
+      - Enrichment Configuration
+    - Function: Collections Processing
+      subfunctions:
+      - Collections Lodgement
+      - Enrichment
+      - Clearing Handoff & Reverse Handoff
+      - Credit Consolidation & Payout
+      - Accounting Update & Narration Building
+      - Auto Debit Exception Disbursement
+      - PDC Management
+      - Mandate Based Direct Debit
+    - Function: Bill Collections & Receivables Recon
+      subfunctions:
+      - Rule Based Auto Receivables Recon
+      - Payment by Link Processing
+      - Payer Registration
+      - Bill Presentment Orchestration
+      - Bill Payment Orchestration
+      - Auto-Debit Bill Payment
+      - Aggregator Based Bill Payment
+    - Function: Doorstep Banking
+      subfunctions:
+      - New Customer Acquisitions
+      - Pickup & Delivery Point Feasibility
+      - Startup & Dry Run
+      - Cash & Cheque Pickup Services
+      - Coordinator Vault & Recon
+      - Return & Funding Marking
+      - Coordinator Charges & Billing
+    - Function: Credit Limits & Recon Management
+      subfunctions:
+      - Guaranteed Funds & Liquidation Credit Payout
+      - Hierarchy & Division Wise Credits
+      - Scheduled & Online Credits
+      - Exposure Limit Setup
+      - Consolidated & Net-Off Credits
+      - Adjustments & Reversals
+      - Correspondent Bank Recon
+      - Balance Justification
+      - GL Recon
+    - Function: Exception Management
+      subfunctions:
+      - Returns
+      - Reversals
+      - Limit Breach Flows
+      - Adjustments
+      - Reversal of Recon & Manual Recon
+      - Auto Debit Retrial
+      - Partial Direct Debit
+    - Function: Follow-Ups
+      subfunctions:
+      - Template Definition
+      - Email & Fax & SMS
+      - Configurable Follow-Up Rules
+      - Configurable Frequency
+      - Customised Schedules
+      - Automatic Follow-Ups
+      - Manual Follow-Ups
+      - Follow-Up History
+  - ProductLine: Virtual Accounts & Escrow Deposits
+    functions:
+    - Function: Account Management
+      subfunctions:
+      - Bank & Product Configuration
+      - Account Series Configuration
+      - Structure Issuance
+      - Sub-Account Issuance & Maintenance
+      - KYC Processing
+      - Context ID Issuance & Maintenance
+      - Virtual Account Closure
+      - Dormancy Management
+    - Function: Invoice & Receipt Management
+      subfunctions:
+      - Context Validation
+      - Context Based Receivable Tracking
+      - Configurations & Invoice Management
+      - Receipt Management
+      - Receivables Matching
+      - File Upload Invoices & Receipts
+    - Function: Transaction Management
+      subfunctions:
+      - Funding & Allocation
+      - Payouts
+      - Automated Transfers
+      - Multi-Currency Payment Processing
+      - Hierarchical Payment Decision
+      - Transaction Processing
+      - Ledger & Balance Management
+      - Transaction Exception Management
+    - Function: Interest Management
+      subfunctions:
+      - Interest Definition
+      - Back-Value Interest Rate Modification
+      - Interest Processing
+      - Back-Value Interest Processing
+      - Interest P&L
+    - Function: API Banking
+      subfunctions:
+      - Account Issuance & Amendment
+      - Account Closure
+      - Incoming Debit Transactions
+      - Incoming Credit Transactions
+      - Transaction Status Update
+      - Transaction Enquiry
+      - Balance Enquiry
+      - Account Statement
+  - ProductLine: Liquidity Management
+    functions:
+    - Function: Sweep Instruction Setup
+      subfunctions:
+      - Control Account Management
+      - Contra Account Management
+      - Internal Balance Management
+      - Group Sweep Rules
+      - Sweep Constraints
+      - Execution Mode
+      - Execution Frequency
+      - Overdraft Limits
+      - Non-Working Days
+      - Automated Investments
+    - Function: Sweep Execution
+      subfunctions:
+      - Instruction Identification
+      - Internal Account Entries Generation
+      - External Account Entries Generation
+      - Transaction Request
+      - External Account Code Attachment
+      - Failure Marking
+      - Exception Alerts Generation
+      - Sweep Priority Determination
+      - Funds Availability Check
+    - Function: Inter-Company Loan Management
+      subfunctions:
+      - Branch & Currency Setup
+      - Loan Parameters
+      - Bank Commission
+      - Maturity Handling
+      - Participants Management
+      - Interest Calculation
+      - Repayments Handling
+      - Loan Rollover
+      - Tax Posting
+    - Function: Notional Pooling
+      subfunctions:
+      - Simple Pool
+      - Aggregate Pool
+      - Sub-Product Definition
+      - Principal Creation
+      - Bank Share Calculation
+      - Interest Type Creation
+      - Balance Set-Off Pooling
+      - Pool Simulation
+      - Interest Settlement
+    - Function: Investment Sweeps
+      subfunctions:
+      - Funds Management
+      - Time Deposit Management
+      - Control Account
+      - Sweep Details
+      - Commission Account
+      - Priority Determination
+      - Deposit Lifecycle
+      - Deposit Rollover
+      - Deposit Cancellation
+    - Function: Accounting Entry Management
+      subfunctions:
+      - Internal Accounts Entries Generation
+      - External Accounts Entries Generation
+      - Transaction Reference Generation
+      - Transaction Code Attachment
+      - Accounting Entry Handoff
+    - Function: Back Value Processing
+      subfunctions:
+      - Back Value Transaction Initiation
+      - Updated Interest Calculation
+      - Re-Execute Day-Zero Sweeps
+      - Re-Execute Time Triggered Sweeps
+      - Re-Execute EOD Sweeps
+      - Back Value Interest Calculation
+  - ProductLine: Trade Finance
+    functions:
+    - Function: Trade Operations
+      subfunctions:
+      - LC Issuance & Advising
+      - LC Amendment & Adjustment
+      - Document Presentation & Booking
+      - Acceptance
+      - Loan Lifecycle Management
+      - Claim Processing
+      - Settlement & Retirement
+      - Closure & Cancellation
+      - Delinquency Management
+    - Function: Charges & Pricing
+      subfunctions:
+      - Preferential Pricing
+      - Fixed & Tiered Pricing
+      - Tenor & Volume Based Pricing
+      - Accrual
+      - Amortization
+      - Periodic Charging
+      - Charge Adjustment
+      - Refund
+    - Function: Limit Monitoring
+      subfunctions:
+      - Hierarchical Limits
+      - Multi-Entity & Multi-Option Facilities
+      - Multi-Currency Limits
+      - Revolving & Non-Revolving Limits
+      - Collateral Based Limits
+      - Credit Line Earmarking & Release
+      - Real-Time Limit Monitoring
+      - Centralized Exposure Tracking
+    - Function: SWIFT Processing
+      subfunctions:
+      - MT7XX Messaging (LC/SBLC/BG)
+      - MT4XX Messaging (Collections)
+      - MT9X Proprietary Messages
+      - MTQ99 Free Format Messages
+      - MT & MX Payment Messages
+      - SWIFT Validations
+      - ACK & NACK Status Update
+      - Duplicate Checks
+    - Function: Workflow Management
+      subfunctions:
+      - Process Modelling
+      - Manual Processing
+      - Auto Processing (STP)
+      - Queue Management
+      - Delegation
+      - Escalation
+      - SLA Management
+      - Priority Processing
+      - Audit Trail
+    - Function: Document Imaging
+      subfunctions:
+      - Scanning
+      - Batch Upload
+      - Remote Scanning
+      - Image Viewer
+      - Image Data Mapping
+      - Image Annotation
+      - Image Archival
+    - Function: Value Added Services
+      subfunctions:
+      - Risk Distribution
+      - Multi-Lingual Correspondences
+      - Built-in Authorisation Matrix
+      - Plug-in Clauses
+      - Copy Transaction
+      - File Export
+      - Email & Fax Integration
+      - Template Definition
+  - ProductLine: Supply Chain Finance
+    functions:
+    - Function: SCF Program Management
+      subfunctions:
+      - Program Setup
+      - Anchor Customer Management
+      - Counterparty Management
+      - Relationship Management
+      - Multi-Lingual Support
+      - Multi-Currency Support
+      - Multi-Entity Management
+    - Function: Instrument Lifecycle
+      subfunctions:
+      - PO Creation
+      - PO Amendment & Cancellation
+      - Invoice Creation
+      - Invoice Amendment
+      - Invoice Acceptance & Cancellation
+      - Debit & Credit Notes
+      - PO & Invoice Reconciliation
+      - Dispute Management
+    - Function: Finance Lifecycle
+      subfunctions:
+      - Finance Request Auto & Manual
+      - Finance Rate & Tenure Amendment
+      - Settlement
+      - Repayment Appropriation
+      - Risk Participation
+      - Syndication
+      - Insurance
+      - Overdue Treatment
+      - Business Validations
+    - Function: Delinquency Management
+      subfunctions:
+      - Delinquency Classification Via Core Banking
+      - Delinquency Classification in SCF Platform
+      - Hybrid Delinquency Classification
+      - Exception Handling for NPA
+      - Appropriation Sequence for NPA
+      - Accounting for NPA
+      - Write-Offs
+    - Function: Exception Handling
+      subfunctions:
+      - RM Exception For Finance Request
+      - Credit Exception For Finance Request
+      - Compliance Exception For Finance Request
+      - Interface Exception Release & Re-Trigger
+      - Overdue Exception
+      - Escalation
+      - Exception Alerts
+      - SLA Management
+    - Function: Limits Management
+      subfunctions:
+      - Hierarchical Limits
+      - Multi-Entity & Currency Limits
+      - Revolving & Non-Revolving Limits
+      - Seasonal Limits
+      - With & Without Recourse Limits
+      - Commodity-Wise Limits
+      - Anchor & Counterparty Limits
+      - Account Earmarking
+      - Limit Earmarking
+    - Function: Charges & Pricing
+      subfunctions:
+      - Fixed & Floating Interest Rate
+      - Reference Rate Based Pricing
+      - Front & Rear-End Periodic Pricing
+      - Tiered Pricing
+      - Volume Based Pricing
+      - Manual Override & Waivers
+      - Multiple Charges Accounts
+      - Accrual & Amortisation
+      - Charges Posting
+- name: consumer_retail
+  display_name: Consumer / Personal / Retail / Digital Banking
+  description: Consumer and retail banking covering individual customers, digital channels, and day-to-day financial services
+    including onboarding, account servicing, payments, and customer experience.
+  spine:
+  - ProductLine: Lending
+    functions:
+    - Function: Loan Origination
+      subfunctions:
+      - Multi-Stage Application Workflow
+      - Document Capture
+      - Pricing & Risk Assessment
+      - Credit Scoring
+      - Underwriting
+      - Verification & Approval
+      - Deviation Management
+      - Simulation & Auto Policy Check
+    - Function: Credit Limit Management
+      subfunctions:
+      - Limit Definition
+      - Account Linkage
+      - Coverage Definition
+      - Limit Hierarchy
+      - Limit Earmarking
+      - Limit Utilisation
+      - Limit Closure
+    - Function: Collateral Management
+      subfunctions:
+      - Collateral Definition
+      - Asset Linking & De-Linking
+      - Guarantor Linking
+      - Portfolio of Collaterals
+      - Collateral Execution
+      - Collateral Insurance Definition
+      - Pledging & De-Pledging
+      - Collateral Earmarking
+      - Collateral Release
+    - Function: Loan Disbursement
+      subfunctions:
+      - Loan Template Definition
+      - Loan Simulation
+      - Repayment Schedule Generation
+      - Disbursement Initiation
+      - Multi-Beneficiary Disbursement
+      - Customer Communication & Advice Generation
+    - Function: Loan Servicing
+      subfunctions:
+      - Loan Top-Up & Rollover
+      - Disbursement Reschedule
+      - Repayment Processing
+      - Non-Financial Updates
+      - Payment Dues Reschedule
+      - Waivers & Refunds
+      - Loan Securitisation
+      - Bulk Repayment Upload
+      - Interest Rate Setup
+    - Function: Delinquency Management
+      subfunctions:
+      - DPD Calculation
+      - NAB Classification
+      - Delinquency Bucketing
+      - Auto Reminders
+      - Case Prioritisation
+      - Customer Response Management
+      - Collector Load Balancing
+      - Agent Performance Tracking
+      - Legal Repossession
+      - Legal Collection
+      - Debt Portfolio Segmentation
+    - Function: Loan Closure
+      subfunctions:
+      - Prepayment
+      - Closure Simulation
+      - Settlement
+      - Write-off
+  - ProductLine: Payments
+    functions:
+    - Function: Payment Origination
+      subfunctions:
+      - SWIFT & SWIFT Service Bureau
+      - ERP & Treasury Management System
+      - Manually Initiated Funds Transfer
+      - Branch
+      - Mobile
+      - Portal
+      - Host to Host (H2H)
+    - Function: Payment Formats
+      subfunctions:
+      - XML
+      - JSON & CJSON
+      - CSV
+      - Fixed Width
+      - Delimited
+      - Canonical Models
+      - Message & File Transformation
+    - Function: Enrichment & Validation
+      subfunctions:
+      - Syntax Validations
+      - Control Sums
+      - Duplicate Checks
+      - IBAN Validation
+      - Customer Validations
+      - Bank Validations
+      - SWIFT Pre-Validations
+      - Route Derivation
+      - Cut-Off Time
+    - Function: Overlay Services
+      subfunctions:
+      - Confirmation of Payee
+      - Request to Pay
+      - Tokenization
+      - Proxy Services
+      - Remittance Data Management
+      - Contextual Payments Engine
+    - Function: Orchestration
+      subfunctions:
+      - AML Screening
+      - Sanctions Screening
+      - Fraud Detection
+      - Treasury Integration
+      - Accounting Integration
+      - Core Banking Integration
+    - Function: Transaction Limits Management
+      subfunctions:
+      - Account & Limit Structure Setup
+      - Limit Types Configuration
+      - Real-Time Funds Control
+      - Availability Calculation
+      - Manual Referral
+      - Auto Retry
+      - Pay & No-Pay Decisioning
+    - Function: Payment Execution
+      subfunctions:
+      - Bank Liquidity Management
+      - Throttling
+      - Correspondent Banking
+      - Partner Banking
+      - Direct Clearing
+      - Indirect Clearing
+      - Net Settlement
+      - Gross Settlement
+    - Function: Clearing & Settlement
+      subfunctions:
+      - Clearing Handoff
+      - Clearing Acknowledgement
+      - Clearing Recon
+      - Returns Processing
+      - Settlement Account Funding
+      - Nostro Funding
+      - Cheque Clearing
+    - Function: Exception & Investigation
+      subfunctions:
+      - Non-STP Queue
+      - Manual Repair
+      - Auto Repair
+      - Retry Process
+      - Reject Handling
+  - ProductLine: Branch Operations
+    functions:
+    - Function: Relationship Management
+      subfunctions:
+      - Customer Onboarding
+      - Bulk Onboarding
+      - Customer Hierarchy & Group
+      - KYC Management
+      - Signatories Setup
+      - Preferential Pricing Interest & Forex Rates
+      - Hierarchical Credit Limits
+      - Welcome Kit Administration
+    - Function: Cash Transactions
+      subfunctions:
+      - Cash Deposit & Withdrawal
+      - Currency Exchange
+      - Cash Maintenance
+      - Cash Transfers - Vault
+      - Cash Transfers - Teller
+      - Cash Session Management
+      - Teller Proofing & Reconciliation
+      - TC Issuance & Purchase
+      - Cash Transaction Advice
+    - Function: Front Office Transactions
+      subfunctions:
+      - Funds Transfers - A2A
+      - Domestic Funds Transfers
+      - Cross Border Funds Transfers
+      - Utility Payments
+      - Instruments - DD & PO
+      - Cheque Deposit
+      - Certified Cheques
+      - Cash Card & Cash Passport
+      - Complaints & Enquiries
+    - Function: Account Services
+      subfunctions:
+      - Earmarking
+      - Cheque Book
+      - Statements
+      - Account Nomination
+      - Covering Instructions
+      - Debit Card Management
+      - Account Modifications & Closure
+      - Account Activation
+      - Advices
+    - Function: Operations Functions
+      subfunctions:
+      - Pricing
+      - Loyalty & Rewards
+      - Limits Definition
+      - Standing Orders
+      - Clearing & Collections
+      - Delivery Tracking - Cheque Book & Debit Card
+      - Deposit Closure & Rollover
+      - Fixed Asset Administration
+      - Stock & Inventory Management
+    - Function: Business Setup
+      subfunctions:
+      - Branch
+      - Product
+      - Currency & Holiday
+      - Interest & FX Rate
+      - Fees & Charges
+      - Teller Limits
+      - Correspondent Banks
+      - GL Accounts
+      - User Management
+  - ProductLine: Consumer Digital
+    functions:
+    - Function: CASA
+      subfunctions:
+      - Summary & Details
+      - Account Statement
+      - Multi-Account Statement
+      - E-Statement Registration
+      - Open New Account
+      - Transaction History
+      - Share Account Info
+      - Cheque Services
+    - Function: Deposits
+      subfunctions:
+      - Summary & Details
+      - Deposit Calculator
+      - Open New Term Deposit
+      - Redeem Deposit
+      - Deposit Closure Simulation
+      - Amend Maturity
+    - Function: Fund Transfers
+      subfunctions:
+      - Own Account Transfer
+      - Within Bank Transfer
+      - Domestic Transfer
+      - International Transfer
+      - Add & Manage Beneficiary
+      - Pay a Friend (P2P)
+      - Pay a New Beneficiary
+      - Transfer & Payment History
+      - Favourite Transfers
+      - Scheduled Transfers
+      - Scan & Pay
+      - Manage Standing Instructions
+    - Function: Payments
+      subfunctions:
+      - Utility Bill Payments
+      - Pay Bill
+      - Multiple Bill Payments
+      - Ad Hoc Bill Payments
+      - Government Payments
+      - Favourite Bill Payments
+      - Top-Up & Recharge
+      - QR Code Payments
+      - Tap & Pay (Apple & Google)
+      - Merchant Payments
+    - Function: Credit Cards
+      subfunctions:
+      - Summary & Details
+      - Supplementary Card Request
+      - Card Payment
+      - Balance Transfer
+      - Manage Limits
+      - Block Card
+      - Replace Card & Unblock Card
+      - Set & Change PIN
+      - Activate Card
+      - Reward Points Redemption
+      - Flash Card
+      - EMI Conversion
+    - Function: Debit & Prepaid Card
+      subfunctions:
+      - Summary & Details
+      - Activate Card
+      - Link Card to Account
+      - Unblock Card
+      - Set & Change Card PIN
+      - Manage Debit Card Limits
+      - Flash Card
+      - Renew & Replace Card
+      - Manage Services
+      - Block Card
+      - Virtual Cards
+      - Forex Cards
+    - Function: Loans
+      subfunctions:
+      - Summary & Details
+      - Loan Statement
+      - Loan Payment
+      - Recent Transactions
+      - Repayment Summary
+      - Interest Certificate
+      - Disbursement Schedule
+      - Loan Disbursement Request
+      - Loan Reschedule Request
+      - Loan Top-Up Request
+      - Loan Closure Simulation
+      - Buy Now Pay Later
+    - Function: Onboarding
+      subfunctions:
+      - Self-Onboarding
+      - Assisted Onboarding
+      - CASA Origination
+      - Loan Origination
+      - Card Origination
+      - Identity Management
+      - eKYC
+    - Function: Pre-Login
+      subfunctions:
+      - Self-Onboarding
+      - ATM & Branch Locator
+      - Login
+      - Forgot Login Credentials
+      - Self Registration
+      - Contact Us
+      - FAQ
+      - Promotions & Offers
+      - Apply for Products
+      - Quick Balance
+      - Language Preference
+  - ProductLine: Retail Cards
+    functions:
+    - Function: Card Origination
+      subfunctions:
+      - Credit Assessment & Scoring
+      - Application Data Capture
+      - Limits Assignment
+      - KCP Assisted Onboarding
+      - Credit & Company Underwriting
+      - PIN Generation & Management
+      - Workflow & Business Rules Setup
+    - Function: Authorisation
+      subfunctions:
+      - Velocity & Limits Checks
+      - Exchange Rate Processing
+      - Online & Batch Authorisation
+      - Policy Checks
+      - Company & Connection Checks
+      - Store & Forward Processing
+      - Positive & Negative Balance File Processing
+    - Function: Transaction Processing
+      subfunctions:
+      - Scheme File Processing
+      - Fees Charges & Interest
+      - Transaction Posting & Reversals
+      - Billing Cycle
+      - Interchange Clearing
+      - Instalment Processing
+      - Financial Adjustments
+      - Customer Billing & Reconciliation
+    - Function: Payment Processing
+      subfunctions:
+      - Auto Debits
+      - Manual & Digital Payments
+      - Online OTB Replenishment
+      - Overdue & Delinquency Tracking
+      - Write-off Management
+      - Payment Reversals
+    - Function: Customer Services
+      subfunctions:
+      - Card Lifecycle Servicing
+      - Fee Reversals
+      - Lost Re-Issues & Renewals
+      - Balance Transfers
+      - Credit Limits Management
+      - Product Swaps & Upgrades
+      - Non-Financial Updates
+    - Function: Fraud & Risk Management
+      subfunctions:
+      - FEWS Parameters Definition
+      - Risk Rules Configuration
+      - Company & Collection Level Rules
+      - Real Time Fraud Detection
+      - Queue Allocation
+      - Case Review
+      - Follow-Up & Closure
+    - Function: Loyalty Management
+      subfunctions:
+      - Reward Schemes Definition
+      - Transaction & Events Generated Rewards
+      - Accrual & Redemption
+      - Rewards Transfer & Reversals
+      - Rewards Capping & Expiry
+      - Rewards Points Gifting
+      - Co-Brand Conversions
+      - Company Level Rewards
+    - Function: Product Configuration
+      subfunctions:
+      - Multi-Organisation Setup
+      - Card Personalisation
+      - Fee Configuration
+      - Interest Configuration
+      - Statement & Billing Configuration
+      - Risk Parameters
+      - Rewards Configuration
+      - Company & Connection Setup
+    - Function: Collections
+      subfunctions:
+      - Workflow Setup
+      - Portfolio Management
+      - Queue Definition
+      - Customer Segmentation
+      - Worklist Actions
+      - Agency Management
+      - Credit Restructuring
+- name: wealth_securities_management
+  display_name: Wealth & Securities Management
+  description: Wealth management services covering investments, advisory, portfolio management, and client servicing for affluent
+    and high-net-worth customers.
+  spine:
+  - ProductLine: Wealth Management
+    functions:
+    - Function: RM Operations & Advisory
+      subfunctions:
+      - Client 360 Degree View
+      - Client Prospect Onboarding
+      - Client & Risk Profiling
+      - Multi-Level Portfolio Views
+      - Portfolio Comparison
+      - Performance Analytics & Attribution
+      - Simulations
+      - Rebalancing
+      - Order Capture
+      - Client Reports
+      - Performance Dashboard
+      - BUM Asset & Liabilities
+      - Revenues Tracking
+      - Targets vs Performance
+      - Top Clients & RMs
+      - GEO Team Asset Product Drilldown
+      - Portfolio Alerts
+      - Compliance Alerts
+      - Market Alerts
+      - Documentation Alerts
+      - Meeting Alerts
+      - Dashboard Widgets
+      - Alert Thresholds
+      - Personalisation
+    - Function: Relationship Services
+      subfunctions:
+      - Lead & Prospect Management
+      - Customer Onboarding
+      - Customer Family Groups
+      - Contact Management
+      - Customer Assignment & Handover
+      - Document Management
+      - Campaign Management
+      - Referral Management
+      - Customer Communication
+      - Service Log System
+    - Function: Financial Need Analysis
+      subfunctions:
+      - Client Risk Profiling
+      - Asset Allocation
+      - Financial Position Analysis
+      - Goal Planning
+      - Insurance Planning
+      - Retirement Planning
+      - Portfolio Construction
+      - Deviation Analysis
+      - Simulation
+      - Proposal Management
+    - Function: Order Management
+      subfunctions:
+      - Order Capture
+      - Order Validation
+      - Batching Aggregation & Tracking
+      - Order Routing
+      - Dealer Blotter
+      - Execution Capture
+      - Insurance Processing
+      - IPO & NFO Processing
+      - Limit Management
+    - Function: Trade Management
+      subfunctions:
+      - Trade Capture
+      - Reconciliation
+      - Correction & Reversal
+      - Trade Allocation
+      - Contracts
+      - Advice Generation
+      - Settlement
+      - Trade Lot Accounting
+    - Function: Portfolio Management
+      subfunctions:
+      - Model Portfolio Maintenance
+      - Advisory & Discretionary
+      - Transfers
+      - Assignment
+      - Simulation
+      - Goal Mapping & Tracking
+      - Alerts Management
+      - Corporate Actions
+    - Function: Portfolio Analytics
+      subfunctions:
+      - 360-Degree Portfolio View
+      - Geo Spatial & Multi-Dimensional Drilldown
+      - Gain & Loss Analytics
+      - Cash Flow Projections
+      - Portfolio Revaluation
+      - Risk-Adjusted Return Analytics
+      - Portfolio Back Testing & Monte Carlo
+      - Duration & Convexity
+      - BI & Advanced Analytics
+    - Function: Margin Lending
+      subfunctions:
+      - Facility Group Setup
+      - Haircut Definition
+      - Concentration Risk Definition
+      - Cross Currency Risk Definition
+      - Margin Monitoring
+      - Simulation
+      - Loan Against Shares
+      - Margin Financing & Trading
+      - Portfolio-Facility Mapping
+      - Collateral Management
+    - Function: Fees & Charges
+      subfunctions:
+      - Event & Criteria Definition
+      - Method of Pricing
+      - Distribution Commission
+      - Upfront & Backend Charges
+      - Trailer & AUM Based Fees
+      - RM & Brokers Commission
+      - Billing
+      - Payment Tracking
+    - Function: Accounting
+      subfunctions:
+      - Accounting Entry Definition
+      - Journal Entries
+      - Valuation Accounting
+      - Distribution Commission
+      - Handoff to GL
+  - ProductLine: Securities
+    functions:
+    - Function: Custody
+      subfunctions:
+      - Customer Onboarding
+      - Trade Processing
+      - Settlement Processing
+      - Corporate Action Processing
+      - Billing
+      - Web Custody
+      - Auto Mailer
+      - Vault Management
+      - Cash Ledger & Global Custody
+    - Function: Brokerage
+      subfunctions:
+      - Order Management
+      - Broker Risk Management
+      - Investor Risk Management
+      - Real-Time Mark to Market (MTM)
+      - Trade Management
+      - Clearing & Settlement
+      - Cash & Stock Management
+      - Research & Analytics
+      - Corporate Action Processing
+    - Function: Fund Administration
+      subfunctions:
+      - Fund Creation
+      - Fund Portfolio Management
+      - Portfolio Rebalancing
+      - Requisition & Order Management
+      - Trade Management
+      - What-If Analysis
+      - Settlement Processing
+      - Risk Management
+      - Corporate Action Processing
+    - Function: Fund Accounting
+      subfunctions:
+      - General Accounting
+      - Investment Accounting
+      - Risk Management
+      - Security Valuation & MTM
+      - Accruals & Amortisation
+      - NAV Computation
+      - NAV Reconciliation
+      - Cash Recon
+      - Fees & Charges
+    - Function: Fund Distribution
+      subfunctions:
+      - Mutual Fund Scheme Listing
+      - Distributor & Advisor Setup
+      - Customer Onboarding
+      - MF Transaction Management
+      - Systematic Transactions
+      - Non-Commercial Transactions
+      - Scheduled Transactions
+      - Payments Processing
+      - Fees & Charges
+    - Function: Transfer Agency
+      subfunctions:
+      - MF Product Creation
+      - Investment Account Opening
+      - Document Tracking
+      - Transaction Management
+      - Non-Financial Transaction
+      - Special Products
+      - Corporate Action Processing
+      - Unit Allocation
+      - Fees & Commission
+    - Function: Corporate Action Management
+      subfunctions:
+      - Events Maintenance
+      - Entitlements Generation
+      - Benefits Processing
+      - Rights Processing
+      - Primary Market Processing
+      - On-Market Buy-Back
+      - E-Voting
+      - Auto Event Creation
+- name: risk_compliance_fraud
+  display_name: Risk, Compliance & Fraud
+  description: Enterprise and regulatory risk functions covering financial crime, regulatory compliance, risk measurement,
+    controls, and monitoring across banking operations.
+  spine:
+  - ProductLine: Financial Crime
+    functions:
+    - Function: AML Monitoring
+      subfunctions:
+      - Transaction Monitoring
+      - Alert Management
+      - Case Investigation
+    - Function: Sanctions Screening
+      subfunctions:
+      - Watchlist Screening
+      - PEP Screening
+      - Real-time Screening
+    - Function: Fraud Management
+      subfunctions:
+      - Fraud Detection
+      - Fraud Investigation
+      - Fraud Prevention
+  - ProductLine: Regulatory Risk
+    functions:
+    - Function: Capital Adequacy
+      subfunctions:
+      - Basel Reporting
+      - Stress Testing
+      - ICAAP
+    - Function: Regulatory Reporting
+      subfunctions:
+      - Central Bank Reports
+      - MIS Reports
+      - LCR NSFR
+  - ProductLine: Operational Risk
+    functions:
+    - Function: Controls Management
+      subfunctions:
+      - KRI Monitoring
+      - RCSA
+      - Incident Management
+    - Function: Audit
+      subfunctions:
+      - Audit Planning
+      - Audit Execution
+      - Findings Management
+  - name: enterprise_hr_audit_others
+    display_name: Enterprise Functions - HR, Audit etc
+    description: Enterprise functions including HR, audit, finance, and shared services. Catch-all for miscellaneous docs;
+      chunks stored in Weaviate only (no KG/Spine).
+    keywords:
+    - human resources
+    - HR operations
+    - internal audit
+    - shared services
+    - procurement
+    - policy management
+    capabilities: []

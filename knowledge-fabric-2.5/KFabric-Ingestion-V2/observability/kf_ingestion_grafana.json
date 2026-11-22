@@ -1,0 +1,209 @@
+{
+  "__metadata": {
+    "name": "KF Ingestion Dashboard",
+    "description": "Knowledge Fabric Ingestion Service Observability",
+    "version": "1.0.0",
+    "service": "kf-ingestion",
+    "generated": "2024-12-15",
+    "import_instructions": "Grafana → Dashboards → Import → Upload JSON"
+  },
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "row",
+      "title": "1 · Ray Jobs Overview",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false
+    },
+    {
+      "type": "stat",
+      "title": "Active Jobs",
+      "description": "Currently running ingestion jobs",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "targets": [{ "expr": "ray_job_active{job=\"kf-ingestion\"}", "legendFormat": "Active", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 3 }, { "color": "red", "value": 5 }] } } }
+    },
+    {
+      "type": "stat",
+      "title": "Total Jobs (24h)",
+      "description": "Jobs completed in last 24 hours",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "targets": [{ "expr": "sum(increase(ray_job_total{job=\"kf-ingestion\"}[24h]))", "legendFormat": "Jobs", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "type": "gauge",
+      "title": "Job Success Rate",
+      "description": "Percentage of successful jobs",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "targets": [{ "expr": "sum(ray_job_total{job=\"kf-ingestion\",ray_job_status=\"succeeded\"}) / sum(ray_job_total{job=\"kf-ingestion\"}) * 100", "legendFormat": "Success %", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 90 }, { "color": "green", "value": 95 }] } } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Job Duration (p95)",
+      "description": "95th percentile job execution time",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 1 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(ray_job_duration_seconds_bucket{job=\"kf-ingestion\"}[5m])) by (le))", "legendFormat": "p95", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "type": "row",
+      "title": "2 · LLM Operations (OTel Gen AI)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM Call Rate",
+      "description": "Calls per minute by operation",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 6 },
+      "targets": [{ "expr": "sum(rate(gen_ai_client_operation_duration_seconds_count{job=\"kf-ingestion\"}[1m])) by (gen_ai_operation_name) * 60", "legendFormat": "{{gen_ai_operation_name}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM Latency (p95)",
+      "description": "95th percentile latency by operation",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 6 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(gen_ai_client_operation_duration_seconds_bucket{job=\"kf-ingestion\"}[5m])) by (le, gen_ai_operation_name))", "legendFormat": "{{gen_ai_operation_name}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Token Usage",
+      "description": "Input/output tokens over time",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 6 },
+      "targets": [
+        { "expr": "sum(rate(gen_ai_client_token_usage_total{job=\"kf-ingestion\",gen_ai_token_type=\"input\"}[5m]))", "legendFormat": "Input", "refId": "A" },
+        { "expr": "sum(rate(gen_ai_client_token_usage_total{job=\"kf-ingestion\",gen_ai_token_type=\"output\"}[5m]))", "legendFormat": "Output", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "type": "row",
+      "title": "3 · Database Operations (OTel Database)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 12 },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "title": "Weaviate Operations",
+      "description": "Weaviate upsert rate and latency",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 13 },
+      "targets": [
+        { "expr": "sum(rate(db_client_operation_duration_seconds_count{job=\"kf-ingestion\",db_system=\"weaviate\"}[1m]))", "legendFormat": "Ops/sec", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum(rate(db_client_operation_duration_seconds_bucket{job=\"kf-ingestion\",db_system=\"weaviate\"}[5m])) by (le))", "legendFormat": "p95 Latency", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Neo4j Operations",
+      "description": "Neo4j write rate and latency",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 13 },
+      "targets": [
+        { "expr": "sum(rate(db_client_operation_duration_seconds_count{job=\"kf-ingestion\",db_system=\"neo4j\"}[1m]))", "legendFormat": "Ops/sec", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum(rate(db_client_operation_duration_seconds_bucket{job=\"kf-ingestion\",db_system=\"neo4j\"}[5m])) by (le))", "legendFormat": "p95 Latency", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "type": "stat",
+      "title": "Chunks Upserted",
+      "description": "Total chunks written to Weaviate",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 19 },
+      "targets": [{ "expr": "sum(db_client_rows_affected_total{job=\"kf-ingestion\",db_system=\"weaviate\"})", "legendFormat": "Chunks", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "type": "stat",
+      "title": "Nodes Created",
+      "description": "Total nodes written to Neo4j",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 19 },
+      "targets": [{ "expr": "sum(db_client_rows_affected_total{job=\"kf-ingestion\",db_system=\"neo4j\",db_operation=\"create_node\"})", "legendFormat": "Nodes", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "type": "stat",
+      "title": "Relationships Created",
+      "description": "Total relationships in Neo4j",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 19 },
+      "targets": [{ "expr": "sum(db_client_rows_affected_total{job=\"kf-ingestion\",db_system=\"neo4j\",db_operation=\"create_relationship\"})", "legendFormat": "Relationships", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "type": "row",
+      "title": "4 · Document Processing",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "title": "Parse Duration by File Type",
+      "description": "Document parsing time",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 24 },
+      "targets": [{ "expr": "avg(rate(kbfabric_document_parse_duration_seconds_sum{job=\"kf-ingestion\"}[5m]) / rate(kbfabric_document_parse_duration_seconds_count{job=\"kf-ingestion\"}[5m])) by (file_type)", "legendFormat": "{{file_type}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "type": "piechart",
+      "title": "Blocks by Type",
+      "description": "Distribution of block types",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 24 },
+      "targets": [{ "expr": "sum(kbfabric_document_blocks_total{job=\"kf-ingestion\"}) by (block_type)", "legendFormat": "{{block_type}}", "refId": "A" }]
+    },
+    {
+      "type": "piechart",
+      "title": "Entities by Type",
+      "description": "Distribution of extracted entities",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 24 },
+      "targets": [{ "expr": "sum(kbfabric_entities_extracted_total{job=\"kf-ingestion\"}) by (entity_type)", "legendFormat": "{{entity_type}}", "refId": "A" }]
+    },
+    {
+      "type": "row",
+      "title": "5 · Security & Compliance",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "title": "PII Detections",
+      "description": "PII entities detected over time",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 31 },
+      "targets": [{ "expr": "sum(rate(kbfabric_pii_detections_total{job=\"kf-ingestion\"}[5m])) by (pii_type)", "legendFormat": "{{pii_type}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "PII Masking Duration",
+      "description": "Time spent masking PII",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 31 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(kbfabric_pii_masking_duration_seconds_bucket{job=\"kf-ingestion\"}[5m])) by (le))", "legendFormat": "p95", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["kf-ingestion", "knowledge-fabric", "observability"],
+  "templating": {
+    "list": [
+      { "name": "datasource", "type": "datasource", "query": "prometheus" },
+      { "name": "domain", "type": "query", "query": "label_values(ray_job_total{job=\"kf-ingestion\"}, kbfabric_domain)", "refresh": 1 }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "KF Ingestion Dashboard",
+  "uid": "kf-ingestion-v1",
+  "version": 1
+}
+

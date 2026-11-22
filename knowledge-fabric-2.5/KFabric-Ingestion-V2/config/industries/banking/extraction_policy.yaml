@@ -1,0 +1,1127 @@
+version: 5.0.1
+node_types:
+- name: DomainRoot
+  description: Customer-scoped domain anchor beneath CustomerRoot. Industry is metadata and never a graph root.
+  name_pattern: Exact domain key (snake_case)
+  examples:
+  - corporate_commercial
+  - consumer_retail
+- name: ProductLine
+  description: Major business line within a domain. Hub node for graph traversal.
+  name_pattern: Title Case, business name as known to the bank
+  examples:
+  - SME Lending
+  - Trade Finance
+  - Cash Management
+- name: Function
+  description: Business function within a product line. Groups related processes and requirements.
+  name_pattern: Title Case, verb-noun phrase preferred
+  examples:
+  - Loan Origination
+  - Loan Servicing
+  - Letter of Credit
+- name: SubFunction
+  description: Specific capability within a function. Leaf of the pre-seeded spine.
+  name_pattern: Title Case
+  examples:
+  - Credit Assessment
+  - Collateral Valuation
+  - Repayment Processing
+- name: Requirement
+  description: Functional or non-functional requirement statement. Core node for coverage and compliance tracing.
+  name_pattern: ID when present in source (FR-xx, REQ-xxx). Else short descriptive phrase ≤80 chars.
+  ie_examples:
+  - block_text: 'FR-04: The system shall auto-generate a repayment schedule (EMI or bullet) upon loan booking, reflecting
+      selected interest type, tenor, and repayment frequency.'
+    block_category: Requirement
+    spine_node: Repayment Processing
+    entities:
+    - type: Requirement
+      value: FR-04
+      description: The system shall auto-generate a repayment schedule (EMI or bullet) upon loan booking, reflecting
+        selected interest type, tenor, and repayment frequency.
+      confidence: 0.95
+    - type: Process
+      value: Loan Booking
+      confidence: 0.9
+    - type: Process
+      value: EMI Schedule Generation
+      confidence: 0.85
+    relationships:
+    - from_type: Requirement
+      from_value: FR-04
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: Loan Booking
+    - from_type: Requirement
+      from_value: FR-04
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: EMI Schedule Generation
+  - block_text: The system must validate that collateral value exceeds 120% of loan amount before approval can proceed.
+    block_category: Requirement
+    spine_node: Collateral Valuation
+    entities:
+    - type: Requirement
+      value: Collateral Validation Threshold
+      description: The system must validate that collateral value exceeds 120% of loan amount before approval can
+        proceed.
+      confidence: 0.95
+    - type: Process
+      value: Loan Approval
+      confidence: 0.9
+    relationships:
+    - from_type: Requirement
+      from_value: Collateral Validation Threshold
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: Loan Approval
+  anti_examples:
+  - Do NOT extract narrative prose or section introductions as Requirement
+  - Do NOT extract section headings like '3. Functional Requirements' as Requirement
+  - Do NOT discard the descriptive text when an entity has an ID. Preserve the ID as `value` and extract the human-readable
+    statement into `description`.
+  - 'Do NOT replace the canonical entity ID with `ID : description`; `value` must remain the stable identifier used
+    for graph linking (e.g. FR-04).'
+  - Do NOT invent a description. It must be grounded in the source block.
+  - Do NOT duplicate the identifier inside description.
+- name: Process
+  description: Named, executable business process or workflow with concrete operational steps, system interactions,
+    or defined inputs/outputs. Must be a specific process that an organization performs — not an abstract concept,
+    methodology phase, lifecycle stage name, or sales description of an approach.
+  name_pattern: Title Case, descriptive verb-noun phrase ≤80 chars
+  evidence_gate:
+    enabled: true
+    min_evidence_score: 3
+    step_keywords:
+    - step
+    - then
+    - after
+    - before
+    - first
+    - next
+    - followed by
+    - sequence
+    - procedure
+    - workflow
+    - navigate
+    - click
+    - enter
+    - select
+    actor_keywords:
+    - manager
+    - officer
+    - agent
+    - user
+    - team
+    - analyst
+    - clerk
+    - applicant
+    - customer
+    - borrower
+    - maker
+    - checker
+    - approver
+    - administrator
+    system_keywords:
+    - system
+    - module
+    - screen
+    - portal
+    - application
+    - database
+    - API
+    - interface
+    - core banking
+    - T24
+    - LOS
+    - CRM
+    - ERP
+    - SWIFT
+    action_keywords:
+    - execute
+    - process
+    - submit
+    - validate
+    - create
+    - generate
+    - verify
+    - approve
+    - reject
+    - initiate
+    - configure
+    - disburse
+    - accrue
+    - settle
+    - book
+    - capture
+    - assess
+    - classify
+    - compute
+    - reconcile
+    outcome_keywords:
+    - produces
+    - results in
+    - generates
+    - completes
+    - approved
+    - booked
+    - disbursed
+    - settled
+    - report produced
+    - outcome
+    - output
+    exclusion_keywords:
+    - batch
+    - scheduled job
+    - nightly run
+    - daily run
+    - eod processing
+    - eom processing
+    - accrual run
+    - posting run
+    - background job
+    - automated sweep
+    - scheduled task
+    - navigate to
+    - click on
+    - enter the field
+    - pre-requisites
+    - pre-condition
+    - test step
+    - login and approve
+  ie_examples:
+  - block_text: 'Loan disbursement initiation: The maker enters the disbursement instruction in LOS_Core specifying
+      account number, amount, and value date. The system validates available limit against sanctioned amount. On success
+      the maker submits for checker review. The checker approves in LOS_Core. On dual approval the disbursement request
+      is transmitted to Core Banking for fund transfer execution.'
+    block_category: Process
+    spine_node: Loan Disbursement
+    entities:
+    - type: Process
+      value: Loan Disbursement Initiation
+      confidence: 0.95
+    - type: System
+      value: LOS_Core
+      confidence: 0.9
+    - type: System
+      value: Core Banking
+      confidence: 0.88
+    - type: Actor
+      value: Maker
+      confidence: 0.85
+    - type: Actor
+      value: Checker
+      confidence: 0.85
+    relationships:
+    - from_type: Process
+      from_value: Loan Disbursement Initiation
+      rel_type: USES
+      to_type: System
+      to_value: LOS_Core
+    - from_type: Actor
+      from_value: Maker
+      rel_type: PERFORMS
+      to_type: Process
+      to_value: Loan Disbursement Initiation
+  anti_examples:
+  - Do NOT extract flowchart box labels like 'Check band' as Process — these are diagram elements
+  - Do NOT extract state names like 'Rejected' or 'Approved' as Process — these are states
+  - Do NOT extract data values like 'AggressiveProfile' as Process
+  - Do NOT extract abstract methodology stages like 'Requirement Stage', 'Design Stage', 'Test Planning', 'Test Execution',
+    'Test Design' as Process — these are methodology phases, not executable workflows
+  - Do NOT extract sales or marketing descriptions of approaches, capabilities, or value propositions as Process
+  - Do NOT extract lifecycle phase names (e.g., 'Planning Phase', 'Execution Phase') unless they describe concrete
+    operational steps with actors and systems
+  - Do NOT extract single-word abstract capabilities like 'Automation', 'Integration', 'Validation', 'Customization',
+    'Scale', or 'Governance' as Process — these are generic concepts
+  - Do NOT extract product or tool feature names like 'Pulse Intelligence', 'Pulse Automation', 'Gateway Integration'
+    as Process — these are software components, not business processes
+  - Do NOT extract benefit descriptions or outcome phrases like 'Clarity & Testability', 'Faster Certification', 'Governed
+    Coverage Creation', 'Risk-Based Validation' as Process
+  - Do NOT extract SDLC activity labels like 'Risk Identification', 'System Impact Discovery', 'Historical Defect
+    Intelligence' as Process unless the text describes a specific workflow with concrete steps, actors, and systems
+  - 'Do NOT extract scheduled batch jobs, cron tasks, or automated events as Process — classify as TechnicalOps instead.
+    Examples: ''Daily DPD Calculation Batch'', ''Monthly EMI Due Generation'', ''Benchmark Rate Refresh Job'', ''Interest
+    Accrual Suspension Job'', ''End-of-Day Reconciliation'''
+  - 'Do NOT extract system lifecycle events or state transitions as Process — classify as TechnicalOps. Examples:
+    ''Approval Event'', ''Status Change'', ''File Upload Trigger'', ''Notification Dispatch'''
+  - Do NOT extract SubFunction spine node names as Process entities — EMI Calculation, Eligibility Check, Disbursement,
+    NAB Classification, Repayment Processing are pre-seeded SubFunction nodes. Set spine_node to the matching SubFunction
+    instead.
+  - Do NOT extract API method names or REST endpoint strings as Process — createConsumerLoan, cancelArrangement, LOAN.API.3
+    PUT, POST /loans are API operations. Classify the block as TechnicalSpec.
+- name: Rule
+  description: Business rule with explicit conditional logic — if X then Y, unless X apply Y, when X triggers Y. BOTH
+    condition AND consequence must be stated. Threshold constraints without a stated consequence are Requirements
+    not Rules. For operational enforcement mechanisms use Control instead.
+  name_pattern: Title Case or RULE-ID if present, descriptive ≤80 chars
+  ie_examples:
+  - block_text: 'Interest accrual ceases when account reaches 90+ DPD and is classified as Non-Accrual of Business
+      (NAB). Repayment priority follows: Interest → Charges → Tax → Principal.'
+    block_category: Rule
+    spine_node: Interest Accrual
+    entities:
+    - type: Rule
+      value: NAB Classification at 90 DPD
+      confidence: 0.95
+    - type: Rule
+      value: Repayment Priority Order
+      confidence: 0.9
+    - type: Process
+      value: Interest Accrual
+      confidence: 0.85
+    relationships:
+    - from_type: Process
+      from_value: Interest Accrual
+      rel_type: GOVERNED_BY
+      to_type: Rule
+      to_value: NAB Classification at 90 DPD
+  - block_text: If a pricing override is submitted, the user must provide documented justification, and the system
+      must log user ID, timestamp, old rate, new rate, and reason for the override.
+    block_category: Rule
+    entities:
+    - type: Rule
+      value: Pricing Override Justification
+      confidence: 0.95
+    - type: Process
+      value: Pricing Override
+      confidence: 0.9
+    relationships:
+    - from_type: Process
+      from_value: Pricing Override
+      rel_type: GOVERNED_BY
+      to_type: Rule
+      to_value: Pricing Override Justification
+  anti_examples:
+  - Do NOT extract narrative descriptions of policy background as Rule
+  - Do NOT extract external regulations (Basel III, OFAC) as Rule — use Regulation
+  - Do NOT extract operational controls (sanctions screening gate) as Rule — use Control
+  - Do NOT extract threshold constraints as Rule when no consequence is stated — collateral must exceed 120% is a
+    Requirement not a Rule
+  - Do NOT extract process sequencing language as Rule — maker submits for checker approval is a Process step not
+    a Rule
+- name: Control
+  description: Operational enforcement mechanism that mitigates risk or enforces rules. SOX controls, compliance gates,
+    screening checks, audit checkpoints. Distinct from Rule (which states the logic) — Control is the mechanism that
+    enforces it.
+  name_pattern: Title Case, descriptive ≤80 chars
+  ie_examples:
+  - block_text: Real-time sanctions screening must execute on all outbound payments above $5,000. The screening control
+      checks against OFAC SDN, UN, and EU sanctions lists. Flagged transactions are held pending compliance review.
+    block_category: Control
+    entities:
+    - type: Control
+      value: Real-Time Sanctions Screening
+      confidence: 0.95
+    - type: Process
+      value: Outbound Payment Processing
+      confidence: 0.9
+    - type: Regulation
+      value: OFAC SDN List
+      confidence: 0.85
+    relationships:
+    - from_type: Control
+      from_value: Real-Time Sanctions Screening
+      rel_type: MITIGATES
+      to_type: Process
+      to_value: Outbound Payment Processing
+    - from_type: Control
+      from_value: Real-Time Sanctions Screening
+      rel_type: ENFORCED_BY
+      to_type: Regulation
+      to_value: OFAC SDN List
+  - block_text: 'KYC completion gate: No account can be activated until KYC verification status = COMPLETE and risk
+      rating is assigned. This is a mandatory SOX control for new customer onboarding.'
+    block_category: Control
+    entities:
+    - type: Control
+      value: KYC Completion Gate
+      confidence: 0.95
+    - type: Process
+      value: New Customer Onboarding
+      confidence: 0.9
+    relationships:
+    - from_type: Control
+      from_value: KYC Completion Gate
+      rel_type: MITIGATES
+      to_type: Process
+      to_value: New Customer Onboarding
+  anti_examples:
+  - Do NOT extract business logic like 'if amount > $1M then escalate' as Control — that is a Rule
+  - Do NOT extract external regulations as Control — use Regulation
+- name: Regulation
+  description: External regulatory mandate, industry standard, or compliance guideline. Basel III, OFAC, GDPR, PCI-DSS,
+    RBI Master Circular, SOX. These are external to the bank and enforce Controls.
+  name_pattern: 'Official name or abbreviation as commonly known: Basel III, OFAC, GDPR'
+  ie_examples:
+  - block_text: All capital adequacy calculations must comply with Basel III norms. The bank maintains a minimum CET1
+      ratio of 8% with a 2.5% conservation buffer as mandated by the central bank.
+    block_category: Regulation
+    entities:
+    - type: Regulation
+      value: Basel III
+      confidence: 0.95
+    - type: Process
+      value: Capital Adequacy Calculation
+      confidence: 0.9
+    - type: Rule
+      value: CET1 Minimum 8% Plus Conservation Buffer
+      confidence: 0.85
+    relationships:
+    - from_type: Process
+      from_value: Capital Adequacy Calculation
+      rel_type: COMPLIANT_WITH
+      to_type: Regulation
+      to_value: Basel III
+    - from_type: Rule
+      from_value: CET1 Minimum 8% Plus Conservation Buffer
+      rel_type: ENFORCED_BY
+      to_type: Regulation
+      to_value: Basel III
+  - block_text: PCI-DSS compliance requires encryption of cardholder data at rest and in transit. Annual penetration
+      testing and quarterly vulnerability scans are mandatory.
+    block_category: Regulation
+    entities:
+    - type: Regulation
+      value: PCI-DSS
+      confidence: 0.95
+    - type: Control
+      value: Cardholder Data Encryption
+      confidence: 0.9
+    relationships:
+    - from_type: Control
+      from_value: Cardholder Data Encryption
+      rel_type: ENFORCED_BY
+      to_type: Regulation
+      to_value: PCI-DSS
+  anti_examples:
+  - Do NOT extract internal policies as Regulation — those are Rules
+  - Do NOT extract control mechanisms as Regulation — those are Controls
+- name: FormCapture
+  description: A data capture form, input screen, or UI mockup. Stores extracted fields as properties and links to
+    governing controls/rules.
+  name_pattern: Form title or screen name
+  ie_examples:
+  - block_text: 'KYC Verification Form for SME Loan Applicants. Fields: Applicant Name, Date of Incorporation, ID
+      Type, ID Number, Registered Address, Risk Rating, KYC Status, Verified By. Must be completed before account
+      activation per CTRL-KYC-001.'
+    block_category: FormCapture
+    entities:
+    - type: FormCapture
+      value: KYC Verification Form
+      confidence: 0.95
+    - type: Control
+      value: CTRL-KYC-001
+      description: Must be completed before account activation
+      confidence: 0.9
+    relationships: null
+  anti_examples:
+  - System architecture diagram
+  - Process flow chart
+- name: UserStory
+  description: User story or feature request. Links to requirements via IMPLEMENTS.
+  name_pattern: JIRA/tool ID when present (JIRA-xxx, USR-xxx). Else short title ≤80 chars.
+  ie_examples:
+  - block_text: 'As a relationship manager, I want to configure bullet repayment schedules for SME loans, so that
+      product setup reflects the agreed terms. Sprint: Q1-2025, Priority: High'
+    block_category: UserStory
+    entities:
+    - type: UserStory
+      value: Bullet Repayment Configuration
+      description: As a relationship manager, I want to configure bullet repayment schedules for SME loans, so that
+        product setup reflects the agreed terms.
+      confidence: 0.95
+    - type: Requirement
+      value: Bullet Repayment Schedule
+      confidence: 0.9
+    - type: Process
+      value: SME Loan Product Setup
+      confidence: 0.85
+    relationships:
+    - from_type: UserStory
+      from_value: Bullet Repayment Configuration
+      rel_type: IMPLEMENTS
+      to_type: Requirement
+      to_value: Bullet Repayment Schedule
+    - from_type: UserStory
+      from_value: Bullet Repayment Configuration
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: SME Loan Product Setup
+  anti_examples:
+  - Do NOT extract sprint name or priority as entities — these go into extracted_fields
+  - Do NOT extract the actor role from 'As a [role]' as a separate entity
+  - Do NOT discard the story text when an ID or short title is used as `value`; put the story/title summary in `description`.
+  - 'Do NOT replace the canonical entity ID/title with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include sprint, priority, or status metadata in `description` when those belong in extracted_fields.
+  - Do NOT invent a description. It must be grounded in the source block.
+- name: AcceptanceCriteria
+  description: Acceptance criterion tied to a requirement. Validates requirement completeness.
+  name_pattern: AC-{parent_req}-{seq} when parent known. Else descriptive ≤80 chars.
+  ie_examples:
+  - block_text: 'AC-FR04-01: Given a new loan is booked with bullet repayment, When the schedule is generated, Then
+      the system shall create a single principal payment at maturity with periodic interest-only payments.'
+    block_category: AcceptanceCriteria
+    entities:
+    - type: AcceptanceCriteria
+      value: AC-FR04-01
+      description: Given a new loan is booked with bullet repayment, When the schedule is generated, Then the system
+        shall create a single principal payment at maturity with periodic interest-only payments.
+      confidence: 0.95
+    - type: Requirement
+      value: FR-04
+      confidence: 0.9
+    relationships:
+    - from_type: AcceptanceCriteria
+      from_value: AC-FR04-01
+      rel_type: VALIDATES
+      to_type: Requirement
+      to_value: FR-04
+  anti_examples:
+  - Do NOT extract Given/When/Then keywords as entities
+  - Do NOT discard the Given/When/Then statement when an AC ID is used as `value`; put the criterion text in `description`.
+  - 'Do NOT replace the canonical AC ID with `ID : description`; keep `value` as AC-FR04-01 for graph linking.'
+  - Do NOT invent a Requirement description when only the ID (e.g. FR-04) is referenced — leave description empty
+    on that reference.
+  - Do NOT duplicate the identifier inside description.
+- name: TestCase
+  description: Individual test procedure including manual test scripts, UI navigation test steps, and automated test
+    definitions. Blocks with preconditions, numbered steps (Navigate To, Click, Enter, Select, Verify), and expected
+    results. Xray, Zephyr, and Excel-based test sheets. ANY block describing how to manually or automatically execute
+    a test belongs here — NOT in Process. Individual UI steps (Navigate To, Click, Enter) are test steps within the
+    TestCase node, not separate Process entities. Test case with steps, preconditions, expected results. Links to
+    requirements via COVERS.
+  name_pattern: TC-{source_short}-{row#} for spreadsheets. Source ID if available (e.g., CLOS_DEL_SCN_004_TC_001).
+    ≤80 chars.
+  ie_examples:
+  - block_text: 'Test Case CLOS_DEL_SCN_004_TC_001 | Scenario: Delinquency processing for Long Term Loan | Priority:
+      High | Requirement: DEL_CL_RTM_001 | Step 1: Login to LOS_Core | Step 2: Navigate to Delinquency screen | Step
+      3: Enter mandatory fields | Expected: Delinquency classification applied'
+    block_category: TestCase
+    entities:
+    - type: TestCase
+      value: CLOS_DEL_SCN_004_TC_001
+      description: Delinquency processing for Long Term Loan
+      confidence: 0.95
+    - type: Requirement
+      value: DEL_CL_RTM_001
+      confidence: 0.9
+    - type: Process
+      value: Delinquency Processing
+      confidence: 0.85
+    - type: System
+      value: LOS_Core
+      confidence: 0.85
+    relationships:
+    - from_type: TestCase
+      from_value: CLOS_DEL_SCN_004_TC_001
+      rel_type: COVERS
+      to_type: Requirement
+      to_value: DEL_CL_RTM_001
+  anti_examples:
+  - Do NOT extract individual test steps as separate entities
+  - Do NOT extract test data values as entities
+  - Do NOT discard the scenario/title when a test case ID is used as `value`; put the scenario/title in `description`.
+  - 'Do NOT replace the canonical test case ID with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include priority, status, or step lists in `description` when those belong in extracted_fields.
+  - Do NOT invent a description. It must be grounded in the source block.
+- name: Defect
+  description: Bug report or defect. Links to requirements (VIOLATES), test cases (MISSED_BY), incidents (LINKED_TO).
+  name_pattern: DEF-{ID} or source ID (e.g., SYN-CL-3001). ≤80 chars.
+  ie_examples:
+  - block_text: 'SYN-CL-3015 | Interest Accrual not suspended after NAB classification | Detection: SIT | Root Cause:
+      Business Logic Error | Module: Loan Servicing - Interest Accrual | Severity: High | Linked: USR-365'
+    block_category: Defect
+    entities:
+    - type: Defect
+      value: SYN-CL-3015
+      description: Interest Accrual not suspended after NAB classification
+      confidence: 0.95
+    - type: Requirement
+      value: USR-365
+      confidence: 0.9
+    - type: Process
+      value: Interest Accrual
+      confidence: 0.85
+    relationships:
+    - from_type: Defect
+      from_value: SYN-CL-3015
+      rel_type: VIOLATES
+      to_type: Requirement
+      to_value: USR-365
+    - from_type: Defect
+      from_value: SYN-CL-3015
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: Interest Accrual
+  anti_examples:
+  - Do NOT extract severity level or detection phase as entities — these go into extracted_fields
+  - Do NOT discard the defect title when a defect ID is used as `value`; put the title/summary in `description`.
+  - 'Do NOT replace the canonical defect ID with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include severity, detection phase, root cause, or status in `description` when those belong in extracted_fields.
+  - Do NOT invent a description. It must be grounded in the source block.
+- name: Incident
+  description: Production incident record. Links to defects for root cause analysis.
+  name_pattern: INC-{ID} from source. ≤80 chars.
+  ie_examples:
+  - block_text: 'INC-LOAN-089: Production incident — bullet repayment not applied to 12 new loans booked after config
+      change. Impact: High. Related defect: DEF-2024-0567.'
+    block_category: Incident
+    entities:
+    - type: Incident
+      value: INC-LOAN-089
+      description: Production incident — bullet repayment not applied to 12 new loans booked after config change.
+      confidence: 0.95
+    - type: Defect
+      value: DEF-2024-0567
+      confidence: 0.9
+    - type: Process
+      value: Loan Booking
+      confidence: 0.85
+    relationships:
+    - from_type: Defect
+      from_value: DEF-2024-0567
+      rel_type: LINKED_TO
+      to_type: Incident
+      to_value: INC-LOAN-089
+    - from_type: Incident
+      from_value: INC-LOAN-089
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: Loan Booking
+  - block_text: 'Incident INC-PAY-2024-041: RTGS payment gateway experienced intermittent timeouts between 14:00-16:30
+      UTC on 2024-06-12. Approximately 340 outbound payments were delayed. Severity P1. Operations team performed
+      manual failover to backup gateway. Root cause under investigation. Impacts RTGS Payment Processing and downstream
+      settlement.'
+    block_category: Incident
+    entities:
+    - type: Incident
+      value: INC-PAY-2024-041
+      description: RTGS payment gateway experienced intermittent timeouts between 14:00-16:30 UTC on 2024-06-12. Approximately
+        340 outbound payments were delayed.
+      confidence: 0.95
+    - type: System
+      value: RTGS Payment Gateway
+      confidence: 0.9
+    - type: Process
+      value: RTGS Payment Processing
+      confidence: 0.85
+    relationships:
+    - from_type: Incident
+      from_value: INC-PAY-2024-041
+      rel_type: IMPACTS
+      to_type: System
+      to_value: RTGS Payment Gateway
+    - from_type: Incident
+      from_value: INC-PAY-2024-041
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: RTGS Payment Processing
+  anti_examples:
+  - Do NOT extract the impact level as an entity
+  - Do NOT discard the incident summary when an incident ID is used as `value`; put the summary in `description`.
+  - 'Do NOT replace the canonical incident ID with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include severity, timestamps, or status alone in `description` when those belong in extracted_fields.
+  - Do NOT invent a description. It must be grounded in the source block.
+- name: System
+  description: 'A named, deployable banking software platform, application, integration system, or named API service
+    — something you can install, configure, or connect to. Valid examples: Temenos Transact, Murex, Finastra TI+,
+    Kondour, Payment Hub, Online Banking Portal, Mobile Banking App, SWIFT Gateway, SMS Gateway, Statement Generation
+    System, Core Banking System, LOS_Core, Actimize AML, Loan API. From TechnicalSpec API catalogs, extract the named
+    API or service (Loan API from LOAN.API.3), not the operation. NOT HTTP methods, NOT operationIds, NOT REST paths,
+    NOT accounting transaction codes, NOT customer types, NOT generic module references without a product name.'
+  name_pattern: Title Case, proper product name ≤80 chars
+  reject_names:
+  - Storage
+  - System
+  - Module
+  - Engine
+  - Service
+  - Layer
+  ie_examples:
+  - block_text: The payment hub integrates with Temenos Transact for account validation, SWIFT Gateway for cross-border
+      message transmission, and the SMS Gateway for customer notifications. Finastra TI+ handles treasury deal processing
+      and feeds position data to Murex for risk calculation.
+    block_category: TechnicalSystem
+    entities:
+    - type: System
+      value: Payment Hub
+      confidence: 0.97
+    - type: System
+      value: Temenos Transact
+      confidence: 0.97
+    - type: System
+      value: SWIFT Gateway
+      confidence: 0.95
+    - type: System
+      value: SMS Gateway
+      confidence: 0.92
+    - type: System
+      value: Finastra TI+
+      confidence: 0.95
+    - type: System
+      value: Murex
+      confidence: 0.95
+    relationships:
+    - from_type: System
+      from_value: Payment Hub
+      rel_type: INTEGRATES_WITH
+      to_type: System
+      to_value: Temenos Transact
+    - from_type: System
+      from_value: Payment Hub
+      rel_type: INTEGRATES_WITH
+      to_type: System
+      to_value: SWIFT Gateway
+    - from_type: System
+      from_value: Finastra TI+
+      rel_type: INTEGRATES_WITH
+      to_type: System
+      to_value: Murex
+  - block_text: I.NO Method Operation Id Operation Description. LOAN.API.3 PUT cancelArrangement Performs the loan
+      cancellation for buy now pay later service. LOAN.API.4 POST createConsumerLoan Creates the creation of consumer
+      loan for the given product.
+    block_category: TechnicalSpec
+    entities:
+    - type: System
+      value: Loan API
+      confidence: 0.92
+    relationships: []
+  anti_examples:
+  - Do NOT extract accounting entries as System — Dr Cash Arrangement, Cr Loan Account, Repayment To Me, Dr Customer
+    Account are transaction/accounting codes not systems.
+  - Do NOT extract customer types or customer states as System — Individual Customer, Corporate Customer, Unauthorised
+    Customer, Deceased Customer are Actor or DataEntity types not systems.
+  - Do NOT extract process or action names as System — Create Prospect, Activate Customer, Amend Customer, Authorise
+    Customer, Delete External User are Processes not systems.
+  - Do NOT extract abbreviations or transaction codes as System — Cm, Ft, Tt, Bom, Tab Arrangement Bom are codes not
+    named systems.
+  - Do NOT extract UI elements or menus as System — User Menu, Customer Relationship, Individual Customer Portal are
+    UI elements not systems.
+  - Do NOT extract generic words alone as System — System, Module, Engine, Service, Layer, or Storage without a proper
+    product name are not valid System entities.
+  - Do NOT extract API operationIds, HTTP methods, or REST paths as System — cancelArrangement, createConsumerLoan,
+    PUT, POST /loans are operations on a system, not the system. From a TechnicalSpec API catalog, extract the named
+    API or service (Loan API from LOAN.API.3) as System.
+- name: DataEntity
+  description: Named data object, report, or master record. Connected to processes via PRODUCES.
+  name_pattern: Title Case, descriptive ≤80 chars
+  ie_examples:
+  - text: The Loan Disbursement Process produces the Loan Repayment Schedule containing principal, interest, due date,
+      and outstanding balance.
+    entities:
+    - type: DataEntity
+      value: Loan Repayment Schedule
+      confidence: 0.95
+    - type: Process
+      value: Loan Disbursement Process
+      confidence: 0.9
+    relationships:
+    - from_type: Process
+      from_value: Loan Disbursement Process
+      rel_type: PRODUCES
+      to_type: DataEntity
+      to_value: Loan Repayment Schedule
+  - text: The Customer Master Record stores customer identity, contact, risk classification, and KYC status used during
+      customer onboarding.
+    entities:
+    - type: DataEntity
+      value: Customer Master Record
+      confidence: 0.95
+    - type: Process
+      value: Customer Onboarding
+      confidence: 0.9
+    relationships: []
+  anti_examples:
+  - Do NOT extract field names like 'SSN' or 'Email' as DataEntity
+  - Do NOT extract PII types as DataEntity
+- name: Actor
+  description: A role or persona that performs processes. Extracted from BPMN swimlanes, process docs. Enables role-based
+    testing traversal.
+  name_pattern: 'Title case role name: Relationship Manager, Credit Analyst, Back Office'
+  anti_examples:
+  - Do NOT extract system names as Actor — use System instead
+  - Do NOT extract department names as Actor unless they represent a specific role
+  ie_examples:
+  - text: The Relationship Manager initiates the loan application and submits it to Credit Underwriting.
+    entities:
+    - type: Actor
+      value: Relationship Manager
+      confidence: 0.95
+    - type: Process
+      value: Loan Application
+      confidence: 0.9
+    relationships:
+    - from_type: Actor
+      from_value: Relationship Manager
+      rel_type: PERFORMS
+      to_type: Process
+      to_value: Loan Application
+  - text: The Credit Analyst reviews the applicant's financial information and performs credit assessment before the
+      loan approval decision.
+    entities:
+    - type: Actor
+      value: Credit Analyst
+      confidence: 0.95
+    - type: Process
+      value: Credit Assessment
+      confidence: 0.9
+    relationships:
+    - from_type: Actor
+      from_value: Credit Analyst
+      rel_type: PERFORMS
+      to_type: Process
+      to_value: Credit Assessment
+relationship_types:
+- name: PART_OF
+  description: Hierarchical membership. Child is part of parent.
+  verb: is part of
+  example:
+    from: Loan Origination
+    to: SME Lending
+    evidence: Loan Origination is a function within the SME Lending product line
+    from_type: Function
+    to_type: ProductLine
+  anti_example: Do NOT use PART_OF for non-hierarchical connections — use IMPACTS instead
+- name: IMPLEMENTS
+  description: User story implements or realizes a requirement.
+  verb: implements
+  example:
+    from: USR-365
+    to: FR-04
+    evidence: User story USR-365 implements the EMI schedule generation requirement FR-04
+  anti_example: Do NOT use IMPLEMENTS for TestCase→Requirement (use COVERS)
+- name: COVERS
+  description: Test case covers or tests a requirement.
+  verb: covers
+  example:
+    from: CLOS_DEL_SCN_004_TC_001
+    to: DEL_CL_RTM_001
+    evidence: Test case validates delinquency processing requirement
+  anti_example: Do NOT use COVERS for UserStory→Requirement (use IMPLEMENTS)
+- name: VALIDATES
+  description: Acceptance criterion validates a requirement's completeness.
+  verb: validates
+  example:
+    from: AC-FR04-01
+    to: FR-04
+    evidence: AC defines the expected bullet repayment schedule output for requirement FR-04
+  anti_example: Do NOT use VALIDATES for TestCase→Requirement (use COVERS)
+- name: IMPACTS
+  description: General impact relationship. Source impacts the target. Used for change analysis and blast radius.
+  verb: impacts
+  example:
+    from: FR-04
+    to: EMI Schedule Generation
+    evidence: Requirement FR-04 impacts the EMI schedule generation process
+    from_type: Requirement
+    to_type: Process
+  anti_example: Do NOT use IMPACTS for hierarchical relationships (use PART_OF)
+- name: GOVERNED_BY
+  description: Process is governed by a rule or controlled by an operational control.
+  verb: is governed by
+  example:
+    from: Interest Accrual
+    to: NAB Classification at 90 DPD
+    evidence: Interest accrual ceases when NAB classification rule triggers at 90+ DPD
+    from_type: Process
+    to_type: Rule
+  anti_example: Do NOT use GOVERNED_BY for process-to-process connections (use IMPACTS)
+- name: USES
+  description: Process executes on or uses a system.
+  verb: uses
+  example:
+    from: Delinquency Processing
+    to: LOS_Core
+    evidence: Delinquency processing runs on the LOS Core system
+  anti_example: Do NOT use USES for process-to-process connections (use IMPACTS)
+- name: VIOLATES
+  description: Defect violates or breaches a requirement or acceptance criterion.
+  verb: violates
+  example:
+    from: SYN-CL-3015
+    to: FR-04
+    evidence: Defect SYN-CL-3015 violates the interest accrual suspension requirement
+    from_type: Defect
+    to_type: Requirement
+  anti_example: Do NOT use VIOLATES for non-defect entities
+- name: MISSED_BY
+  description: Defect was missed by (should have been caught by) a test case.
+  verb: was missed by
+  example:
+    from: SYN-CL-3015
+    to: CLOS_DEL_SCN_004_TC_001
+    evidence: Delinquency test case should have caught the NAB classification defect
+  anti_example: Do NOT use MISSED_BY for test cases that correctly found the defect
+- name: LINKED_TO
+  description: Bidirectional link between a defect and a production incident.
+  verb: is linked to
+  example:
+    from: DEF-2024-0567
+    to: INC-LOAN-089
+    evidence: Defect DEF-2024-0567 caused production incident INC-LOAN-089
+  anti_example: Do NOT use LINKED_TO for unrelated defect-incident pairs
+- name: PRODUCES
+  description: Process produces or generates a data artifact.
+  verb: produces
+  example:
+    from: Regulatory Reporting Batch
+    to: Portfolio Outstanding Report
+    evidence: The batch job generates the portfolio outstanding report
+  anti_example: Do NOT use PRODUCES for process-to-process outputs (use IMPACTS)
+- name: CROSS_DOMAIN_IMPACTS
+  description: Process in one domain impacts a process in another domain. Cross-domain only.
+  verb: cross-domain impacts
+  example:
+    from: SME Loan Product Setup
+    to: Capital Adequacy Calculation
+    evidence: Changes to SME loan products affect capital adequacy calculations in the risk domain
+  anti_example: Do NOT use CROSS_DOMAIN_IMPACTS for same-domain process connections (use IMPACTS)
+- name: PERFORMS
+  description: Actor/role performs or executes a process. Enables role-based testing queries.
+  verb: performs
+  example:
+    from: Relationship Manager
+    to: Loan Application
+    evidence: The RM initiates and manages the loan application process
+  anti_example: Do NOT use PERFORMS for Process-to-System — use USES instead. PERFORMS is Actor-to-Process only.
+- name: MITIGATES
+  description: Control mitigates risk in a process or enforces a rule. Control → Process means the control governs/gates
+    the process.
+  verb: mitigates
+  example:
+    from: Real-Time Sanctions Screening
+    to: Outbound Payment Processing
+    evidence: Sanctions screening control gates all outbound payments before release
+    from_type: Control
+    to_type: Process
+  anti_example: Do NOT use MITIGATES for Process-to-Rule or Process-to-Control — use GOVERNED_BY instead. MITIGATES
+    is Control-to-Process or Control-to-Rule.
+- name: ENFORCED_BY
+  description: Rule or control is enforced by an external regulation. Links internal governance to external mandates.
+  verb: is enforced by
+  example:
+    from: CET1 Minimum 8% Plus Conservation Buffer
+    to: Basel III
+    evidence: The CET1 ratio rule is mandated by Basel III capital adequacy norms
+    from_type: Rule
+    to_type: Regulation
+  anti_example: Do NOT use ENFORCED_BY between two internal rules — use GOVERNED_BY
+- name: COMPLIANT_WITH
+  description: Process must comply with an external regulation. Used for compliance tracing.
+  verb: complies with
+  example:
+    from: Capital Adequacy Calculation
+    to: Basel III
+    evidence: Capital adequacy calculations must meet Basel III requirements
+  anti_example: Do NOT use COMPLIANT_WITH for internal rules (use GOVERNED_BY)
+- name: INTEGRATES_WITH
+  description: System-to-system integration point. Captures interfaces, APIs, file feeds, and messaging between systems
+    without creating a separate Interface node.
+  verb: integrates with
+  example:
+    from: LOS_Core
+    to: Core Banking System
+    evidence: LOS sends approved loan records to Core Banking via real-time API for account creation
+  anti_example: Do NOT use INTEGRATES_WITH for process-to-system — use USES instead
+industry_id: banking
+policy_scope: Industry-wide extraction guidance; runtime domain and product-line scope comes from the frozen customer
+  ontology context.
+block_categories:
+- name: Requirement
+  description: A source-supported obligation, capability, constraint, or desired system behavior.
+  maps_to_node: Requirement
+  examples:
+  - 'FR-04: The system shall auto-generate a repayment schedule (EMI or bullet) upon loan booking, reflecting selected
+    interest type, tenor, and repayment frequency.'
+  - The system must validate that collateral value exceeds 120% of loan amount before approval can proceed.
+  anti_examples:
+  - Do NOT extract narrative prose or section introductions as Requirement
+  - Do NOT extract section headings like '3. Functional Requirements' as Requirement
+  - Do NOT discard the descriptive text when an entity has an ID. Preserve the ID as `value` and extract the human-readable
+    statement into `description`.
+  - 'Do NOT replace the canonical entity ID with `ID : description`; `value` must remain the stable identifier used
+    for graph linking (e.g. FR-04).'
+- name: Process
+  description: A named operational or business procedure supported by steps, actors, decisions, or system interactions.
+  maps_to_node: Process
+  examples:
+  - 'Loan disbursement initiation: The maker enters the disbursement instruction in LOS_Core specifying account number,
+    amount, and value date. The system validates available limit against sanctioned amount. On success the maker submits
+    for checker review. The checker approves in LOS_Core. On dual approval the disbursement request is transmitted
+    to Core Banking for fund transfer execution.'
+  anti_examples:
+  - Do NOT extract flowchart box labels like 'Check band' as Process — these are diagram elements
+  - Do NOT extract state names like 'Rejected' or 'Approved' as Process — these are states
+  - Do NOT extract data values like 'AggressiveProfile' as Process
+  - Do NOT extract abstract methodology stages like 'Requirement Stage', 'Design Stage', 'Test Planning', 'Test Execution',
+    'Test Design' as Process — these are methodology phases, not executable workflows
+- name: Rule
+  description: An explicit condition and resulting decision or action.
+  maps_to_node: Rule
+  examples:
+  - 'Interest accrual ceases when account reaches 90+ DPD and is classified as Non-Accrual of Business (NAB). Repayment
+    priority follows: Interest → Charges → Tax → Principal.'
+  - If a pricing override is submitted, the user must provide documented justification, and the system must log user
+    ID, timestamp, old rate, new rate, and reason for the override.
+  anti_examples:
+  - Do NOT extract narrative descriptions of policy background as Rule
+  - Do NOT extract external regulations (Basel III, OFAC) as Rule — use Regulation
+  - Do NOT extract operational controls (sanctions screening gate) as Rule — use Control
+  - Do NOT extract threshold constraints as Rule when no consequence is stated — collateral must exceed 120% is a
+    Requirement not a Rule
+- name: Control
+  description: A concrete checkpoint or mechanism that verifies, restricts, authorizes, reconciles, or records an
+    action.
+  maps_to_node: Control
+  examples:
+  - Real-time sanctions screening must execute on all outbound payments above $5,000. The screening control checks
+    against OFAC SDN, UN, and EU sanctions lists. Flagged transactions are held pending compliance review.
+  - 'KYC completion gate: No account can be activated until KYC verification status = COMPLETE and risk rating is
+    assigned. This is a mandatory SOX control for new customer onboarding.'
+  anti_examples:
+  - Do NOT extract business logic like 'if amount > $1M then escalate' as Control — that is a Rule
+  - Do NOT extract external regulations as Control — use Regulation
+- name: Regulation
+  description: An explicitly identified external law, regulation, standard, or official instrument.
+  maps_to_node: Regulation
+  examples:
+  - All capital adequacy calculations must comply with Basel III norms. The bank maintains a minimum CET1 ratio of
+    8% with a 2.5% conservation buffer as mandated by the central bank.
+  - PCI-DSS compliance requires encryption of cardholder data at rest and in transit. Annual penetration testing and
+    quarterly vulnerability scans are mandatory.
+  anti_examples:
+  - Do NOT extract internal policies as Regulation — those are Rules
+  - Do NOT extract control mechanisms as Regulation — those are Controls
+- name: TestCase
+  description: An individual test procedure with a stated subject and verification intent.
+  maps_to_node: TestCase
+  examples:
+  - 'Test Case CLOS_DEL_SCN_004_TC_001 | Scenario: Delinquency processing for Long Term Loan | Priority: High | Requirement:
+    DEL_CL_RTM_001 | Step 1: Login to LOS_Core | Step 2: Navigate to Delinquency screen | Step 3: Enter mandatory
+    fields | Expected: Delinquency classification applied'
+  anti_examples:
+  - Do NOT extract individual test steps as separate entities
+  - Do NOT extract test data values as entities
+  - Do NOT discard the scenario/title when a test case ID is used as `value`; put the scenario/title in `description`.
+  - 'Do NOT replace the canonical test case ID with `ID : description`; `value` must remain the stable graph identifier.'
+- name: Defect
+  description: A reported product or process malfunction with evidence of unintended behavior.
+  maps_to_node: Defect
+  examples:
+  - 'SYN-CL-3015 | Interest Accrual not suspended after NAB classification | Detection: SIT | Root Cause: Business
+    Logic Error | Module: Loan Servicing - Interest Accrual | Severity: High | Linked: USR-365'
+  anti_examples:
+  - Do NOT extract severity level or detection phase as entities — these go into extracted_fields
+  - Do NOT discard the defect title when a defect ID is used as `value`; put the title/summary in `description`.
+  - 'Do NOT replace the canonical defect ID with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include severity, detection phase, root cause, or status in `description` when those belong in extracted_fields.
+- name: Incident
+  description: A specific operational event such as an outage or service interruption.
+  maps_to_node: Incident
+  examples:
+  - 'INC-LOAN-089: Production incident — bullet repayment not applied to 12 new loans booked after config change.
+    Impact: High. Related defect: DEF-2024-0567.'
+  - 'Incident INC-PAY-2024-041: RTGS payment gateway experienced intermittent timeouts between 14:00-16:30 UTC on
+    2024-06-12. Approximately 340 outbound payments were delayed. Severity P1. Operations team performed manual failover
+    to backup gateway. Root cause under investigation. Impacts RTGS Payment Processing and downstream settlement.'
+  anti_examples:
+  - Do NOT extract the impact level as an entity
+  - Do NOT discard the incident summary when an incident ID is used as `value`; put the summary in `description`.
+  - 'Do NOT replace the canonical incident ID with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include severity, timestamps, or status alone in `description` when those belong in extracted_fields.
+- name: UserStory
+  description: A user role’s stated goal or requested capability.
+  maps_to_node: UserStory
+  examples:
+  - 'As a relationship manager, I want to configure bullet repayment schedules for SME loans, so that product setup
+    reflects the agreed terms. Sprint: Q1-2025, Priority: High'
+  anti_examples:
+  - Do NOT extract sprint name or priority as entities — these go into extracted_fields
+  - Do NOT extract the actor role from 'As a [role]' as a separate entity
+  - Do NOT discard the story text when an ID or short title is used as `value`; put the story/title summary in `description`.
+  - 'Do NOT replace the canonical entity ID/title with `ID : description`; `value` must remain the stable graph identifier.'
+- name: AcceptanceCriteria
+  description: A testable condition that defines when a requirement or story is satisfied.
+  maps_to_node: AcceptanceCriteria
+  examples:
+  - 'AC-FR04-01: Given a new loan is booked with bullet repayment, When the schedule is generated, Then the system
+    shall create a single principal payment at maturity with periodic interest-only payments.'
+  anti_examples:
+  - Do NOT extract Given/When/Then keywords as entities
+  - Do NOT discard the Given/When/Then statement when an AC ID is used as `value`; put the criterion text in `description`.
+  - 'Do NOT replace the canonical AC ID with `ID : description`; keep `value` as AC-FR04-01 for graph linking.'
+  - Do NOT invent a Requirement description when only the ID (e.g. FR-04) is referenced — leave description empty
+    on that reference.
+- name: TechnicalSystem
+  description: A specifically named software application, platform, module, or service.
+  maps_to_node: System
+  examples:
+  - The payment hub integrates with Temenos Transact for account validation, SWIFT Gateway for cross-border message
+    transmission, and the SMS Gateway for customer notifications. Finastra TI+ handles treasury deal processing and
+    feeds position data to Murex for risk calculation.
+  - I.NO Method Operation Id Operation Description. LOAN.API.3 PUT cancelArrangement Performs the loan cancellation
+    for buy now pay later service. LOAN.API.4 POST createConsumerLoan Creates the creation of consumer loan for the
+    given product.
+  anti_examples:
+  - Do NOT extract accounting entries as System — Dr Cash Arrangement, Cr Loan Account, Repayment To Me, Dr Customer
+    Account are transaction/accounting codes not systems.
+  - Do NOT extract customer types or customer states as System — Individual Customer, Corporate Customer, Unauthorised
+    Customer, Deceased Customer are Actor or DataEntity types not systems.
+  - Do NOT extract process or action names as System — Create Prospect, Activate Customer, Amend Customer, Authorise
+    Customer, Delete External User are Processes not systems.
+  - Do NOT extract abbreviations or transaction codes as System — Cm, Ft, Tt, Bom, Tab Arrangement Bom are codes not
+    named systems.
+- name: TechnicalSpec
+  description: A machine-readable or otherwise explicit interface contract, schema, or endpoint definition.
+  maps_to_node: System
+  examples:
+  - The payment hub integrates with Temenos Transact for account validation, SWIFT Gateway for cross-border message
+    transmission, and the SMS Gateway for customer notifications. Finastra TI+ handles treasury deal processing and
+    feeds position data to Murex for risk calculation.
+  - I.NO Method Operation Id Operation Description. LOAN.API.3 PUT cancelArrangement Performs the loan cancellation
+    for buy now pay later service. LOAN.API.4 POST createConsumerLoan Creates the creation of consumer loan for the
+    given product.
+  anti_examples:
+  - Do NOT extract accounting entries as System — Dr Cash Arrangement, Cr Loan Account, Repayment To Me, Dr Customer
+    Account are transaction/accounting codes not systems.
+  - Do NOT extract customer types or customer states as System — Individual Customer, Corporate Customer, Unauthorised
+    Customer, Deceased Customer are Actor or DataEntity types not systems.
+  - Do NOT extract process or action names as System — Create Prospect, Activate Customer, Amend Customer, Authorise
+    Customer, Delete External User are Processes not systems.
+  - Do NOT extract abbreviations or transaction codes as System — Cm, Ft, Tt, Bom, Tab Arrangement Bom are codes not
+    named systems.
+- name: TechnicalOps
+  description: Operational technical detail such as scheduled jobs, configuration, deployment, or system events.
+  maps_to_node: _SKIP_KG
+  anti_examples:
+  - Do not create graph entities from this block category.
+  examples: []
+- name: Reference
+  description: A glossary item, definition, acronym, or reference information.
+  maps_to_node: _SKIP_KG
+  anti_examples:
+  - Do not create graph entities from this block category.
+  examples: []
+- name: Diagram
+  description: Visual content such as a workflow, architecture diagram, or form image.
+  maps_to_node: _SKIP_KG
+  anti_examples:
+  - Do not create graph entities from this block category.
+  examples: []
+- name: FormCapture
+  description: A specifically identified form or screen used to capture structured information.
+  maps_to_node: FormCapture
+  examples:
+  - 'KYC Verification Form for SME Loan Applicants. Fields: Applicant Name, Date of Incorporation, ID Type, ID Number,
+    Registered Address, Risk Rating, KYC Status, Verified By. Must be completed before account activation per CTRL-KYC-001.'
+  anti_examples:
+  - System architecture diagram
+  - Process flow chart
+- name: Narrative
+  description: General prose that does not meet a more specific supported category.
+  maps_to_node: _SKIP_KG
+  anti_examples:
+  - Do not create graph entities from this block category.
+  examples: []

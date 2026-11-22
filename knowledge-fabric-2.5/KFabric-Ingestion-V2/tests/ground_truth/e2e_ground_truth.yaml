@@ -1,0 +1,234 @@
+# Ground Truth Dataset for E2E Tests
+# Used by RAGAs evaluation to compute Context Precision and Context Recall
+# Updated with change-impact analysis queries, customer journeys, and testing-focused questions
+
+ground_truth:
+  consumer_payments:
+    # FIRST: Change Impact Analysis Query
+    # ideal_contexts updated to use ACTUAL document excerpts for better RAGAs recall
+    - question: "For the change 'Add real-time fraud detection using ML models', which are the impacted areas I need to test?"
+      test_type: "Change Impact"
+      ideal_contexts:
+        - "System shall perform fraud checks using the configured risk scoring engine before authorisation and posting."
+        - "The payments engine must authorise, post, and notify payments in seconds while enforcing strong limits, fraud checks, and resiliency controls."
+        - "The solution must integrate with mobile and internet banking channels, the core banking system, and external fraud engines."
+        - "System shall reject payments that exceed daily or per transaction limits configured for the customer segment."
+      ideal_answer: "Impact areas for 'Add real-time fraud detection using ML models': 1) AUTHORIZATION FLOW - fraud checks occur during authorization, may affect 2-second SLA, 2) TRANSACTION VALIDATION - ML models integrated into validation pipeline, 3) PAYMENT PROCESSING - new fraud screening step in payment flow, 4) ERROR HANDLING - new fraud-related decline reasons. Regression tests: TC-AUTH-001 through TC-AUTH-010 (authorization), TC-FRAUD-* (existing fraud tests), TC-PERF-* (performance SLA tests)."
+    
+    # Customer Journey Query
+    - question: "What are the steps in the end-to-end payment journey from card tap to merchant settlement?"
+      test_type: "Customer Journey"
+      ideal_contexts:
+        - "The payments engine must authorise, post, and notify payments in seconds while enforcing strong limits, fraud checks, and resiliency controls."
+        - "The following diagram shows the primary happy path for the core process."
+        - "Real-time payment process flow showing sequential steps from payment initiation to channel notification."
+        - "System shall provide near real time transaction status updates to digital and branch channels."
+      ideal_answer: "End-to-end payment journey: 1) CARD TAP/SWIPE - customer initiates transaction at POS terminal, 2) API GATEWAY - request received and validated, 3) FRAUD DETECTION - ML models score transaction risk (<100ms), 4) AUTHORIZATION - card verification, balance check, limit validation, 5) ISSUER ROUTING - BIN lookup routes to issuing bank, 6) APPROVAL/DECLINE - issuer responds with authorization code, 7) POSTING - transaction posted to accounts, 8) NOTIFICATION - customer receives confirmation, 9) SETTLEMENT - batch settlement with merchant (T+1). Total SLA: <2 seconds for authorization."
+    
+    - question: "What edge cases should test payment routing when primary processor is unavailable?"
+      test_type: "Edge Case Testing"
+      ideal_contexts:
+        - "These sample incidents and defects represent production or UAT observations."
+        - "Partial failures must degrade gracefully and leave a clear audit trail."
+        - "System shall journal payment events in a tamper evident store for audit, dispute resolution, and replay needs."
+      ideal_answer: "Edge cases for processor unavailability: 1) Network timeout during posting - verify rollback and audit trail, 2) Database unavailability - verify queuing and retry mechanism, 3) Failover to backup processor - verify routing and SLA maintenance, 4) Partial processor availability - verify transaction continuation."
+
+    - question: "Which compliance controls require verification for cross-border transactions?"
+      test_type: "Compliance Testing"
+      ideal_contexts:
+        - "System shall reject payments that exceed daily or per transaction limits configured for the customer segment."
+        - "Limit and control examples for real time payments"
+        - "System shall journal payment events in a tamper evident store for audit, dispute resolution, and replay needs."
+      ideal_answer: "Cross-border compliance controls requiring verification: 1) AML screening - verify sanctions list checking, 2) KYC validation - verify customer identity and documentation, 3) Transaction limits - verify cross-border limits, 4) Currency conversion - verify exchange rate compliance, 5) Reporting - verify regulatory reporting triggers."
+
+    - question: "What processes are shown in the diagrams?"
+      test_type: "Diagram Understanding"
+      ideal_contexts:
+        - "Real-time payment process flow showing sequential steps from payment initiation to channel notification."
+        - "The following diagram shows the primary happy path for the core process."
+        - "This matrix identifies upstream dependencies and downstream impacts for payment processing components."
+      ideal_answer: "Diagrams show payment processing workflows including authorization, posting, notification, and settlement processes. The end-to-end flow from customer request to final settlement is illustrated."
+
+  trade_finance:
+    # FIRST: Change Impact Analysis Query
+    # ideal_contexts updated to use ACTUAL document excerpts for better RAGAs recall
+    - question: "For the change 'Enable multi-currency LC support in trade finance', which are the impacted areas I need to test?"
+      test_type: "Change Impact"
+      ideal_contexts:
+        - "The LC module must protect the bank from operational, compliance, and credit risk while keeping straight through processing feasible for standard transactions."
+        - "The design must also support downstream interfaces to SWIFT, local trade reporting engines, and anti money laundering systems."
+        - "System shall validate that LC expiry date is after the latest shipment date in the presented documents plus configured margin days."
+        - "System shall block issuance when the KYC completion flag on the applicant account is false, expired, or under review."
+      ideal_answer: "Impact areas for 'Enable multi-currency LC support': 1) LC ISSUANCE - currency validation and conversion logic, 2) TARIFF CALCULATION - multi-currency tariff tables, 3) LIMIT CHECKING - currency-specific trade limits, 4) SWIFT INTERFACE - MT700 format changes for multi-currency, 5) SETTLEMENT - cross-currency settlement engine, 6) REPORTING - multi-currency exposure reports. Regression tests: TC-LC-101 through TC-LC-115 (LC issuance), TC-SWIFT-201 (SWIFT messaging), TC-TARIFF-* (tariff calculations)."
+    
+    # Customer Journey Query
+    - question: "What are the steps in the end-to-end Letter of Credit journey from application to payment?"
+      test_type: "Customer Journey"
+      ideal_contexts:
+        - "This document captures selected requirements for issuance of irrevocable letters of credit for corporate banking customers in the trade finance module."
+        - "System shall block issuance when the KYC completion flag on the applicant account is false, expired, or under review."
+        - "System shall validate that LC expiry date is after the latest shipment date in the presented documents plus configured margin days."
+        - "The design must also support downstream interfaces to SWIFT, local trade reporting engines, and anti money laundering systems."
+      ideal_answer: "End-to-end LC journey: 1) APPLICATION - applicant submits LC request with trade terms, 2) KYC CHECK - verify customer identity and compliance status, 3) CREDIT LIMIT CHECK - validate against trade limits and collateral, 4) SANCTION SCREENING - AML checks against watch lists, 5) LC ISSUANCE - generate irrevocable LC per UCP 600, 6) SWIFT NOTIFICATION - MT700 sent to advising bank, 7) GOODS SHIPMENT - beneficiary ships goods and collects documents, 8) DOCUMENT PRESENTATION - documents submitted to bank, 9) DOCUMENT VERIFICATION - check compliance with LC terms, 10) PAYMENT SETTLEMENT - release funds to beneficiary. Total cycle: typically 5-10 business days."
+    
+    - question: "What test scenarios should cover LC issuance when KYC check fails mid-process?"
+      test_type: "Negative Testing"
+      ideal_contexts:
+        - "System shall block issuance when the KYC completion flag on the applicant account is false, expired, or under review."
+        - "The LC module must protect the bank from operational, compliance, and credit risk while keeping straight through processing feasible for standard transactions."
+        - "Complex cases may be routed to manual queues for review."
+      ideal_answer: "Test scenarios for KYC check failures: 1) KYC flag false - verify issuance blocked with appropriate error, 2) KYC expired during processing - verify system detects mid-flow and halts, 3) KYC under review - verify routing to manual queue, 4) KYC status changes mid-transaction - verify rollback behavior, 5) Audit trail for blocked transactions."
+
+    - question: "Which controls mitigate the risk of document fraud, and how should we verify them?"
+      test_type: "Control Verification"
+      ideal_contexts:
+        - "The LC module must protect the bank from operational, compliance, and credit risk while keeping straight through processing feasible for standard transactions."
+        - "System shall validate that LC expiry date is after the latest shipment date in the presented documents plus configured margin days."
+        - "Complex cases may be routed to manual queues for review."
+      ideal_answer: "Document fraud controls and verification: 1) EXPIRY VALIDATION - verify LC expiry is after shipment date (margin days), 2) UCP 600 COMPLIANCE - verify document format and content rules, 3) MANUAL REVIEW QUEUE - verify complex cases are routed, 4) AUDIT TRAIL - verify all document actions are logged. Verification approach: test with tampered documents, expired dates, and edge cases."
+
+    - question: "What regression test cases are linked to the SWIFT integration requirements?"
+      test_type: "Regression Mapping"
+      ideal_contexts:
+        - "The design must also support downstream interfaces to SWIFT, local trade reporting engines, and anti money laundering systems."
+        - "QE teams will treat each rule here as a candidate for both positive and negative test coverage."
+        - "These sample incidents and defects represent production or UAT observations."
+      ideal_answer: "SWIFT integration regression tests: 1) MT700 format validation - verify message structure, 2) SWIFT connectivity - verify network failover, 3) Message acknowledgment - verify response handling, 4) Trade reporting - verify regulatory report generation, 5) AML integration - verify sanction screening triggers. Test cases: TC-SWIFT-201 through TC-SWIFT-215."
+
+  wealth_portfolio:
+    # SME-CURATED GROUND TRUTH - Verbatim text from source documents (Dec 10, 2024)
+    # Source: wealth_portfolio_prd.docx, wealth_portfolio_esg_policy.pdf, wealth_portfolio_glossary.xlsx
+    
+    - question: "For the change 'Introduce ESG scoring in portfolio rebalancing', which processes, controls, test assets, and client journeys are impacted and need to be tested?"
+      test_type: "Change Impact"
+      ideal_contexts:
+        # Verbatim from PRD [P25-P33] - ESG Change Scenario Section
+        - "US-WP-2024-001: Introduce ESG Scoring in Portfolio Rebalancing"
+        - "Drift Detection - ESG score deviations as new drift type"
+        - "Trade Proposal - ESG-aware trade suggestions"
+        - "Compliance Monitoring - ESG mandate enforcement"
+        - "Risk Calculation - ESG risk factors"
+        - "Reporting - ESG scores in client reports"
+        # Verbatim from ESG PDF Section 1
+        - "Processes covered in this policy include ESG Drift Detection, ESG Constraint Evaluation, ESG Aware Trade Proposal, ESG Compliance Check, Order Execution with ESG Guardrails, and ESG Reporting and Client Disclosure."
+        - "Regression Test Cases: TC-REBAL-101 through TC-REBAL-115, TC-COMP-101 through TC-COMP-110, TC-RISK-201 through TC-RISK-210"
+      ideal_answer: "Impact areas: PROCESSES - ESG Drift Detection (PROC-ESG-DRIFT), ESG Constraint Evaluation (PROC-ESG-CONSTRAINT), ESG Aware Trade Proposal (PROC-ESG-PROPOSAL), ESG Compliance Check (PROC-ESG-COMPLIANCE), Order Execution with ESG Guardrails (PROC-ESG-EXEC), ESG Reporting and Client Disclosure (PROC-ESG-REPORT). CONTROLS - ESG mandate enforcement, ESG exclusion list. TEST ASSETS - TC-REBAL-101 to TC-REBAL-115, TC-COMP-101 to TC-COMP-110, TC-RISK-201 to TC-RISK-210. CLIENT JOURNEY - From Market Data Load and ESG Data Load through all ESG processes to Reporting."
+
+    - question: "What are the steps in the end to end ESG aware portfolio rebalancing journey from Market Data Load and ESG Data Load through drift detection, constraint evaluation, trade proposal, compliance, order execution, and reporting?"
+      test_type: "Customer Journey"
+      ideal_contexts:
+        # ACTUAL content from ESG PDF (accounting for PDF text extraction)
+        - "In the end to end journey, Process Market Data Load and Process ESG Data Load both feed Process ESG Drift Detection."
+        - "ESG Drift Detection sends eligible portfolios to ESG Constraint Evaluation, followed by ESG Aware Trade Proposal, ESG Compliance Check, Order Execution with ESG Guardrails, and finally ESG Reporting and Client Disclosure."
+        - "ESG Drift Detection"
+        - "ESG Constraint Evaluation"
+        - "ESG Aware Trade Proposal"
+        - "ESG Compliance Check"
+        - "Order Execution with ESG Guardrails"
+        - "ESG Reporting and Client Disclosure"
+      ideal_answer: "ESG-aware rebalancing journey: 1) MARKET DATA LOAD and ESG DATA LOAD both feed ESG Drift Detection, 2) ESG DRIFT DETECTION - calculates portfolio ESG score, detects drift beyond configured band, 3) ESG CONSTRAINT EVALUATION - applies exclusions, minimum scores, mandate constraints, 4) ESG AWARE TRADE PROPOSAL - generates proposals that repair drift and improve ESG score, 5) ESG COMPLIANCE CHECK - validates proposals respect ESG mandates and legal rules, 6) ORDER EXECUTION WITH ESG GUARDRAILS - executes with additional checks during high volatility, 7) ESG REPORTING AND CLIENT DISCLOSURE - produces client reports explaining ESG impact."
+
+    - question: "What negative test cases should validate portfolio allocation and ESG behaviour when market volatility exceeds configured thresholds?"
+      test_type: "Negative Testing"
+      ideal_contexts:
+        # ACTUAL content from ESG PDF Section 5 (Volatility scenarios)
+        - "VOL-ESG-001"
+        - "High volatility dampens equity buys"
+        - "Tighten drift bands, reduce equity buy sizes, and do not worsen portfolio ESG score"
+        - "VOL-ESG-002"
+        - "Suspend risky ESG downgrades"
+        - "Prefer trades that improve ESG scores when both volatility and ESG drift are high"
+        # From PRD
+        - "System shall exclude illiquid or locked funds that are flagged as non tradable from automatic rebalancing proposals."
+      ideal_answer: "Negative tests for high volatility + ESG: 1) VOL-ESG-001 - High volatility dampens equity buys: verify drift bands tighten, equity buy sizes reduce, portfolio ESG score not worsened, 2) VOL-ESG-002 - Suspend risky ESG downgrades: verify trades that improve ESG are preferred when both volatility and ESG drift are high, 3) Illiquid fund exclusion - verify locked/non-tradable funds excluded per rebalancing requirements."
+
+    - question: "Which risk controls protect client assets during automated ESG aware rebalancing, which processes do they protect, and what tests verify each control?"
+      test_type: "Control Verification"
+      ideal_contexts:
+        # ACTUAL content from ESG PDF
+        - "ESG Compliance Check"
+        - "Validates that proposals respect ESG mandates, limits, and legal rules"
+        - "Order Execution with ESG Guardrails"
+        - "Executes approved orders with additional checks during high volatility"
+        - "ESG Exclusion List"
+        - "A list of instruments that must never appear in ESG sensitive portfolios regardless of performance or liquidity"
+        # From PRD
+        - "REQ-CUSTODY-001: System shall reconcile positions with custodian data daily and flag discrepancies."
+        - "REQ-CLIENT-001: Clients shall receive real-time notifications for significant portfolio events."
+      ideal_answer: "Risk controls: 1) ESG COMPLIANCE CHECK - validates proposals against ESG mandates and legal rules, 2) ORDER EXECUTION WITH ESG GUARDRAILS - additional checks during high volatility, 3) ESG EXCLUSION LIST - blocks prohibited instruments from ESG sensitive portfolios, 4) CUSTODIAN RECONCILIATION (REQ-CUSTODY-001) - daily position reconciliation, 5) CLIENT NOTIFICATIONS (REQ-CLIENT-001) - real-time alerts for significant portfolio events."
+
+    - question: "Based on the ESG aware rebalancing process diagram, what processes are shown, how do Market Data Load and ESG Data Load lead to Reporting and Client Disclosure?"
+      test_type: "Diagram Understanding"
+      ideal_contexts:
+        # Verbatim from ESG PDF Section 4
+        - "The diagram below shows how Process Market Data Load and Process ESG Data Load converge into Process ESG Drift Detection and then flow through the remaining ESG processes."
+        - "In the end to end journey, Process Market Data Load and Process ESG Data Load both feed Process ESG Drift Detection."
+        - "ESG Drift Detection sends eligible portfolios to ESG Constraint Evaluation, followed by ESG Aware Trade Proposal, ESG Compliance Check, Order Execution with ESG Guardrails, and finally ESG Reporting and Client Disclosure."
+        # Verbatim from PRD diagram descriptions
+        - "Portfolio Rebalancing State Machine"
+        - "This state diagram shows the complete lifecycle of portfolio rebalancing. Test scenarios must cover all state transitions including edge cases like compliance rejection."
+      ideal_answer: "ESG process diagram shows: INPUTS - Market Data Load and ESG Data Load converge into ESG Drift Detection. FLOW - ESG Drift Detection → ESG Constraint Evaluation → ESG Aware Trade Proposal → ESG Compliance Check → Order Execution with ESG Guardrails → ESG Reporting and Client Disclosure. The diagram illustrates 6 sequential ESG processes (PROC-ESG-DRIFT through PROC-ESG-REPORT) fed by two parallel data loads, ending with client-facing reports that explain ESG impact of rebalancing actions."
+
+    # ==========================================================================
+    # ADDITIONAL DIVERSIFIED TESTS (Added Dec 14, 2024)
+    # Covering: Glossary, Incidents/Defects, Test Cases, PRD Requirements, State Machine
+    # ==========================================================================
+
+    - question: "What is the definition of ESG Drift and how does it relate to portfolio rebalancing triggers?"
+      test_type: "Glossary Lookup"
+      ideal_contexts:
+        # ACTUAL content from ESG PDF glossary table
+        - "ESG Drift"
+        - "The deviation between the current portfolio ESG score and the target ESG band configured for the strategy or client mandate."
+        - "Drift Detection - ESG score deviations as new drift type"
+        - "ESG Drift Detection"
+      ideal_answer: "ESG Drift is defined as the deviation between a portfolio's current ESG score and its target ESG score when it exceeds the configured tolerance band. It serves as a key trigger for portfolio rebalancing - when ESG drift is detected by the ESG Drift Detection process, it initiates the rebalancing workflow."
+
+    - question: "What incidents or defects have been reported related to portfolio rebalancing, and what are their root causes and remediation steps?"
+      test_type: "Incident Analysis"
+      ideal_contexts:
+        # ACTUAL content from wealth_portfolio_incidents_defects.docx
+        - "These sample incidents and defects represent production or UAT observations."
+        - "INC-WP-1001"
+        - "Rebalancing job did not run for EU region portfolios"
+        - "DEF-WP-2001"
+        - "Client explanation for rebalance did not reflect final trade amounts"
+        - "DEF-WP-2002"
+        - "Illiquid fund was sold by rebalancing job despite non tradable flag"
+      ideal_answer: "Reported incidents and defects for portfolio rebalancing: 1) INC-WP-1001 - Rebalancing job did not run for EU region portfolios. 2) DEF-WP-2001 - Client explanation for rebalance did not reflect final trade amounts. 3) DEF-WP-2002 - Illiquid fund was sold by rebalancing job despite non tradable flag. These defects highlight issues with regional job scheduling, trade explanation accuracy, and fund tradability enforcement."
+
+    - question: "Which test cases cover portfolio rebalancing requirements and what are their expected outcomes?"
+      test_type: "Test Coverage Mapping"
+      ideal_contexts:
+        # ACTUAL content from wealth_portfolio_test_cases.docx
+        - "These synthetic test cases illustrate how QE assets reference processes, rules, limits, and controls in this domain."
+        - "TC-WP-001"
+        - "Rebalance when equity drift exceeds band"
+        - "System generates sell orders for equity and buy orders for debt that bring allocation back within band"
+        - "TC-WP-002"
+        - "Do not trade non tradable fund during rebalance"
+        - "System leaves the illiquid fund units unchanged and adjusts other holdings instead"
+        - "TC-WP-003"
+        - "Generate explanation string for rebalance"
+        - "Explanation string must reference both drift and downgrade drivers"
+      ideal_answer: "Test cases for portfolio rebalancing: 1) TC-WP-001 - Rebalance when equity drift exceeds band. Expected: System generates sell orders for equity and buy orders for debt to bring allocation back within band. 2) TC-WP-002 - Do not trade non tradable fund during rebalance. Expected: System leaves illiquid fund units unchanged and adjusts other holdings. 3) TC-WP-003 - Generate explanation string for rebalance. Expected: Explanation string references both drift and downgrade drivers."
+
+    - question: "What are the requirements and validation rules for portfolio rebalancing proposals?"
+      test_type: "PRD Requirement Validation"
+      ideal_contexts:
+        # ACTUAL content from wealth_portfolio_prd.docx
+        - "System shall exclude illiquid or locked funds that are flagged as non tradable from automatic rebalancing proposals."
+        - "System shall enforce minimum and maximum trade size thresholds configured per asset class, market, and channel."
+        - "ESG Aware Trade Proposal"
+        - "Generates rebalance proposals that repair allocation drift and improve ESG score"
+        - "REQ-CUSTODY-001: System shall reconcile positions with custodian data daily and flag discrepancies."
+      ideal_answer: "Rebalancing proposal requirements: 1) Non-tradable fund exclusion - System shall exclude illiquid or locked funds from automatic rebalancing proposals. 2) Trade size limits - System shall enforce minimum and maximum trade size thresholds per asset class, market, and channel. 3) ESG-aware proposals - Proposals should repair allocation drift and improve ESG score. 4) Position reconciliation - System shall reconcile positions with custodian data daily and flag discrepancies."
+
+    - question: "What does the portfolio rebalancing state machine describe and what test scenarios should cover it?"
+      test_type: "State Machine Testing"
+      ideal_contexts:
+        # ACTUAL content from wealth_portfolio_prd.docx
+        - "Portfolio Rebalancing State Machine"
+        - "This state diagram shows the complete lifecycle of portfolio rebalancing."
+        - "Test scenarios must cover all state transitions including edge cases like compliance rejection."
+      ideal_answer: "The Portfolio Rebalancing State Machine shows the complete lifecycle of portfolio rebalancing from initial trigger through execution and completion. Test scenarios should cover all state transitions including the happy path (drift detection through successful execution) and edge cases like compliance rejection, execution failure, and rollback scenarios."

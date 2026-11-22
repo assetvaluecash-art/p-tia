@@ -1,0 +1,37 @@
+# Python runtime
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local environment and secrets
+.env
+.env.*
+env
+env.*
+
+# Generated runtime logs
+logs/*.log
+logs/*.jsonl
+logs/review_and_delete/enhanced_images/
+
+# Generated ingestion artifacts and reports
+artifacts/ingest-golden-e2e-*/
+artifacts/ingest-lc-product-line-*/
+artifacts/ingestion_*/
+reports/golden-e2e-*
+reports/ingest-*.json
+reports/ingest-*.html
+reports/ingestion_*.html
+reports/lc-product-line-*.html
+reports/trade-finance-ingestion-test*.html
+
+# Local temporary outputs
+.e2e_loc_input/
+EnrichedBlock.
+merged
+fabric_foundry_openapi_extract.json
+
+!env.example
+!env.test.example

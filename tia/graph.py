@@ -1,0 +1,240 @@
+"""In-memory typed dependency graph built from repository extracts."""
+from __future__ import annotations
+
+import re
+from collections import defaultdict
+from dataclasses import asdict
+
+from .data import add_data_layer, add_sql_lineage
+from .extract_python import module_name
+from .graphschema import TRAVERSED_DST_TO_SRC, TRAVERSED_SRC_TO_DST
+from .graphstructure import add_structure
+from .models import CONTRACT_CONFIRMED, INFERRED, SOURCE_CONFIRMED, Edge, RepoExtract
+from .resolve import resolve_consumers
+
+# Relationships whose destination change affects the source (caller / subclass / reader), and the reverse: both from the graph schema
+# (tia.graphschema, docs/GRAPH-SCHEMA.md), which is the one place a relationship's impact direction is decided.
+_IMPACT_DST = TRAVERSED_DST_TO_SRC
+_IMPACT_SRC = TRAVERSED_SRC_TO_DST
+
+
+def _structural(path: str) -> bool:
+    from .lang.generic import EXTENSIONS
+    return path.lower().endswith(EXTENSIONS)
+
+
+def _file_stem(path: str) -> str:
+    return path.rsplit("/", 1)[-1].split(".", 1)[0].lower()
+
+
+def _test_stem(path: str) -> str:
+    """order_test.rb, order_spec.rb, test_order.rb, OrderTest.php, OrderTests.swift, order.test.lua -> order"""
+    base = path.rsplit("/", 1)[-1]
+    stem = base.split(".", 1)[0]
+    stem = re.sub(r"^test_|_(test|spec|tests)$|(Test|Tests|Spec)$", "", stem)
+    return stem.lower()
+
+
+def _path_matches(template: str, concrete: str) -> bool:
+    """Endpoint template ('/a/{}/b') vs a test's concrete or templated path ('/a/123/b')."""
+    ta, tb = template.strip("/").split("/"), concrete.strip("/").split("/")
+    return len(ta) == len(tb) and all(x == y or x == "{}" or y == "{}" for x, y in zip(ta, tb))
+
+
+class Graph:
+    def __init__(self):
+        self.nodes: dict[str, dict] = {}
+        self.edges: list[Edge] = []
+        self._impact: dict[str, list] = defaultdict(list)
+        self._deps: dict[str, list] = defaultdict(list)     # the reverse of _impact: what a node depends on
+        self.unresolved: list[dict] = []
+        self.resolution_stats: dict = {}
+        self.ambiguous_calls = 0
+        self.sql_unresolved: list[dict] = []        # procedure calls that match no analysed definition (FR-041)
+
+    def add_node(self, nid: str, **attrs):
+        self.nodes[nid] = attrs
+
+    def add_edge(self, e: Edge):
+        self.edges.append(e)
+        # impact direction (who is affected when `key` changes)
+        if e.rel in _IMPACT_SRC:  # handler change -> endpoint; producer change -> the topic it publishes to
+            self._impact[e.src].append((e.dst, e))
+            self._deps[e.dst].append((e.src, e))
+        elif e.rel in _IMPACT_DST:
+            self._impact[e.dst].append((e.src, e))     # table/column -> entity -> function: who is affected by a data change
+            self._deps[e.src].append((e.dst, e))
+        # EXPOSES / MIGRATES and the use-case structure (screens, fields, rules) are not traversed
+
+    def impacted_by(self, nid: str):
+        return sorted(self._impact.get(nid, []), key=lambda t: (t[0], t[1].rel))
+
+    def depends_on(self, nid: str):
+        """What a change to these nodes would reach `nid` through (the reverse of impacted_by)."""
+        return sorted(self._deps.get(nid, []), key=lambda t: (t[0], t[1].rel))
+
+    def to_dict(self) -> dict:
+        return {"nodes": self.nodes, "edges": [asdict(e) for e in self.edges], "unresolved": self.unresolved,
+                "resolution_stats": self.resolution_stats, "ambiguous_calls": self.ambiguous_calls, "sql_unresolved": self.sql_unresolved}
+
+    @staticmethod
+    def from_dict(d: dict) -> "Graph":
+        g = Graph()
+        g.nodes = d["nodes"]
+        for e in d["edges"]:
+            g.add_edge(Edge(**e))
+        g.unresolved, g.resolution_stats, g.ambiguous_calls = d["unresolved"], d["resolution_stats"], d["ambiguous_calls"]
+        g.sql_unresolved = d.get("sql_unresolved", [])
+        return g
+
+
+def add_events(g, extracts: dict):
+    """Topics (global: one Kafka topic name is one node), producers, consumers (listener nodes, like outbound call sites) and the
+    schema each topic carries (FR-019)."""
+    def topic(t):
+        nid = f"topic:{t}"
+        if nid not in g.nodes:
+            g.add_node(nid, type="topic", repo=None, service=None, file=None, line=None, name=t)
+        return nid
+    for repo, ex in extracts.items():
+        ev = lambda file, line: {"repo": repo, "file": file, "line": line, "commit": ex.commit}
+        for e in ex.events:
+            t = topic(e["topic"])
+            status, strat = (CONTRACT_CONFIRMED, "E2") if e.get("declared") else (SOURCE_CONFIRMED, "E1")
+            if e["kind"] == "produces":
+                src = e["function_id"] or f"svc:{ex.service}"
+                g.add_edge(Edge(src, "PUBLISHES", t, status, strat, None, ev(e["file"], e["line"])))
+            else:
+                lid = f"{repo}:{e['file']}:{e['line']}:consumes:{e['topic']}"
+                g.add_node(lid, type="listener", repo=repo, service=ex.service, file=e["file"], line=e["line"], name=f"{e['via']} {e['topic']}")
+                g.add_edge(Edge(lid, "CONSUMES_EVENT", t, status, strat, None, ev(e["file"], e["line"])))
+                if e["function_id"]:
+                    g.add_edge(Edge(e["function_id"], "ISSUES", lid, SOURCE_CONFIRMED, "extract", None, ev(e["file"], e["line"])))
+        for s in ex.event_schemas:
+            g.add_node(s["id"], type="event_schema", repo=repo, service=ex.service, file=s["file"], line=s["line"], name=s["name"])
+            if s.get("topic"):
+                inferred = s.get("topic_source") == "file_name"
+                g.add_edge(Edge(topic(s["topic"]), "USES_SCHEMA", s["id"], INFERRED if inferred else CONTRACT_CONFIRMED,
+                                f"schema-{s.get('topic_source')}", "INF-SCHEMA-FILE-NAME" if inferred else None, ev(s["file"], s["line"])))
+
+
+def build_graph(extracts: dict[str, RepoExtract], strip_prefixes: tuple = (),
+                test_naming: bool = True) -> Graph:
+    g = Graph()
+    fn_by_repo_name: dict[str, dict[str, list]] = {}
+    for repo, ex in extracts.items():
+        g.add_node(f"svc:{ex.service}", type="service", repo=repo, service=ex.service)
+        by_name = defaultdict(list)
+        for f in ex.functions:
+            g.add_node(f.id, type="function", repo=repo, service=ex.service, file=f.file,
+                       line=f.line, name=f.qualname)
+            by_name[f.qualname.split(".")[-1]].append(f)
+        fn_by_repo_name[repo] = by_name
+        for tdecl in ex.types:
+            g.add_node(tdecl.id, type="type", repo=repo, service=ex.service, file=tdecl.file,
+                       line=tdecl.line, name=tdecl.name, kind=tdecl.kind)
+        for s in ex.schemas:
+            g.add_node(s.id, type="schema", repo=repo, service=ex.service, file=s.file, line=s.line, name=s.name)
+        for e in ex.endpoints:
+            g.add_node(e.id, type="endpoint", repo=repo, service=ex.service, file=e.file, line=e.line,
+                       method=e.method, path=e.norm_path, route=e.path)
+        for c in ex.callsites:
+            g.add_node(c.id, type="callsite", repo=repo, service=ex.service, file=c.file, line=c.line,
+                       **({"client_pkg": c.client_pkg, "client_attr": c.client_attr} if c.client_pkg else {}))
+        for t in ex.tests:
+            g.add_node(t.id, type="test", repo=repo, service=ex.service, file=t.file, line=t.line, name=t.name)
+
+    for repo, ex in extracts.items():
+        ev = lambda file, line: {"repo": repo, "file": file, "line": line, "commit": ex.commit}
+        by_name = fn_by_repo_name[repo]
+        types_by_name = defaultdict(list)
+        for tdecl in ex.types:
+            types_by_name[tdecl.name].append(tdecl)
+        schema_ids = {s.name: s.id for s in ex.schemas}
+        for e in ex.endpoints:
+            g.add_edge(Edge(f"svc:{ex.service}", "EXPOSES", e.id, SOURCE_CONFIRMED, "extract", None, ev(e.file, e.line)))
+            if e.source == "code":                                  # an endpoint declared only in a specification has no handler in the code
+                g.add_edge(Edge(e.handler_id, "HANDLES", e.id, SOURCE_CONFIRMED, "extract", None, ev(e.file, e.line)))
+            for nm in ([e.response_schema] if e.response_schema else []) + list(e.request_schemas):
+                if nm in schema_ids:
+                    g.add_edge(Edge(e.id, "USES_SCHEMA", schema_ids[nm], SOURCE_CONFIRMED, "extract", None,
+                                    ev(e.file, e.line)))
+        for c in ex.callsites:
+            if c.function_id:
+                g.add_edge(Edge(c.function_id, "ISSUES", c.id, SOURCE_CONFIRMED, "extract", None, ev(c.file, c.line)))
+        for f in ex.functions:
+            for callee in f.calls:
+                cands = [c for c in by_name.get(callee, []) if c.id != f.id]
+                if len(cands) == 1:
+                    g.add_edge(Edge(f.id, "CALLS", cands[0].id, SOURCE_CONFIRMED, "extract", None, ev(f.file, f.line)))
+                elif len(cands) > 1:
+                    # keep every candidate as an inferred edge instead of dropping the call (Pulse port)
+                    g.ambiguous_calls += len(cands)
+                    for cand in cands:
+                        g.add_edge(Edge(f.id, "CALLS", cand.id, INFERRED, "extract", "INF-CALL-AMBIGUOUS", ev(f.file, f.line)))
+        for tdecl in ex.types:
+            for base in tdecl.bases:
+                cands = [t for t in types_by_name.get(base, []) if t.id != tdecl.id]
+                if len(cands) == 1:
+                    g.add_edge(Edge(tdecl.id, "INHERITS", cands[0].id, SOURCE_CONFIRMED, "extract", None, ev(tdecl.file, tdecl.line)))
+                elif len(cands) > 1:
+                    for cand in cands:
+                        g.add_edge(Edge(tdecl.id, "INHERITS", cand.id, INFERRED, "extract", "INF-INHERITS-AMBIGUOUS",
+                                        ev(tdecl.file, tdecl.line)))
+        # ---- test association (TFD: TESTS is a static association, not execution) -------------------
+        funcs_by_module = defaultdict(list)
+        for f in ex.functions:
+            funcs_by_module[module_name(f.file)].append(f)
+        for t in ex.tests:
+            linked = False
+            for key in t.http_calls:
+                for ep in ex.endpoints:
+                    if ep.method == key[0] and _path_matches(ep.norm_path, key[1]):
+                        g.add_edge(Edge(t.id, "TESTS", ep.id, SOURCE_CONFIRMED, "test-http-call", None,
+                                        ev(t.file, t.line)))
+                        linked = True
+            for mod, funcs in funcs_by_module.items():
+                if mod in t.imports or any(i.endswith("." + mod) for i in t.imports):
+                    for f in funcs:
+                        if f.qualname.split(".")[-1] in t.called and f.id != t.id:
+                            g.add_edge(Edge(t.id, "TESTS", f.id, SOURCE_CONFIRMED, "test-import-call", None,
+                                            ev(t.file, t.line)))
+                            linked = True
+            if not linked and _structural(t.file):
+                # structure-only languages (tia.lang.generic) have no module imports to go by: a test that calls a function whose name is
+                # unique in the repository tests it, the same rule CALLS edges use
+                for name in sorted(set(t.called)):
+                    cands = [f for f in by_name.get(name, []) if f.id != t.id]
+                    if len(cands) == 1:
+                        g.add_edge(Edge(t.id, "TESTS", cands[0].id, SOURCE_CONFIRMED, "test-call-name", None, ev(t.file, t.line)))
+                        linked = True
+            if test_naming and not linked and _structural(t.file):
+                stem = _test_stem(t.file)
+                for f in ex.functions:
+                    if stem and _file_stem(f.file) == stem and f.file != t.file:
+                        g.add_edge(Edge(t.id, "TESTS", f.id, INFERRED, "test-naming", "INF-TEST-NAMING", ev(t.file, t.line)))
+                linked = True
+            if test_naming and not linked:
+                stem = t.file.rsplit("/", 1)[-1]
+                if stem.endswith(".java"):
+                    stem = next((stem[:-len(x) - 5] for x in ("Tests", "Test", "IT") if stem.endswith(x + ".java")), None)
+                else:
+                    stem = stem[5:-3] if stem.startswith("test_") else stem[:-8] if stem.endswith("_test.py") else None
+                if stem:
+                    for mod, funcs in funcs_by_module.items():
+                        if mod.rsplit(".", 1)[-1] == stem:
+                            for f in funcs:
+                                g.add_edge(Edge(t.id, "TESTS", f.id, INFERRED, "test-naming", "INF-TEST-NAMING",
+                                                ev(t.file, t.line)))
+
+    add_events(g, extracts)
+    edges, unresolved, stats, synthetic = resolve_consumers(extracts, strip_prefixes)
+    for nid, attrs in synthetic.items():
+        g.add_node(nid, **attrs)
+    for e in edges:
+        g.add_edge(e)
+    g.unresolved, g.resolution_stats = unresolved, stats
+    add_data_layer(g, extracts)
+    add_sql_lineage(g, extracts)
+    add_structure(g, extracts)
+    return g

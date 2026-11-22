@@ -1,0 +1,1436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>TIA - Technical Impact Analysis</title>
+<script src="/vendor/cytoscape.min.js"></script>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--fg:#1a1d21;--mut:#5b6472;--line:#dfe3e8;--acc:#1f4fd8;--ok:#127a3b;--warn:#a86400;--bad:#b3261e;--btnfg:#fff}
+  @media (prefers-color-scheme:dark){:root{--bg:#14171c;--card:#1d2127;--fg:#e8eaed;--mut:#9aa3af;--line:#2d333b;--acc:#7aa2ff;--ok:#5fd08a;--warn:#f0b35a;--bad:#ff8f87;--btnfg:#0b1220}}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,Segoe UI,Arial,sans-serif}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+  header h1{font-size:18px;margin:0} header small{color:var(--mut)}
+  main{max-width:1180px;margin:0 auto;padding:16px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+  section{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0;overflow-x:auto}
+  code{overflow-wrap:anywhere}
+  h2{font-size:15px;margin:0 0 10px}
+  label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
+  input,select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+  .row{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+  button{padding:7px 14px;border:1px solid var(--acc);background:var(--acc);color:var(--btnfg);border-radius:6px;font:inherit;cursor:pointer}
+  button.sec{background:transparent;color:var(--acc)} button:disabled{opacity:.5;cursor:not-allowed} button.busy{cursor:wait}
+  .tabs{display:flex;gap:6px;margin-bottom:8px} .tabs button{background:transparent;color:var(--fg);border-color:var(--line)} .tabs button.on{border-color:var(--acc);color:var(--acc)}
+  table{width:100%;border-collapse:collapse;margin-top:8px} th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;color:var(--mut);font-weight:600}
+  .pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;border:1px solid var(--line)}
+  .critical,.high{color:var(--bad);border-color:var(--bad)} .medium{color:var(--warn);border-color:var(--warn)} .low,.unknown{color:var(--mut)}
+  .ok{color:var(--ok)} .err{color:var(--bad)} .mut{color:var(--mut)}
+  pre{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px;overflow:auto;max-height:420px;white-space:pre-wrap}
+  .banner{padding:8px 12px;border-radius:6px;border:1px solid var(--warn);color:var(--warn);margin:8px 0}
+  .hidden{display:none} code{font-size:12px}
+  #gwrap{display:grid;grid-template-columns:1fr 280px;gap:10px;margin-top:8px} @media(max-width:900px){#gwrap{grid-template-columns:1fr}}
+  #cy{height:540px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+  #gside{font-size:12px;border:1px solid var(--line);border-radius:6px;padding:8px;max-height:540px;overflow:auto}
+  #gside dt{color:var(--mut);margin-top:6px} #gside dd{margin:0;word-break:break-all}
+  /* report tables: fixed column widths so long text wraps inside its cell instead of pushing the table past the card */
+  #findings,#scopetable{table-layout:fixed;min-width:900px} #findings td,#scopetable td{overflow-wrap:anywhere}
+  dl.why{margin:0} dl.why dt{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.03em;margin-top:6px} dl.why dt:first-child{margin-top:0} dl.why dd{margin:1px 0 0}
+  .tchip{display:inline-block;white-space:nowrap;font-size:12px} .tchip i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:baseline}
+  .hop{display:inline-block;margin:1px 0} .hop .arr{color:var(--mut);margin:0 4px}
+  #pgcy{height:210px;border:1px solid var(--line);border-radius:6px;background:var(--bg)} tr.pgrow td{background:var(--bg)}
+  #archcy{height:240px;border:1px solid var(--line);border-radius:6px} #archwrap.none{display:none}
+  #structure details{margin-top:8px} #structure summary{cursor:pointer} #structure li{margin:3px 0;word-break:break-word}
+  .tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:8px;border:1px solid #d32f2f;color:#d32f2f;margin-left:4px}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--mut);margin-top:6px} .legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:4px}
+  .ctl{display:flex;gap:10px;flex-wrap:wrap;align-items:end} .ctl>div{min-width:130px}
+  main.locked>section:not(#signin){display:none} #who{margin-left:auto} header button{padding:3px 10px}
+  .roles label{display:inline-block;margin:0 10px 0 0;color:var(--fg)} .roles input{width:auto}
+  .ttabs{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap} .ttabs button{background:transparent;color:var(--fg);border-color:var(--line)} .ttabs button.on{border-color:var(--acc);color:var(--acc)}
+  .covered{color:var(--ok);border-color:var(--ok)} .partial{color:var(--warn);border-color:var(--warn)} .missing,.breaking{color:var(--bad);border-color:var(--bad)}
+  .behaviour_change{color:var(--warn);border-color:var(--warn)} .compatible_change,.no_functional_change{color:var(--mut)}
+  details{border:1px solid var(--line);border-radius:6px;padding:6px 10px;margin:6px 0} summary{cursor:pointer} .wrapx{overflow-x:auto}
+  .gap{padding:8px 12px;border-radius:6px;border:1px solid var(--bad);margin:8px 0} .gap.moved{border-color:var(--ok)}
+  textarea.json{width:100%;height:200px;font:12px ui-monospace,Consolas,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px}
+</style>
+</head>
+<body>
+<header><h1>TIA</h1><small>Technical Impact Analysis</small><small id="cfg" class="mut"></small>
+  <span id="who" class="mut"></span><button class="sec hidden" id="signout">Sign out</button></header>
+<main class="locked">
+
+<section id="signin" class="hidden">
+  <h2>Sign in</h2>
+  <p class="mut">Enter your organisation's name, then choose how to sign in.</p>
+  <div class="row"><div><label>Organisation</label><input id="org" autocomplete="organization" placeholder="your organisation's TIA name"></div></div>
+  <p><button id="orgnext">Continue</button> <span id="signmsg"></span></p>
+  <div id="signopts"></div>
+</section>
+
+<section>
+  <h2>1. Ingest repositories</h2>
+  <div class="tabs">
+    <button class="on" data-tab="url">Git URL (GitHub / Azure DevOps / other)</button>
+    <button data-tab="disc">Whole ADO project / GitHub org</button>
+    <button data-tab="path">Local path</button>
+    <button data-tab="up">Upload zip / folder</button>
+  </div>
+
+  <div id="tab-url">
+    <div class="row">
+      <div><label>Repository URL</label><input id="url" placeholder="https://dev.azure.com/org/project/_git/repo  or  https://github.com/org/repo"></div>
+      <div><label>Access token (PAT) - needed for private repos; not stored</label><input id="token" type="password" autocomplete="off"></div>
+      <div><label>Name (optional)</label><input id="name"></div>
+      <div><label>Branch (optional)</label><input id="branch" placeholder="default branch"></div>
+    </div>
+    <p><button id="add">Ingest</button> <span id="addmsg"></span></p>
+  </div>
+
+  <div id="tab-disc" class="hidden">
+    <div class="row">
+      <div><label>Provider</label><select id="dprov"><option value="ado">Azure DevOps</option><option value="github">GitHub</option></select></div>
+      <div><label>Organisation / user</label><input id="dorg"></div>
+      <div><label>Project (Azure DevOps only)</label><input id="dproj"></div>
+      <div><label>PAT (required)</label><input id="dtoken" type="password" autocomplete="off"></div>
+      <div><label>API base (on-prem / GitHub Enterprise, optional)</label><input id="dapi" placeholder="https://tfs.company.com/tfs  or  https://ghe.company.com/api/v3"></div>
+    </div>
+    <p><button id="disc">Discover and ingest all</button> <span id="discmsg"></span></p>
+  </div>
+
+  <div id="tab-up" class="hidden">
+    <p class="mut">Send code from your own computer. Each upload is a snapshot stored as a revision; upload the same name again with a changed copy and use
+      <b>Analyse vs previous upload</b> to see its impact, with no Git host involved. Folders such as <code>.git</code>, <code>node_modules</code>, <code>__pycache__</code> and virtual environments are skipped. Limit: 2 GB per upload.</p>
+    <div class="row">
+      <div><label>Repository name (optional: defaults to the zip / folder name)</label><input id="upname"></div>
+      <div><label>Zip file</label><input id="zipfile" type="file" accept=".zip,application/zip"></div>
+      <div><label>or a whole folder</label><input id="folderfiles" type="file" webkitdirectory multiple></div>
+    </div>
+    <p><button id="upzip">Upload zip</button> <button id="upfolder">Upload folder</button> <span id="upmsg"></span></p>
+    <div id="upbar" class="hidden" style="height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden"><div id="upfill" style="height:8px;width:0;background:#2563eb"></div></div>
+  </div>
+
+  <div id="tab-path" class="hidden">
+    <div class="row">
+      <div><label>Local git repository path (on the machine running TIA)</label><input id="lpath" placeholder="C:\src\my-service"></div>
+      <div><label>Name (optional)</label><input id="lname"></div>
+    </div>
+    <p><button id="addlocal">Register</button> <span id="localmsg"></span></p>
+  </div>
+
+  <table id="repos"><thead><tr><th>Name</th><th>Provider</th><th>Default branch</th><th>Latest commit</th><th>Branches</th><th>Synced</th><th></th></tr></thead><tbody></tbody></table>
+</section>
+
+<section>
+  <h2>2. Code graph</h2>
+  <p class="mut" style="margin:0 0 6px">Dependencies TIA extracted from the default branch of every ingested repository. Edge colour = evidence. Double-click a node to focus on its neighbourhood; click for details.</p>
+  <div class="ctl">
+    <div><label>Level of detail</label><select id="glevel"><option value="service">Services</option><option value="endpoint">Endpoints &amp; schemas</option><option value="function">Functions, call sites, tests</option></select></div>
+    <div><label>Repositories (none selected = all)</label><select id="grepos" multiple size="3"></select></div>
+    <div><label>Search</label><input id="gq" placeholder="name, path, file"></div>
+    <div><label>Layout</label><select id="glayout"><option>cose</option><option>breadthfirst</option><option>concentric</option><option>circle</option><option>grid</option></select></div>
+    <div><button id="gload">Load graph</button> <button class="sec" id="gimpact" disabled title="Run an analysis in section 3 first">Show impact of last analysis</button> <button class="sec" id="gfit">Fit</button></div>
+  </div>
+  <div id="ginfo" class="mut" style="margin-top:6px"></div>
+  <div id="gwrap"><div id="cy"></div><div id="gside"><span class="mut">Click a node or edge.</span></div></div>
+  <div class="legend" id="typelegend" aria-label="Component types"></div>
+  <div class="legend">
+    <span><i style="border-color:#2e7d32"></i>source-confirmed / corroborated</span>
+    <span><i style="border-color:#1565c0"></i>contract-confirmed</span>
+    <span><i style="border-color:#ef6c00;border-top-style:dashed"></i>inferred</span>
+    <span><i style="border-color:#9e9e9e;border-top-style:dotted"></i>unresolved</span>
+    <span><i style="border-color:#b8c0cc"></i>structural</span>
+    <span><i style="border-color:#b8651b"></i>entity</span>
+    <span><i style="border-color:#0b6e4f"></i>table</span>
+    <span><i style="border-color:#c2410c"></i>inheritance (subclass &rarr; base class)</span>
+    <span><i style="border-color:#ef6c00;border-top-style:dashed"></i>ambiguous call: one dashed line per candidate</span>
+    <span id="legimpact" class="hidden">Impact view: red outline = changed; fill = severity (critical dark red, high red, medium amber, low grey)</span>
+  </div>
+  <h3 style="font-size:13px;margin:14px 0 4px">Ask the graph</h3>
+  <p class="mut" style="margin:0 0 6px">A direct question about one component, with no change involved. AI agents ask the same through <code>GET /api/v1/graph/query</code> or the MCP tool <code>query_graph</code>.</p>
+  <div class="ctl">
+    <div><label for="aqq">Question</label><select id="aqq"><option value="consumers">Who depends on it?</option><option value="dependencies">What does it depend on?</option>
+      <option value="tests">Which tests cover it?</option><option value="covers">What does this test cover?</option></select></div>
+    <div style="flex:1;min-width:220px"><label for="aqc">Component</label><input id="aqc" placeholder="GET /accounts/{account_id}/payments, or a function, test, service, table or topic name"></div>
+    <div><button id="aqgo" type="button">Ask</button></div>
+  </div>
+  <div id="aqout" aria-live="polite"></div>
+</section>
+
+<section>
+  <h2>3. Analyse a change</h2>
+  <div class="row">
+    <div><label>Repository containing the change</label><select id="target"></select></div>
+    <div><label>Head: branch / tag / commit</label><input id="head" placeholder="feature/my-change" list="headchoices" autocomplete="off"><datalist id="headchoices"></datalist></div>
+    <div><label>or Pull request number</label><input id="pr" type="number" min="1" placeholder="e.g. 42"></div>
+    <div><label>Base (default: default branch)</label><input id="base" placeholder="main" list="headchoices" autocomplete="off"></div>
+    <div><label>Token (only to fetch a private PR)</label><input id="atoken" type="password" autocomplete="off"></div>
+  </div>
+  <p><button id="run">Run analysis</button> <span id="runmsg"></span></p>
+</section>
+
+<section id="result" class="hidden">
+  <h2>4. Change Impact Report <span id="status" class="pill"></span></h2>
+  <div id="warn"></div>
+  <div id="summary" class="mut"></div>
+  <div id="scope"></div>
+  <div id="evid"></div>
+  <h2 style="margin-top:16px">Tester pack for this change</h2>
+  <p class="mut" style="margin:0 0 6px">One change, three answers, limited to the entry points this change reaches. The same content is available as JSON for tools and AI testing agents.</p>
+  <p id="packgate" aria-live="polite"></p>
+  <div class="ttabs">
+    <button class="on" type="button" data-ptab="retest">1. Retest and coverage gate</button>
+    <button type="button" data-ptab="ui">2. UI locator pack</button>
+    <button type="button" data-ptab="api">3. API test matrix</button>
+  </div>
+  <div id="pk-retest"></div><div id="pk-ui" class="hidden"></div><div id="pk-api" class="hidden"></div>
+  <p><button class="sec" id="packjson" type="button">Show pack JSON</button> <button class="sec" id="kfjson" type="button">Show agent response (Knowledge Fabric JSON)</button> <span id="kfsum" class="mut" aria-live="polite"></span></p>
+  <pre id="packraw" class="hidden" tabindex="0" aria-label="Tester pack (JSON)"></pre>
+  <pre id="kfraw" class="hidden" tabindex="0" aria-label="Knowledge Fabric agent response (JSON)"></pre>
+  <h2 style="margin-top:16px">Findings</h2>
+  <div id="ffilter" class="row" role="group" aria-label="Filter findings">
+    <label>Severity <select id="f_severity"><option value="">any</option><option>critical</option><option>high</option><option>medium</option><option>low</option><option>unknown</option></select></label>
+    <label>Service or repository <input id="f_service" size="16" placeholder="any"></label>
+    <label>Reach <select id="f_reach"><option value="">any</option><option>direct</option><option>transitive</option></select></label>
+    <label>Impact <select id="f_kind"><option value="">any</option><option>contract</option><option>data</option><option>test</option><option>runtime</option><option>operational</option></select></label>
+    <label>Evidence <select id="f_evidence"><option value="">any</option><option>source_confirmed</option><option>contract_confirmed</option><option>corroborated</option><option>runtime_observed</option><option>inferred</option><option>stale</option></select></label>
+    <label>Environment <input id="f_environment" size="10" placeholder="any"></label>
+    <label>Policy <select id="f_policy"><option value="">any</option><option>pass</option><option>fail</option><option>not_evaluated</option><option>requires_review</option></select></label>
+    <label>Evidence gaps <select id="f_issue"><option value="">any</option><option>unresolved</option><option>stale</option><option>inferred</option></select></label>
+    <button class="sec" id="fclear" type="button">Clear filters</button> <span id="fcount" class="mut" aria-live="polite"></span>
+  </div>
+  <table id="findings"><thead><tr><th style="width:8%">Severity</th><th style="width:13%">Component</th><th style="width:11%">Evidence</th><th style="width:29%">Why</th><th style="width:17%">What to do</th><th style="width:14%">Tests</th><th style="width:8%">Graph</th></tr></thead><tbody></tbody></table>
+  <h2 style="margin-top:16px">Architecture and structure</h2>
+  <p class="mut" style="margin:0 0 6px">Derived context computed from the graph, not extracted evidence: it never adds or removes a finding.</p>
+  <div id="archwrap"><div id="archcy" role="img" aria-label="Architecture diagram: services involved in this change and the evidence links between them"></div></div>
+  <div id="archnote" class="mut"></div>
+  <div id="structure"></div>
+  <h2 style="margin-top:16px">Unknowns</h2><ul id="unknowns"></ul>
+  <h2 style="margin-top:16px">Team coordination</h2>
+  <p class="mut" style="margin:0">Teams owning materially affected components: who was told and who has acknowledged.</p>
+  <table id="coordtable"><thead><tr><th>Team</th><th>Components</th><th>Notification</th><th>Acknowledged</th><th>Status</th></tr></thead><tbody></tbody></table>
+  <div class="ctl">
+    <div><button class="sec" id="coordnotify" type="button">Notify the teams</button></div>
+    <div><label for="ackteam">Acknowledge for team</label><select id="ackteam"></select></div>
+    <div><label for="ackcomment">Comment</label><input id="ackcomment" maxlength="1000"></div>
+    <div><button class="sec" id="ackbtn" type="button">Acknowledge</button></div>
+    <span id="coordmsg" class="mut" aria-live="polite"></span>
+  </div>
+  <h2 style="margin-top:16px">Reviewer verdict</h2>
+  <div class="ctl">
+    <div><label for="vfinding">Finding</label><select id="vfinding"></select></div>
+    <div><label for="vverdict">Verdict</label><select id="vverdict"><option value="confirmed">confirmed</option><option value="false_positive">false positive</option><option value="irrelevant">irrelevant</option></select></div>
+    <div><label for="vcomment">Comment</label><input id="vcomment" maxlength="1000"></div>
+    <div><button class="sec" id="vsave" type="button">Record verdict</button></div>
+    <span id="vmsg" class="mut" aria-live="polite"></span>
+  </div>
+  <h2>PR comment</h2>
+  <p class="mut" style="margin:0 0 6px">Shown as plain text. <code>###</code>, <code>**</code> and tables are Markdown for GitHub: use <b>Copy for PR (markdown)</b> when pasting into a pull request.</p>
+  <div class="ttabs" style="margin-bottom:6px">
+    <button class="on" type="button" id="cplain">Plain text</button>
+    <button type="button" id="cmd">Markdown (for GitHub)</button>
+  </div>
+  <pre id="comment" tabindex="0" aria-label="Pull request comment"></pre>
+  <p><button class="sec" id="toimpact" disabled title="Run an analysis in section 3 first">Show on graph</button> <button class="sec" id="copy">Copy for PR (markdown)</button> <button class="sec" id="json">Show full JSON</button> <a id="permalink" class="mut"></a></p>
+  <pre id="raw" class="hidden" tabindex="0" aria-label="Full report (JSON)"></pre>
+</section>
+<section id="testersec">
+  <h2>5. Tester views</h2>
+  <p class="mut" style="margin:0 0 6px">What the code means for testing, across every ingested repository you can read. Matching is static: "covered" means a test addresses it, not that it passes. The tabs fill in when the page opens and again after each analysis.</p>
+  <div class="ttabs">
+    <button class="on" data-ttab="shared">Common components &amp; rule gaps</button>
+    <button data-ttab="cov">Technical coverage</button>
+    <button data-ttab="api">Automation: APIs</button>
+    <button data-ttab="ui">Automation: pages &amp; locators</button>
+    <button data-ttab="tc">Check one test case</button>
+    <button data-ttab="flow">Execution flow</button>
+    <button data-ttab="script">Automation script</button>
+  </div>
+  <div id="ttab-shared"><p><button class="sec" id="tshared">Refresh</button> <span id="tsharedmsg" class="mut"></span></p><div id="tsharedout"></div></div>
+  <div id="ttab-cov" class="hidden"><p><button class="sec" id="tcov">Refresh</button> <span id="tcovmsg" class="mut"></span></p><div id="tcovout"></div></div>
+  <div id="ttab-api" class="hidden"><p><button class="sec" id="tapi">Refresh</button> <span id="tapimsg" class="mut"></span></p><div id="tapiout"></div></div>
+  <div id="ttab-ui" class="hidden"><p><button class="sec" id="tui">Refresh</button> <span id="tuimsg" class="mut"></span></p><div id="tuiout"></div></div>
+  <div id="ttab-tc" class="hidden">
+    <div class="row">
+      <div><label>Title</label><input id="tctitle" maxlength="500" placeholder="Pay in GBP"></div>
+      <div><label>Entry point (API "POST /accounts/{id}/payments" or a page route)</label><input id="tcentry" maxlength="500"></div>
+    </div>
+    <label>Steps</label><textarea id="tcsteps" class="json" style="height:70px" maxlength="20000"></textarea>
+    <label>Expected result</label><textarea id="tcexpected" class="json" style="height:50px" maxlength="5000"></textarea>
+    <p><button id="tccheck">Check coverage of this test case</button> <span id="tcmsg"></span></p>
+    <div id="tcout"></div>
+  </div>
+  <div id="ttab-flow" class="hidden">
+    <p class="mut" style="margin:0 0 6px">What an entry point runs: the controller, the services and data access it calls, the other services, data, topics and business rules it reaches; and each service's design (controllers, models, main entities).</p>
+    <div class="row">
+      <div><label>Entry point (METHOD /route, empty for all)</label><input id="flowep" maxlength="500" placeholder="POST /payments"></div>
+      <div><label>Repository (optional)</label><input id="flowrepo" maxlength="200"></div>
+    </div>
+    <p><button id="flowrun">Show execution flow</button> <span id="flowmsg"></span></p>
+    <div id="flowout"></div>
+  </div>
+  <div id="ttab-script" class="hidden">
+    <p class="mut" style="margin:0 0 6px">A Playwright test for a user flow: the screens on the way (from the links between them), each input filled with a valid value from its rules, the recommended locators, and a wait for each API call. What the code cannot tell is marked TODO.</p>
+    <div class="row">
+      <div><label>Front-end repository</label><input id="scrrepo" maxlength="200" placeholder="web-portal"></div>
+      <div><label>From screen (route)</label><input id="scrfrom" maxlength="300" placeholder="/login"></div>
+      <div><label>To screen (route)</label><input id="scrto" maxlength="300" placeholder="/done"></div>
+    </div>
+    <p><button id="scrrun">Generate script</button> <span id="scrmsg"></span></p>
+    <div id="scrout"></div>
+  </div>
+</section>
+<section id="relsec">
+  <h2>5a. Releases, environments and incidents</h2>
+  <div class="ttabs">
+    <button class="on" data-rtab="rel" type="button">Releases</button>
+    <button data-rtab="env" type="button">What ran where</button>
+    <button data-rtab="inc" type="button">Incidents</button>
+  </div>
+  <div id="rtab-rel">
+    <div class="row">
+      <div><label for="relname">New release name</label><input id="relname" maxlength="80" placeholder="2026.11"></div>
+      <div><label for="relrevs">Revisions (JSON: repository to commit, tag or branch)</label><input id="relrevs" placeholder='{"orders-service": "main"}'></div>
+    </div>
+    <p><button class="sec" id="relsave" type="button">Record release</button> <button class="sec" id="relload" type="button">Refresh</button> <span id="relmsg" class="mut" aria-live="polite"></span></p>
+    <table id="reltable"><thead><tr><th>Release</th><th>Repositories</th><th>Recorded</th></tr></thead><tbody></tbody></table>
+    <div class="ctl">
+      <div><label for="relbase">Compare from</label><select id="relbase"></select></div>
+      <div><label for="relhead">to</label><select id="relhead"></select></div>
+      <div><button class="sec" id="relcmp" type="button">Compare</button></div>
+    </div>
+    <div id="relout"></div>
+  </div>
+  <div id="rtab-env" class="hidden">
+    <div class="ctl"><div><label for="envat">At (date and time, UTC)</label><input id="envat" type="datetime-local"></div>
+      <div><button class="sec" id="envgo" type="button">Show</button></div> <span id="envmsg" class="mut" aria-live="polite"></span></div>
+    <div id="envout"></div>
+  </div>
+  <div id="rtab-inc" class="hidden">
+    <p><button class="sec" id="incload" type="button">Refresh incidents</button> <span id="incmsg" class="mut" aria-live="polite"></span></p>
+    <table id="inctable"><thead><tr><th>Incident</th><th>Service</th><th>Environment</th><th>Started</th><th></th></tr></thead><tbody></tbody></table>
+    <div id="incout"></div>
+  </div>
+</section>
+<section id="insightsec">
+  <h2>5b. Insights: trends and rule precision</h2>
+  <div class="ctl">
+    <div><label for="trgroup">Group by</label><select id="trgroup"><option value="application">application</option><option value="team">team</option></select></div>
+    <div><label for="trperiod">Period</label><select id="trperiod"><option value="month">month</option><option value="week">week</option><option value="quarter">quarter</option></select></div>
+    <div><button class="sec" id="trgo" type="button">Show trends</button></div>
+    <div><button class="sec" id="calgo" type="button">Show rule precision</button></div>
+    <span id="insmsg" class="mut" aria-live="polite"></span>
+  </div>
+  <div id="trout"></div><div id="calout"></div>
+</section>
+<section id="cfgsec">
+  <h2>6. Configuration <span id="cfgid" class="pill"></span></h2>
+  <p class="mut" id="cfgmeta">Per-tenant limits, severity rules, criticality and path prefixes. Every save is a new immutable version.</p>
+  <details id="cfghelp"><summary>Skip files TIA should not analyse (vendored, generated, minified)</summary>
+    <p class="mut" style="margin:4px 0">Add path patterns under <code>paths</code> &rarr; <code>exclude_patterns</code>, for example
+      <code>"paths": {"strip_prefixes": [], "exclude_patterns": ["vendor/**", "**/generated/**", "*.min.js"]}</code>.
+      <code>*</code> stays within one folder, <code>**</code> crosses folders, and a pattern without a folder also matches the file name anywhere.
+      Up to 100 patterns. Anything defined in a skipped file is invisible to TIA, so a change to it reaches nothing. Every report records the patterns it ran with.</p>
+  </details>
+  <textarea id="cfgtext" aria-label="Tenant configuration (JSON)" spellcheck="false" style="width:100%;height:260px;font:12px ui-monospace,Consolas,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px"></textarea>
+  <ul id="cfgproblems" class="err"></ul>
+  <div class="row"><div><label>Comment for this version</label><input id="cfgcomment" maxlength="500" placeholder="why this change"></div></div>
+  <p><button class="sec" id="cfgvalidate">Validate</button> <button id="cfgsave">Save as new version</button> <button class="sec" id="cfgreload">Reload</button> <span id="cfgmsg"></span></p>
+  <table id="cfghist"><thead><tr><th>Version</th><th>Saved by</th><th>Comment</th><th>When</th><th></th></tr></thead><tbody></tbody></table>
+</section>
+<section id="adminsec" class="hidden">
+  <h2>7. Administration</h2>
+  <h3 style="font-size:13px">People</h3>
+  <table id="adusers"><thead><tr><th>Person</th><th>Roles</th><th>Source-host login</th><th>Last sign-in</th><th></th></tr></thead><tbody></tbody></table>
+  <h3 style="font-size:13px">Repository access</h3>
+  <p class="mut">Hosted repositories are readable only by the people the source-code host lists (mirrored; a mirror older than <span id="adage"></span> grants nothing).
+    <button class="sec" id="adsync">Sync permissions from GitHub</button> <span id="adsyncmsg"></span></p>
+  <table id="adrepos"><thead><tr><th>Repository</th><th>Governed by</th><th>Mirror</th></tr></thead><tbody></tbody></table>
+  <h3 style="font-size:13px">Service-account tokens</h3>
+  <div class="row"><div><label>Name</label><input id="tkname"></div><div><label>Repositories ("*" or comma-separated)</label><input id="tkrepos" value="*"></div>
+    <div><label>Expires in days</label><input id="tkdays" type="number" min="1" value="90"></div></div>
+  <div class="roles" id="tkroles"></div>
+  <p><button id="tkmake">Create token</button> <span id="tkmsg"></span></p>
+  <pre id="tkshow" class="hidden" tabindex="0" aria-label="New token"></pre>
+  <table id="adtokens"><thead><tr><th>Name</th><th>Roles</th><th>Repositories</th><th>Expires</th><th>Last used</th><th></th></tr></thead><tbody></tbody></table>
+  <h3 style="font-size:13px">Identity providers</h3>
+  <table id="adidps"><thead><tr><th>Name</th><th>Type</th><th>Enabled</th><th></th></tr></thead><tbody></tbody></table>
+  <p class="mut">Add or change one (JSON: name, protocol, config, enabled, and optionally client_secret, which is stored encrypted and never shown again):</p>
+  <textarea id="idptext" class="json" aria-label="Identity provider (JSON)" spellcheck="false"></textarea>
+  <ul id="idpproblems" class="err"></ul>
+  <p><button id="idpsave">Save identity provider</button> <span id="idpmsg"></span></p>
+  <h3 style="font-size:13px">Usage and plan</h3>
+  <p><button class="sec" id="adusage" type="button">Show this month's usage</button> <span id="adusagemsg" class="mut" aria-live="polite"></span></p>
+  <div id="adusageout"></div>
+  <h3 style="font-size:13px">Service catalog import (owners and criticality)</h3>
+  <div class="ctl"><div><label for="regfmt">Format</label><select id="regfmt"><option value="backstage">Backstage catalog-info</option><option value="csv">CSV</option><option value="json">JSON</option></select></div></div>
+  <label for="regtext">Catalog content</label><textarea id="regtext" class="json" spellcheck="false" style="height:110px"></textarea>
+  <p><button class="sec" id="regimport" type="button">Import as a new configuration version</button> <span id="regmsg" class="mut" aria-live="polite"></span></p>
+  <h3 style="font-size:13px">Evidence held</h3>
+  <div class="ctl"><div><label for="evkind">Kind</label><select id="evkind"><option>test_run</option><option>coverage</option><option>runtime_edge</option><option>deployment</option><option>approval</option><option>incident</option><option>incident_link</option><option>release</option><option>verdict</option><option>notification</option><option>acknowledgement</option></select></div>
+    <div><button class="sec" id="evload" type="button">List</button></div> <span id="evmsg" class="mut" aria-live="polite"></span></div>
+  <div id="evout"></div>
+  <h3 style="font-size:13px">Environments</h3>
+  <p><button class="sec" id="envlist" type="button">Show what runs where</button> <span id="envlistmsg" class="mut" aria-live="polite"></span></p>
+  <div id="envlistout"></div>
+</section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let CSRF = null, PERMS = null, ME = null;
+const UNSAFE = ["POST", "PUT", "PATCH", "DELETE"];
+async function tfetch(path, init) {
+  init = init || {};
+  const h = {...(init.headers || {})};
+  if (CSRF && UNSAFE.includes((init.method || "GET").toUpperCase())) h["X-TIA-CSRF"] = CSRF;
+  const r = await fetch(path, {...init, headers: h, credentials: "same-origin"});
+  if (r.status === 401 && ME && ME.auth === "required") showSignIn("Your session has ended. Sign in again.");
+  return r;
+}
+const can = p => PERMS === null || PERMS.includes(p);
+async function api(path, opts) {
+  const r = await tfetch(path, opts && {method: opts.method, headers: {"Content-Type":"application/json"}, body: opts.body && JSON.stringify(opts.body)});
+  const t = await r.text(); let j; try { j = JSON.parse(t) } catch { j = t }
+  if (!r.ok) throw new Error((j && j.detail) || t || r.statusText);
+  return j;
+}
+function busy(btn, on) { btn.disabled = on; btn.classList.toggle("busy", on); }
+// ---- configuration (own fetch: a refusal carries a list of problems, not a message)
+async function cfgCall(path, method, body) {
+  const r = await tfetch(path, method ? {method, headers: {"Content-Type":"application/json", "X-TIA-Actor":"ui"}, body: JSON.stringify(body)} : undefined);
+  let j = {}; try { j = await r.json() } catch {}
+  return {ok: r.ok, status: r.status, j};
+}
+function cfgProblems(list) { $("cfgproblems").innerHTML = (list || []).map(p => `<li>${esc(p)}</li>`).join(""); }
+function cfgParse() {
+  try { return JSON.parse($("cfgtext").value) } catch (e) { cfgProblems(["The text is not valid JSON: " + e.message]); return null; }
+}
+async function cfgLoad() {
+  const {ok, j} = await cfgCall("/api/v1/tenant/config");
+  if (!ok) { $("cfgmeta").textContent = String(j.detail || "Configuration is not available."); return; }
+  $("cfgtext").value = JSON.stringify(j.config, null, 2); $("cfgid").textContent = j.id; cfgProblems([]);
+  $("cfgmeta").textContent = j.is_default ? "Built-in defaults: nothing has been saved yet." : `Version ${j.version} saved by ${j.actor || "?"}${j.comment ? " - " + j.comment : ""}`;
+  const h = (await cfgCall("/api/v1/tenant/config/versions")).j;
+  $("cfghist").querySelector("tbody").innerHTML = (Array.isArray(h) ? h : []).map(v =>
+    `<tr><td>${esc(v.version)} <span class="mut">${esc(v.id)}</span></td><td>${esc(v.actor || "")}</td><td>${esc(v.comment || "")}</td><td class="mut">${esc(v.created_at)}</td>` +
+    `<td><button class="sec" data-restore="${esc(v.version)}">Restore as new version</button></td></tr>`).join("");
+  document.querySelectorAll("[data-restore]").forEach(b => b.onclick = async () => {
+    const r = await cfgCall(`/api/v1/tenant/config/versions/${b.dataset.restore}/restore`, "POST", {});
+    msg("cfgmsg", r.ok ? (r.j.created ? `Restored as version ${r.j.version}` : "Already the current configuration") : "Restore failed", r.ok ? "ok" : "err");
+    cfgLoad();
+  });
+}
+$("cfgvalidate").onclick = async () => {
+  const cfg = cfgParse(); if (!cfg) return;
+  const {j} = await cfgCall("/api/v1/tenant/config/validate", "POST", {config: cfg});
+  cfgProblems(j.valid ? [] : j.problems);
+  msg("cfgmsg", j.valid ? `Valid. ${(j.changes || []).length} setting(s) would change.` : "Not valid", j.valid ? "ok" : "err");
+};
+$("cfgsave").onclick = async () => {
+  const cfg = cfgParse(); if (!cfg) return;
+  const r = await cfgCall("/api/v1/tenant/config", "PUT", {config: cfg, comment: $("cfgcomment").value || null});
+  if (r.ok) { cfgProblems([]); msg("cfgmsg", r.j.created ? `Saved as version ${r.j.version}` : "No change: identical to the current version", "ok"); $("cfgcomment").value = ""; cfgLoad(); }
+  else { const d = r.j.detail; cfgProblems(d && d.problems ? d.problems : [typeof d === "string" ? d : "Save failed"]); msg("cfgmsg", "Not saved", "err"); }
+};
+$("cfgreload").onclick = cfgLoad;
+
+function msg(id, text, cls) { $(id).className = cls || "mut"; $(id).textContent = text; }
+
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  ["url","disc","path","up"].forEach(t => $("tab-"+t).classList.toggle("hidden", t !== b.dataset.tab));
+});
+
+async function loadRepos() {
+  const repos = await api("/api/v1/repositories");
+  const tb = $("repos").querySelector("tbody");
+  tb.innerHTML = repos.map(r => `<tr><td><b>${esc(r.name)}</b><br><span class="mut">${esc(r.url)}</span>${r.last_error ? `<br><span class="err">${esc(r.last_error)}</span>`:""}</td>
+    <td>${esc(r.provider)}</td><td>${esc(r.default_branch)}</td><td><code>${esc((r.last_commit||"").slice(0,8))}</code></td>
+    <td>${esc((r.branches||[]).slice(0,6).join(", "))}${(r.branches||[]).length>6?" ...":""}</td>
+    <td class="mut">${r.last_synced ? new Date(r.last_synced*1000).toLocaleString() : ""}</td>
+    <td>${r.kind === "upload" ? `<button class="sec" onclick="useUpload('${esc(r.name)}')">Analyse vs previous upload</button>` : `<button class="sec" onclick="syncRepo('${esc(r.name)}')">Sync</button>`} <button class="sec" onclick="delRepo('${esc(r.name)}')">Remove</button></td></tr>`).join("")
+    || `<tr><td colspan="7" class="mut">No repositories yet.</td></tr>`;
+  fillRepoFilter();
+  const cur = $("target").value;
+  $("target").innerHTML = repos.map(r => `<option ${r.name===cur?"selected":""}>${esc(r.name)}</option>`).join("");
+  REPO_BRANCHES = Object.fromEntries(repos.map(r => [r.name, r.branches || []]));
+  fillHeadChoices();
+}
+// the Head box suggests the branches that already exist in the chosen repository (typing anything else still works)
+let REPO_BRANCHES = {};
+function fillHeadChoices() {
+  const bs = REPO_BRANCHES[$("target").value] || [];
+  $("headchoices").innerHTML = bs.map(b => `<option value="${esc(b)}">`).join("");
+  $("head").placeholder = bs.length ? `e.g. ${bs.filter(b => b !== "main")[0] || bs[0]} (click to see all branches)` : "feature/my-change";
+}
+$("target").addEventListener("change", fillHeadChoices);
+// a browser's suggestion list only shows names that contain what is already typed, so a box holding "main" would hide develop:
+// on click, show every branch, and put the old text back if nothing was chosen
+["head", "base"].forEach(id => { const el = $(id);
+  el.addEventListener("focus", () => { el.dataset.prev = el.value; if (el.value && (REPO_BRANCHES[$("target").value] || []).length) el.value = ""; });
+  el.addEventListener("blur", () => { if (el.value === "" && el.dataset.prev) el.value = el.dataset.prev; delete el.dataset.prev; }); });
+async function syncRepo(n) { try { await api(`/api/v1/repositories/${encodeURIComponent(n)}/sync`, {method:"POST", body:{token: $("token").value || null}}); } catch(e) { alert(e.message) } loadRepos(); }
+async function delRepo(n) { if (confirm("Remove "+n+"?")) { await api(`/api/v1/repositories/${encodeURIComponent(n)}`, {method:"DELETE"}); loadRepos(); } }
+
+$("add").onclick = async () => {
+  busy($("add"), true); msg("addmsg", "Cloning...");
+  try { const r = await api("/api/v1/repositories", {method:"POST", body:{url:$("url").value.trim(), token:$("token").value||null, name:$("name").value||null, branch:$("branch").value||null}});
+        msg("addmsg", `Ingested ${r.name} (${r.branches.length} branches)`, "ok"); $("url").value=""; await loadRepos(); }
+  catch(e) { msg("addmsg", e.message, "err") } busy($("add"), false);
+};
+// ---- upload from the user's drive: a zip (streamed as one body) or a folder (sent in batches) ----------------------------
+function xhr(method, url, body, onprogress, headers) {
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest(); x.open(method, url); x.withCredentials = true;
+    Object.entries(headers || {}).forEach(([k, v]) => x.setRequestHeader(k, v));
+    if (CSRF && UNSAFE.includes(method.toUpperCase())) x.setRequestHeader("X-TIA-CSRF", CSRF);
+    if (onprogress) x.upload.onprogress = e => e.lengthComputable && onprogress(e.loaded);
+    x.onload = () => { let j; try { j = JSON.parse(x.responseText) } catch { j = x.responseText }
+                       x.status < 300 ? res(j) : rej(new Error((j && j.detail) || x.statusText || ("HTTP " + x.status))) };
+    x.onerror = () => rej(new Error("network error")); x.send(body);
+  });
+}
+const mb = n => (n / 1048576).toFixed(1) + " MB";
+const SKIP_DIRS = new Set([".git", "node_modules", "__pycache__", ".venv", "venv", ".tox", ".mypy_cache", ".pytest_cache", ".idea"]);
+function upProgress(done, total, what) {
+  $("upbar").classList.remove("hidden"); $("upfill").style.width = (total ? Math.min(100, 100 * done / total) : 0) + "%";
+  msg("upmsg", `${what}: ${mb(done)} of ${mb(total)} (${total ? Math.round(100 * done / total) : 0}%)`);
+}
+function upDone(r) {
+  return r.unchanged ? `${r.name}: identical to the previous upload, no new revision`
+    : `${r.name}: ${r.files} files stored as revision ${r.revision.slice(0, 8)}` + (r.skipped_files ? ` (${r.skipped_files} files in ignored folders skipped)` : "");
+}
+function upBusy(on) { busy($("upzip"), on); busy($("upfolder"), on); }
+async function upFinish(id) {
+  msg("upmsg", "Storing as a repository and updating the graph...");
+  const r = await api(`/api/v1/uploads/${id}/commit`, {method: "POST"});
+  msg("upmsg", upDone(r), "ok"); $("upbar").classList.add("hidden"); await loadRepos();
+}
+async function upAbort(id) { if (id) { try { await api(`/api/v1/uploads/${id}`, {method: "DELETE"}) } catch {} } $("upbar").classList.add("hidden"); }
+
+$("upzip").onclick = async () => {
+  const f = $("zipfile").files[0]; if (!f) return msg("upmsg", "Choose a .zip file first", "err");
+  const name = $("upname").value.trim() || f.name.replace(/\.zip$/i, "");
+  upBusy(true); let id;
+  try {
+    const s = await api("/api/v1/uploads", {method: "POST", body: {name}}); id = s.upload_id;
+    if (f.size > s.max_bytes) throw new Error(`This file is ${mb(f.size)}; the limit is ${mb(s.max_bytes)}`);
+    await xhr("PUT", `/api/v1/uploads/${id}/archive`, f, l => upProgress(l, f.size, "Uploading"), {"Content-Type": "application/zip"});
+    await upFinish(id);
+  } catch (e) { msg("upmsg", e.message, "err"); await upAbort(id); }
+  upBusy(false);
+};
+
+$("upfolder").onclick = async () => {
+  const all = [...$("folderfiles").files]; if (!all.length) return msg("upmsg", "Choose a folder first", "err");
+  const folder = all[0].webkitRelativePath.split("/")[0];
+  const items = all.map(f => ({f, rel: f.webkitRelativePath.split("/").slice(1).join("/")}))
+                   .filter(x => x.rel && !x.rel.split("/").some(p => SKIP_DIRS.has(p)));
+  if (!items.length) return msg("upmsg", "Nothing to upload (only ignored folders such as node_modules or .git)", "err");
+  const name = $("upname").value.trim() || folder, total = items.reduce((a, x) => a + x.f.size, 0);
+  upBusy(true); let id;
+  try {
+    const s = await api("/api/v1/uploads", {method: "POST", body: {name}}); id = s.upload_id;
+    if (total > s.max_bytes) throw new Error(`This folder is ${mb(total)}; the limit is ${mb(s.max_bytes)}`);
+    if (items.length > s.max_files) throw new Error(`This folder has ${items.length} files; the limit is ${s.max_files}`);
+    let sent = 0, i = 0;
+    while (i < items.length) {                                   // batches of up to 250 files / 48 MB
+      const batch = []; let size = 0;
+      while (i < items.length && batch.length < 250 && (batch.length === 0 || size + items[i].f.size <= 48 * 1048576)) { batch.push(items[i]); size += items[i].f.size; i++; }
+      const fd = new FormData();
+      batch.forEach(x => { fd.append("paths", x.rel); fd.append("files", x.f, x.f.name); });
+      await xhr("POST", `/api/v1/uploads/${id}/files`, fd, l => upProgress(sent + Math.min(l, size), total, "Uploading"));
+      sent += size;
+    }
+    await upFinish(id);
+  } catch (e) { msg("upmsg", e.message, "err"); await upAbort(id); }
+  upBusy(false);
+};
+
+async function useUpload(name) {
+  const revs = await api(`/api/v1/repositories/${encodeURIComponent(name)}/revisions`);
+  if (revs.length < 2) return alert("Upload a changed copy of " + name + " first: this is the only revision so far.");
+  $("target").value = name; $("head").value = "main"; $("base").value = "main~1"; $("pr").value = "";
+  $("run").scrollIntoView({behavior: "smooth", block: "center"});
+}
+
+$("addlocal").onclick = async () => {
+  busy($("addlocal"), true);
+  try { const r = await api("/api/v1/repositories", {method:"POST", body:{path:$("lpath").value.trim(), name:$("lname").value||null}});
+        msg("localmsg", `Registered ${r.name}`, "ok"); await loadRepos(); } catch(e) { msg("localmsg", e.message, "err") } busy($("addlocal"), false);
+};
+$("disc").onclick = async () => {
+  busy($("disc"), true); msg("discmsg", "Discovering and cloning (can take a while)...");
+  try { const r = await api("/api/v1/repositories/discover", {method:"POST", body:{provider:$("dprov").value, org:$("dorg").value.trim(), project:$("dproj").value.trim()||null, token:$("dtoken").value, api_base:$("dapi").value.trim()||null}});
+        msg("discmsg", `Discovered ${r.discovered.length}, ingested ${r.ingested.length}, failed ${r.failed.length}` + (r.failed.length ? ": " + r.failed.map(f=>f.name+" ("+f.error+")").join("; ") : ""), r.failed.length ? "err" : "ok"); await loadRepos(); }
+  catch(e) { msg("discmsg", e.message, "err") } busy($("disc"), false);
+};
+
+// ---- the last analysis survives a reload (this browser only; the token is never kept) ----
+function saveLastRun(extra) {
+  try {
+    const prev = JSON.parse(localStorage.getItem("tia.lastRun") || "{}");
+    localStorage.setItem("tia.lastRun", JSON.stringify({...prev, target: $("target").value, head: $("head").value, base: $("base").value,
+                                                        pr: $("pr").value, ...extra, saved_at: new Date().toISOString()}));
+  } catch (_) {}
+}
+function restoreRunForm() {
+  try {
+    const s = JSON.parse(localStorage.getItem("tia.lastRun") || "null");
+    if (!s) return;
+    if (s.target && [...$("target").options].some(o => o.value === s.target)) { $("target").value = s.target; fillHeadChoices(); }
+    if (s.head != null) $("head").value = s.head;
+    if (s.base != null) $("base").value = s.base;
+    if (s.pr != null) $("pr").value = s.pr;
+  } catch (_) {}
+}
+async function restoreLastAnalysis() {
+  let aid = null;
+  try { aid = (JSON.parse(localStorage.getItem("tia.lastRun") || "{}")).analysis_id || null; } catch (_) {}
+  if (!aid) return;
+  try {
+    const [rep, comment] = await Promise.all([api(`/api/v1/impact-analyses/${encodeURIComponent(aid)}`),
+                                              api(`/api/v1/impact-analyses/${encodeURIComponent(aid)}/comment`)]);
+    lastAnalysis = aid; $("gimpact").disabled = false; $("toimpact").disabled = false;
+    show(rep, comment, {scroll: false});
+    msg("runmsg", `Restored the last analysis, ${aid}`, "ok");
+  } catch (_) {
+    // the analysis is gone (for example a fresh database) or no longer readable: keep the form, forget the id
+    try { const s = JSON.parse(localStorage.getItem("tia.lastRun") || "{}"); delete s.analysis_id; localStorage.setItem("tia.lastRun", JSON.stringify(s)); } catch (_) {}
+  }
+}
+$("run").onclick = async () => {
+  busy($("run"), true); msg("runmsg", "Analysing...");
+  try {
+    const body = {target:$("target").value, head:$("head").value.trim()||null, pr:$("pr").value?+$("pr").value:null, base:$("base").value.trim()||null, token:$("atoken").value||null};
+    const r = await api("/api/v1/impact-analyses", {method:"POST", body});
+    lastAnalysis = r.analysis_id; $("gimpact").disabled = false; $("toimpact").disabled = false;
+    saveLastRun({analysis_id: r.analysis_id});
+    show(r.report, await api(`/api/v1/impact-analyses/${r.analysis_id}/comment`)); msg("runmsg", "Done", "ok");
+    warmAllSections();
+  } catch(e) { msg("runmsg", e.message, "err") } busy($("run"), false);
+};
+// ---- findings and their filters (PRD 9.3): the server applies the filters, so the page and the API agree ----
+const FILTERS = ["severity", "service", "reach", "kind", "evidence", "environment", "policy", "issue"];
+let CUR_AID = null;
+// ---- one colour per component type, used by the graphs, the legend and the report tables ----
+const TYPE_COLOR = {service:"#1f4fd8", endpoint:"#2a9df4", schema:"#8e5bd9", function:"#8b95a5", callsite:"#12a594", contract_ref:"#8a9a2e", test:"#3ba55d",
+  entity:"#b8651b", table:"#0b6e4f", column:"#7bc4a4", migration:"#6b7280", type:"#c2410c", topic:"#b83280", listener:"#d53f8c", event_schema:"#805ad5",
+  procedure:"#0e7490", runtime_ref:"#00838f", config:"#a16207", file:"#78716c", page:"#0891b2", unresolved:"#9e9e9e", redacted:"#9e9e9e"};
+const TYPE_NAME = {service:"service", endpoint:"endpoint (API)", schema:"schema", function:"function", callsite:"outbound call", contract_ref:"declared contract", test:"test",
+  entity:"data entity", table:"table", column:"column", migration:"migration", type:"class", topic:"event topic", listener:"event listener", event_schema:"event schema",
+  procedure:"stored procedure", runtime_ref:"seen at runtime", config:"configuration", file:"file", page:"page", unresolved:"unresolved call", redacted:"hidden"};
+const typeChip = (t, text) => `<span class="tchip"><i style="background:${TYPE_COLOR[t] || "#9aa3af"}"></i>${esc(text === undefined ? (TYPE_NAME[t] || t || "component") : text)}</span>`;
+function shortNode(p) {
+  if (!p || p.type === "redacted" || !p.node) return "[hidden]";
+  if (p.type === "callsite") return `call ${p.file || ""}:${p.line || ""}`;
+  const id = String(p.node);
+  if (p.type === "runtime_ref") return id.replace(/^runtime:/, "").split("->")[0] + " (seen at runtime)";
+  return id.includes("::") ? id.split("::").pop() : id.replace(/^svc:/, "").split(":").slice(1).join(":") || id;
+}
+// "Why", in labelled parts: what changed, why this row is affected, the path from the change to it, the evidence, the limits
+function whyHtml(o) {
+  const part = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : "";
+  const hops = (o.path || []).map((p, i) => `<span class="hop">${i ? '<span class="arr">&rarr;</span>' : ""}${typeChip(p.type, shortNode(p))}</span>`).join(" ");
+  return `<dl class="why">${part("What changed", esc(o.changed))}${part("Why this is affected", esc(o.how))}${part("Path from the change", hops)}` +
+    part("Evidence", o.ev && o.ev.file ? `<code>${esc(o.ev.repo || "")}:${esc(o.ev.file)}${o.ev.line ? ":" + esc(o.ev.line) : ""}</code>` : "") +
+    part("Limits", (o.limits || []).map(esc).join("<br>")) + "</dl>";
+}
+const splitReason = r => { const i = String(r || "").indexOf(". Change: "); return i < 0 ? [String(r || ""), ""] : [r.slice(0, i) + ".", r.slice(i + 10).replace(/\.$/, "")]; };
+const graphBtn = (kind, i, has) => has ? `<button class="sec" type="button" data-pg="${kind}:${i}" aria-expanded="false">Show</button>` : '<span class="mut">-</span>';
+const PG_ROWS = {f: [], s: []};
+function findingRows(list) {
+  PG_ROWS.f = list;
+  return list.map((f, i) => { const [how, changed] = splitReason(f.reason); return `<tr><td><span class="pill ${esc(f.severity)}">${esc(f.severity)}</span></td><td>${esc(f.component)}<br><span class="mut">${esc(f.repository)}</span>${f.node_type ? "<br>" + typeChip(f.node_type) : ""}</td>
+    <td>${esc(String(f.evidence_status || "").replace(/_/g, " "))}${f.resolution_strategy ? `<br><span class="mut">${esc(f.resolution_strategy)}</span>`:""}${f.runtime ? `<br><span class="mut">observed in ${esc(f.runtime.environments.join(", ") || "telemetry")}: ${esc(f.runtime.calls_observed)} call(s)</span>` : ""}</td>
+    <td>${whyHtml({changed, how, path: f.path, ev: f.evidence, limits: f.limitations})}</td>
+    <td>${f.remediation ? esc(f.remediation) + (f.explanation ? `<br><span class="mut">${esc(f.explanation)}${f.rule_id ? ` (<code>${esc(f.rule_id)}</code>)` : ""}</span>` : "") : '<span class="mut">-</span>'}</td>
+    <td>${(f.tests||[]).map(t=>esc(t.name)+` <span class="mut">(${esc(t.association)})</span>`).join("<br>") || '<span class="mut">none found</span>'}</td>
+    <td>${graphBtn("f", i, (f.path || []).length > 1)}</td></tr>`; }).join("");
+}
+// ---- the Graph column: this row's impact path, drawn under the row (one open at a time) ----
+let pgCy = null;
+function closePathGraph() {
+  if (pgCy) { pgCy.destroy(); pgCy = null; }
+  document.querySelectorAll("tr.pgrow").forEach(r => r.remove());
+  document.querySelectorAll("[data-pg]").forEach(b => { b.textContent = "Show"; b.setAttribute("aria-expanded", "false"); });
+}
+function showPathGraph(btn) {
+  const open = btn.getAttribute("aria-expanded") === "true";
+  closePathGraph();
+  if (open) return;
+  const [kind, i] = btn.dataset.pg.split(":"), row = PG_ROWS[kind][+i], tr = btn.closest("tr");
+  if (!row || !tr) return;
+  const path = row.path || [], pe = row.path_edges || [];
+  tr.insertAdjacentHTML("afterend", `<tr class="pgrow"><td colspan="${tr.children.length}"><div id="pgcy" role="img" aria-label="Impact path of this row: ${esc(path.map(shortNode).join(" to "))}"></div>
+    <p class="mut" style="margin:4px 0 0">Red outline = what changed. Arrows follow the impact, from the change to what is affected${kind === "f" ? " (filled by severity)" : ""}. Dashed orange = inferred link. ${[...new Set(path.map(p => p.type))].map(t => typeChip(t)).join(" &nbsp; ")}</p></td></tr>`);
+  btn.textContent = "Hide"; btn.setAttribute("aria-expanded", "true");
+  const fg = css("--fg") || "#222", ids = path.map((p, n) => "n" + n);
+  const els = path.map((p, n) => ({data: {id: ids[n], label: shortNode(p), tcolor: TYPE_COLOR[p.type] || "#9aa3af", role: n === 0 ? "changed" : n === path.length - 1 ? "affected" : "via",
+                                          ...(kind === "f" && n === path.length - 1 && n ? {sevcolor: SEV[row.severity]} : {})}, position: {x: n * 230, y: (n % 2) * 70}}))
+    .concat(pe.slice(0, path.length - 1).map((e, n) => ({data: {id: "e" + n, source: ids[n], target: ids[n + 1], label: e.rel, status: e.status}})));
+  pgCy = cytoscape({container: $("pgcy"), elements: els, layout: {name: "preset", fit: true, padding: 30}, wheelSensitivity: .25, boxSelectionEnabled: false, style: [
+    {selector: "node", style: {label: "data(label)", "font-size": 10, color: fg, "text-valign": "bottom", "text-margin-y": 4, "text-wrap": "ellipsis", "text-max-width": 150,
+                               "background-color": "data(tcolor)", width: 20, height: 20, "border-width": 1, "border-color": css("--line") || "#ccc"}},
+    {selector: 'node[role="changed"]', style: {"border-color": "#d32f2f", "border-width": 5}},
+    {selector: "node[sevcolor]", style: {"background-color": "data(sevcolor)", width: 28, height: 28}},
+    {selector: "edge", style: {width: 2, "curve-style": "bezier", "target-arrow-shape": "triangle", "line-color": "#2e7d32", "target-arrow-color": "#2e7d32", label: "data(label)",
+                               "font-size": 8, color: fg, "text-rotation": "autorotate", "text-margin-y": -9}},
+    {selector: 'edge[status="contract_confirmed"]', style: {"line-color": "#1565c0", "target-arrow-color": "#1565c0"}},
+    {selector: 'edge[status="runtime_observed"]', style: {"line-color": "#00838f", "target-arrow-color": "#00838f"}},
+    {selector: 'edge[status="inferred"]', style: {"line-color": "#ef6c00", "target-arrow-color": "#ef6c00", "line-style": "dashed"}}]});
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-pg]"); if (b) showPathGraph(b); });
+$("typelegend").innerHTML = "<span>Component types:</span>" + ["service", "endpoint", "schema", "function", "callsite", "test", "type", "entity", "table", "topic",
+  "listener", "config", "page", "contract_ref", "runtime_ref", "unresolved"].map(t => `<span>${typeChip(t)}</span>`).join("");
+async function applyFilters() {
+  if (!CUR_AID) return;
+  const p = new URLSearchParams();
+  FILTERS.forEach(k => { const v = $("f_" + k).value.trim(); if (v) p.set(k, v) });
+  try {
+    const r = await api(`/api/v1/impact-analyses/${encodeURIComponent(CUR_AID)}/findings?${p}`);
+    $("findings").querySelector("tbody").innerHTML = findingRows(r.findings) || `<tr><td colspan="7" class="mut">No finding matches these filters.</td></tr>`;
+    $("fcount").textContent = [...p.keys()].length ? `${r.matched} of ${r.total} finding(s) shown` : "";
+  } catch (e) { $("fcount").textContent = e.message }
+}
+FILTERS.forEach(k => $("f_" + k).addEventListener("change", applyFilters));
+$("fclear").onclick = () => { FILTERS.forEach(k => { $("f_" + k).value = "" }); applyFilters() };
+
+// ---- team coordination and reviewer verdicts (FR-045, FR-044) ----
+async function loadCoordination() {
+  if (!CUR_AID) return;
+  try {
+    const st = await api(`/api/v1/impact-analyses/${encodeURIComponent(CUR_AID)}/coordination`);
+    $("coordtable").querySelector("tbody").innerHTML = st.teams.map(t => `<tr><td>${esc(t.team)}</td><td>${t.components.map(esc).join(", ")}</td>
+      <td>${t.notification ? `${esc(t.notification.channel || "none")}: ${esc(t.notification.status)}<br><span class="mut">${esc(t.notification.detail || "")}</span>` : '<span class="mut">not yet</span>'}</td>
+      <td>${t.acknowledged ? `${esc(t.acknowledged.by)}<br><span class="mut">${esc(t.acknowledged.at)}${t.acknowledged.comment ? " - " + esc(t.acknowledged.comment) : ""}</span>` : '<span class="mut">no</span>'}</td>
+      <td><span class="pill ${t.status === "acknowledged" ? "covered" : t.status === "notification_failed" ? "missing" : "partial"}">${esc(t.status.replace("_", " "))}</span></td></tr>`).join("")
+      || `<tr><td colspan="5" class="mut">No other team owns a materially affected component (owners come from the configuration's ownership or tia-services.yaml).</td></tr>`;
+    $("ackteam").innerHTML = st.teams.map(t => `<option>${esc(t.team)}</option>`).join("");
+    $("coordnotify").disabled = $("ackbtn").disabled = !st.teams.length;
+  } catch (e) { msg("coordmsg", e.message, "err") }
+}
+$("coordnotify").onclick = async () => {
+  busy($("coordnotify"), true);
+  try { const st = await api(`/api/v1/impact-analyses/${encodeURIComponent(CUR_AID)}/notifications`, {method: "POST"});
+        msg("coordmsg", `${st.summary.notified + st.summary.acknowledged} team(s) notified, ${st.summary.notification_failed} failed`, st.summary.notification_failed ? "err" : "ok");
+        loadCoordination(); } catch (e) { msg("coordmsg", e.message, "err") }
+  busy($("coordnotify"), false);
+};
+$("ackbtn").onclick = async () => {
+  try { const r = await api(`/api/v1/impact-analyses/${encodeURIComponent(CUR_AID)}/acknowledgements`, {method: "POST", body: {team: $("ackteam").value, comment: $("ackcomment").value || null}});
+        msg("coordmsg", r.coordination.complete ? "Every affected team has acknowledged" : "Acknowledgement recorded", "ok"); loadCoordination(); } catch (e) { msg("coordmsg", e.message, "err") }
+};
+$("vsave").onclick = async () => {
+  try { await api(`/api/v1/impact-analyses/${encodeURIComponent(CUR_AID)}/verdicts`, {method: "POST", body: {finding_id: $("vfinding").value, verdict: $("vverdict").value, comment: $("vcomment").value || null}});
+        msg("vmsg", "Verdict recorded (the report itself is not changed)", "ok"); } catch (e) { msg("vmsg", e.message, "err") }
+};
+
+// ---- releases, environments, incidents (FR-030 to FR-032) ----
+document.querySelectorAll("[data-rtab]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-rtab]").forEach(x => x.classList.toggle("on", x === b));
+  ["rel", "env", "inc"].forEach(t => $("rtab-" + t).classList.toggle("hidden", t !== b.dataset.rtab));
+});
+const relRow = r => `<tr><td>${esc(r.rel)}</td><td>${esc(r.from_service || r.from)} &rarr; ${esc(r.to_service || "")} <code>${esc(String(r.to).split("::").pop())}</code></td><td>${esc(r.status || (r.before ? r.before.status + " -> " + r.after.status : ""))}</td></tr>`;
+async function loadReleases() {
+  try {
+    const r = await api("/api/v1/releases");
+    $("reltable").querySelector("tbody").innerHTML = r.releases.map(x => `<tr><td>${esc(x.name)}</td><td>${Object.keys(x.revisions).map(esc).join(", ")}</td><td>${esc(x.recorded_at)}</td></tr>`).join("")
+      || `<tr><td colspan="3" class="mut">No release recorded yet.</td></tr>`;
+    const opts = r.releases.map(x => `<option>${esc(x.name)}</option>`).join("");
+    $("relbase").innerHTML = opts; $("relhead").innerHTML = opts;
+    if (r.releases.length > 1) $("relbase").selectedIndex = 1;
+  } catch (e) { msg("relmsg", e.message, "err") }
+}
+$("relload").onclick = loadReleases;
+$("relsave").onclick = async () => {
+  let revs; try { revs = JSON.parse($("relrevs").value || "{}") } catch { return msg("relmsg", "Revisions must be JSON, e.g. {\"orders-service\": \"main\"}", "err") }
+  try { const r = await api("/api/v1/releases", {method: "POST", body: {name: $("relname").value.trim(), revisions: revs}});
+        msg("relmsg", `Release ${r.name} recorded (${r.edges} relationships)`, "ok"); loadReleases(); } catch (e) { msg("relmsg", e.message, "err") }
+};
+$("relcmp").onclick = async () => {
+  try {
+    const d = await api(`/api/v1/releases/compare?base=${encodeURIComponent($("relbase").value)}&head=${encodeURIComponent($("relhead").value)}`);
+    const part = (title, rows) => `<h3 style="font-size:13px">${title} (${rows.length})</h3>` + (rows.length ? `<table><thead><tr><th>Relationship</th><th>From &rarr; to</th><th>Evidence</th></tr></thead><tbody>${rows.map(relRow).join("")}</tbody></table>` : '<p class="mut">None.</p>');
+    $("relout").innerHTML = part("Introduced", d.introduced) + part("Removed", d.removed) + part("Modified", d.modified);
+  } catch (e) { $("relout").innerHTML = `<p class="err">${esc(e.message)}</p>` }
+};
+$("envgo").onclick = async () => {
+  const v = $("envat").value; if (!v) return msg("envmsg", "Choose a date and time", "err");
+  try {
+    const d = await api(`/api/v1/environments/at?at=${encodeURIComponent(v + ":00Z")}`);
+    const rows = Object.entries(d.deployed).flatMap(([repo, envs]) => Object.entries(envs).map(([env, x]) => `<tr><td>${esc(repo)}</td><td>${esc(env)}</td><td><code>${esc(String(x.revision).slice(0, 12))}</code></td><td>${esc(x.deployed_at)}</td></tr>`));
+    $("envout").innerHTML = rows.length ? `<table><thead><tr><th>Repository</th><th>Environment</th><th>Revision</th><th>Deployed</th></tr></thead><tbody>${rows.join("")}</tbody></table>` : '<p class="mut">No deployment recorded before that moment.</p>';
+    msg("envmsg", `as of ${d.at}`);
+  } catch (e) { msg("envmsg", e.message, "err") }
+};
+async function loadIncidents() {
+  try {
+    const r = await api("/api/v1/evidence?kind=incident&limit=200");
+    $("inctable").querySelector("tbody").innerHTML = r.records.map(x => `<tr><td>${esc(x.data.id)}<br><span class="mut">${esc(x.data.title)}</span></td><td>${esc(x.data.service || x.data.repo)}</td><td>${esc(x.data.environment)}</td><td>${esc(x.data.started_at)}</td>
+      <td><button class="sec" type="button" data-inc="${esc(x.data.id)}">Investigate</button></td></tr>`).join("") || `<tr><td colspan="5" class="mut">No incident recorded (push them with POST /api/v1/incidents).</td></tr>`;
+    document.querySelectorAll("[data-inc]").forEach(b => b.onclick = () => investigate(b.dataset.inc));
+  } catch (e) { msg("incmsg", e.message, "err") }
+}
+async function investigate(id) {
+  try {
+    const d = await api(`/api/v1/incidents/${encodeURIComponent(id)}/investigation`);
+    $("incout").innerHTML = `<p class="banner">${esc(d.note)}</p><table><thead><tr><th>Repository</th><th>Revision</th><th>How it is associated</th><th>Evidence</th></tr></thead><tbody>` +
+      (d.candidates.map(c => `<tr><td>${esc(c.repo)}</td><td><code>${esc(String(c.revision || "").slice(0, 12))}</code></td><td>${c.associations.map(a => `<span class="pill">${esc(a.replace("_", " "))}</span>`).join(" ")}</td>
+        <td>${c.evidence.map(e => esc(e.because || (e.deployment ? `deployed to ${e.deployment.environment} ${e.hours_before_incident} h before` : e.by ? `linked by ${e.by}` : "named by the incident record"))).join("<br>")}</td></tr>`).join("")
+        || `<tr><td colspan="4" class="mut">No candidate change in the ${esc(d.window_hours)} h window.</td></tr>`) + "</tbody></table>";
+  } catch (e) { $("incout").innerHTML = `<p class="err">${esc(e.message)}</p>` }
+}
+$("incload").onclick = loadIncidents;
+
+// ---- insights (FR-043, FR-044) ----
+const share = v => v === null || v === undefined ? "-" : Math.round(v * 100) + "%";
+async function loadTrends() {
+  try {
+    const t = await api(`/api/v1/trends?group=${$("trgroup").value}&period=${$("trperiod").value}`);
+    $("trout").innerHTML = `<p class="mut">${esc(t.note)}</p><table><thead><tr><th>${esc(t.group)}</th><th>Period</th><th>Changes</th><th>Breaking</th><th>Unresolved dependencies</th><th>Material findings without a test</th><th>Incident associations</th></tr></thead><tbody>` +
+      (t.rows.map(r => `<tr><td>${esc(r[t.group])}</td><td>${esc(r.period)}</td><td>${r.change_volume}</td><td>${r.breaking_changes} (${share(r.breaking_share)})</td><td>${share(r.unresolved_dependency_share)}</td><td>${share(r.missing_verification_share)}</td><td>${r.incident_associations}</td></tr>`).join("")
+       || '<tr><td colspan="7" class="mut">No analysis in this period.</td></tr>') + "</tbody></table>";
+  } catch (e) { msg("insmsg", e.message, "err") }
+}
+async function loadCalibration() {
+  try {
+    const c = await api("/api/v1/calibration");
+    const rows = Object.entries(c.by.severity_rule).map(([rule, r]) => `<tr><td><code>${esc(rule)}</code></td><td>${r.judged}</td><td>${r.confirmed}</td><td>${r.false_positive}</td><td>${r.irrelevant}</td><td>${share(r.precision)}${r.too_few_to_act_on ? ' <span class="mut">(too few)</span>' : ""}</td></tr>`);
+    $("calout").innerHTML = `<p class="mut">${esc(c.note)}</p><table><thead><tr><th>Severity rule</th><th>Judged</th><th>Confirmed</th><th>False positive</th><th>Irrelevant</th><th>Precision</th></tr></thead><tbody>${rows.join("") || '<tr><td colspan="6" class="mut">No verdict recorded yet.</td></tr>'}</tbody></table>`;
+  } catch (e) { msg("insmsg", e.message, "err") }
+}
+$("trgo").onclick = loadTrends;
+$("calgo").onclick = loadCalibration;
+// fill every tester, release and insight view from the live API, so an opened page is not blank
+async function warmAllSections() {
+  await Promise.allSettled([tShared(), tCov(), tApi(), tUi(), loadReleases(), loadIncidents(), loadTrends(), loadCalibration()]);
+}
+
+// ---- administration additions: usage, catalog import, evidence, environments ----
+$("adusage").onclick = async () => {
+  try { const u = await api("/api/v1/usage");
+        $("adusageout").innerHTML = `<table><thead><tr><th>Measure</th><th>Used this month</th><th>Plan limit</th></tr></thead><tbody>` +
+          Object.entries(u.usage).filter(([k]) => k !== "month").map(([k, v]) => { const lim = {repositories: "max_repositories", users: "max_users", analyses_in_month: "max_analyses_per_month", evidence_records_in_month: "max_evidence_records_per_month"}[k];
+            return `<tr><td>${esc(k.replace(/_/g, " "))}</td><td>${esc(v)}</td><td>${lim ? esc((u.plan || {})[lim] ?? "no limit") : '<span class="mut">-</span>'}</td></tr>` }).join("") +
+          `</tbody></table><p class="mut">Region: ${esc(u.region || "any")} &middot; customer-managed key: ${u.customer_managed_key ? "yes" : "no"}</p>`;
+  } catch (e) { msg("adusagemsg", e.message, "err") }
+};
+$("regimport").onclick = async () => {
+  const r = await tfetch(`/api/v1/registry/import?format=${$("regfmt").value}`, {method: "POST", headers: {"Content-Type": "text/plain", "X-TIA-Actor": "ui"}, body: $("regtext").value});
+  let j = {}; try { j = await r.json() } catch {}
+  msg("regmsg", r.ok ? `Imported ${j.services ?? ""} service(s) as configuration version ${j.version ?? ""}` : (j.detail && (j.detail.problems || j.detail).toString()) || r.statusText, r.ok ? "ok" : "err");
+};
+$("evload").onclick = async () => {
+  try { const r = await api(`/api/v1/evidence?kind=${$("evkind").value}&limit=100`);
+        $("evout").innerHTML = r.records.length ? `<table><thead><tr><th>Id</th><th>Repository / service</th><th>Environment</th><th>Revision</th><th>Ingested</th><th>By</th></tr></thead><tbody>` +
+          r.records.map(x => `<tr><td>${x.id}</td><td>${esc(x.repo || x.service || "")}</td><td>${esc(x.environment || "")}</td><td><code>${esc(String(x.revision || "").slice(0, 12))}</code></td><td>${esc(x.ingested_at)}</td><td>${esc(x.ingested_by || "")}</td></tr>`).join("") + "</tbody></table>"
+          : '<p class="mut">None held.</p>';
+  } catch (e) { msg("evmsg", e.message, "err") }
+};
+$("envlist").onclick = async () => {
+  try { const d = await api("/api/v1/environments");
+        const rows = Object.entries(d.by_repo).map(([repo, envs]) => `<tr><td>${esc(repo)}</td>${d.environments.map(e => `<td>${envs[e] ? `<code>${esc(String(envs[e].revision).slice(0, 12))}</code>` : '<span class="mut">-</span>'}</td>`).join("")}</tr>`);
+        $("envlistout").innerHTML = `<table><thead><tr><th>Repository</th>${d.environments.map(e => `<th>${esc(e)}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`;
+  } catch (e) { msg("envlistmsg", e.message, "err") }
+};
+// WCAG 1.3.1 / 4.1.2: a label written just before its field is tied to it, so screen readers announce every input by name
+document.querySelectorAll("label").forEach(l => {
+  if (l.htmlFor || l.querySelector("input,select,textarea")) return;
+  const n = l.nextElementSibling;
+  if (n && /^(INPUT|SELECT|TEXTAREA)$/.test(n.tagName)) { if (!n.id) n.id = "f" + Math.random().toString(36).slice(2, 9); l.htmlFor = n.id; }
+});
+// the PR comment is Markdown for GitHub; on this page it is shown as plain text unless asked otherwise
+let COMMENT_MD = "";
+function plainComment(md) {
+  return String(md || "")
+    .replace(/^<!--[\s\S]*?-->\s*/m, "")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\s*>\s?/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/<\/?details>/gi, "")
+    .replace(/<\/?summary>/gi, "")
+    .replace(/^\|[-: |]+\|\s*$/gm, "")
+    .replace(/^\|/gm, "")
+    .replace(/\|\s*$/gm, "")
+    .replace(/\|/g, " | ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+function setCommentView(which) {
+  $("cplain").classList.toggle("on", which === "plain");
+  $("cmd").classList.toggle("on", which === "md");
+  $("comment").textContent = which === "md" ? COMMENT_MD : plainComment(COMMENT_MD);
+}
+$("cplain").onclick = () => setCommentView("plain");
+$("cmd").onclick = () => setCommentView("md");
+function show(rep, comment, opts) {
+  opts = opts || {};
+  $("result").classList.remove("hidden");
+  $("status").textContent = rep.status;
+  $("warn").innerHTML = rep.status === "complete" ? "" : `<div class="banner">${rep.status === "failed" ? "The analysis failed: " + esc(rep.failure_reason) : "This is not a clean impact assessment: see the unknowns below."}</div>`;
+  const s = rep.summary || {};
+  $("summary").textContent = rep.status === "failed" ? "" : `${rep.change.repository} ${rep.change.base_revision.slice(0,7)} -> ${rep.change.proposed_revision.slice(0,7)}  |  change type: ${rep.change.change_type}  |  ${s.findings} finding(s), ${s.material_findings} material` + (rep.coverage && rep.coverage.outbound_call_sites ? `  |  ${rep.coverage.outbound_call_sites_resolved}/${rep.coverage.outbound_call_sites} outbound calls resolved` : "") + (s.message ? "  |  " + s.message : "") + (rep.redacted && rep.redacted.note ? "  |  " + rep.redacted.note : "");
+  CUR_AID = rep.analysis_id;
+  FILTERS.forEach(k => { $("f_" + k).value = "" }); $("fcount").textContent = "";
+  $("findings").querySelector("tbody").innerHTML = findingRows(rep.findings || []) || `<tr><td colspan="7" class="mut">No findings.</td></tr>`;
+  $("vfinding").innerHTML = (rep.findings || []).map(f => `<option value="${esc(f.id)}">${esc(f.id)} ${esc(f.severity)} ${esc(f.component)}</option>`).join("");
+  $("vsave").disabled = !(rep.findings || []).length;
+  loadCoordination();
+  $("unknowns").innerHTML = (rep.unknowns||[]).map(u => `<li>${esc(u.reason)}${u.items ? "<ul>" + u.items.slice(0,15).map(i=>`<li class="mut">${i.rule ? esc(i.rule) + " x" + esc(i.count) : `${esc(i.repo||"")} ${esc(i.file||"")}${i.line?":"+i.line:""}${i.service ? " " + esc(i.service) : ""}${i.count && !i.reason ? " x" + esc(i.count) : ""} - ${esc(i.reason||i.error||"")}`}</li>`).join("") + (u.items.length>15?`<li class="mut">... ${u.items.length-15} more in JSON</li>`:"") + "</ul>" : ""}</li>`).join("");
+  renderStructure(rep);
+  loadPack(rep.analysis_id, rep.status === "failed");
+  $("scope").innerHTML = scopeHtml(rep.test_scope);
+  $("evid").innerHTML = evidHtml(rep);
+  COMMENT_MD = comment || ""; setCommentView("plain"); $("raw").textContent = JSON.stringify(rep, null, 2);
+  $("permalink").textContent = rep.analysis_id; $("permalink").href = `/analyses/${encodeURIComponent(rep.analysis_id)}`; $("permalink").target = "_blank";
+  if (opts.scroll !== false) $("result").scrollIntoView({behavior:"smooth"});
+}
+$("copy").onclick = () => navigator.clipboard.writeText(COMMENT_MD || $("comment").textContent);
+$("json").onclick = () => $("raw").classList.toggle("hidden");
+
+// ================= tester views (docs/CASE-STUDY.md UC-1, UC-2, UC-3) =================
+const EFFECT = {breaking:"breaking", behaviour_change:"behaviour change", compatible_change:"compatible change", no_functional_change:"no functional change", unknown:"unknown (file-level)"};
+const pill = (cls, text) => `<span class="pill ${esc(cls)}">${esc(text)}</span>`;
+const v2s = v => v === null || v === undefined ? "?" : typeof v === "string" ? JSON.stringify(v) : JSON.stringify(v);
+function gapHtml(g) {
+  const head = g.resolved_by_this_change ? "Rule moved into the shared service" : "Possible rule gap";
+  return `<div class="gap ${g.resolved_by_this_change ? "moved" : ""}"><b>${head}</b>: ${esc(g.reason)}<ul>` +
+    g.applied_by.map(a => `<li>applied by <code>${esc(a.label || a.entry_point)}</code> (${esc(a.service)}) in <code>${esc(a.function)}</code> <span class="mut">${esc(a.function_file)}:${esc(a.function_line)}</span>: <code>${esc(a.expr)}</code></li>`).join("") +
+    g.missing_in.map(m => `<li>not applied by <code>${esc(m.label || m.entry_point)}</code> (${esc(m.service)})</li>`).join("") + "</ul></div>";
+}
+const RES = {passed: ["covered", "passed"], failed: ["missing", "FAILED"], error: ["missing", "ERROR"], skipped: ["partial", "skipped"], not_in_run: ["partial", "not in CI run"]};
+function resultPill(t) {
+  const r = RES[t.result]; if (!r) return "";
+  return " " + pill(r[0], r[1] + (t.run && !t.run.of_analysed_revision ? " (other revision)" : "")) + (t.states && t.states.includes("executed") ? " " + pill("covered", "executed") : "");
+}
+function evidHtml(rep) {
+  let out = "";
+  const recs = (rep.test_recommendations || {}).tests || [];
+  if (recs.length) out += `<h2 style="margin-top:16px">Recommended tests</h2><table id="rectable"><thead><tr><th>Priority</th><th>Test</th><th>Why</th><th>Last result</th></tr></thead><tbody>` +
+    recs.map(r => `<tr><td>${esc(r.priority)}</td><td><code>${esc(r.test)}</code><br><span class="mut">${esc(r.repo)}: ${esc(r.file)}</span></td><td>${r.why.map(esc).join("<br>")}</td><td>${esc(r.last_result || "")}</td></tr>`).join("") +
+    `</tbody></table><p class="mut">${esc(rep.test_recommendations.note)}</p>`;
+  const gaps = rep.test_gaps || [];
+  if (gaps.length) out += `<p class="err">Without test evidence: ${gaps.map(g => esc(g.entry_point || g.component)).join("; ")}</p>`;
+  const dep = rep.deployments;
+  if (dep) {
+    const rows = Object.entries(dep.by_repo).flatMap(([r, envs]) => Object.entries(envs).map(([env, d]) =>
+      `<tr><td>${esc(r)}</td><td>${esc(env)}</td><td><code>${esc(d.revision.slice(0, 12))}</code></td><td>${d.is_analysed_revision ? "analysed revision" : '<span class="err">not the analysed revision</span>'}${d.is_proposed_revision ? "; the proposed change" : ""}` +
+      (d.rollbacks ? `<br><span class="err">rolled back to <code>${esc(d.rollbacks[d.rollbacks.length - 1].to_revision.slice(0, 7))}</code> at ${esc(d.rollbacks[d.rollbacks.length - 1].at)}${d.rollbacks[d.rollbacks.length - 1].explicit ? "" : " (returned to an earlier revision)"}</span>` : "") +
+      (d.build ? `<br><span class="mut">artifact built by ${esc(d.build.build_id)} (${esc(d.build.status)})</span>` : "") +
+      (d.artifact_revision_mismatch ? `<br><span class="err">the artifact was built from <code>${esc(d.build.revision.slice(0, 7))}</code>, not this revision</span>` : "") +
+      `</td></tr>`)).join("");
+    if (rows) out += `<h2 style="margin-top:16px">Deployments</h2><table id="deptable"><thead><tr><th>Repository</th><th>Environment</th><th>Deployed</th><th>Compared</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  // FR-007: builds of the analysed revisions and the artifacts they produced
+  const bl = rep.builds;
+  if (bl) {
+    const label = {proposed_revision: "proposed", base_revision: "base", analysed_revision: "analysed"};
+    const rows = Object.entries(bl.by_repo).flatMap(([r, kinds]) => Object.entries(kinds).map(([k, b]) =>
+      `<tr><td>${esc(r)}</td><td>${esc(label[k] || k)}</td>` + (b ? `<td><code>${esc(b.revision.slice(0, 12))}</code></td><td>${esc(b.build_id)}${b.pipeline ? ` <span class="mut">(${esc(b.pipeline)})</span>` : ""}</td>
+       <td>${b.status === "failed" ? '<span class="err">failed</span>' : esc(b.status)}</td><td>${(b.artifacts || []).map(a => `<code>${esc(a.name)}${a.version ? ":" + esc(a.version) : ""}</code>`).join(" ") || '<span class="mut">none recorded</span>'}</td>`
+       : `<td colspan="4"><span class="mut">no build recorded for this revision</span></td>`) + `</tr>`)).join("");
+    if (rows) out += `<h2 style="margin-top:16px">Builds</h2><table id="buildtable"><thead><tr><th>Repository</th><th>Revision</th><th>Commit</th><th>Build</th><th>Status</th><th>Artifacts</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  // FR-007: the same failure across runs (and incidents), and whether it predates this change
+  const fs = (rep.failure_signatures || {}).signatures || [];
+  if (fs.length) out += `<h2 style="margin-top:16px">Failure signatures</h2><table id="sigtable"><thead><tr><th>Failure (normalised)</th><th>Assessment</th><th>Runs</th><th>Tests</th><th>Incidents</th></tr></thead><tbody>` +
+    fs.map(s => `<tr><td><code>${esc(s.pattern)}</code></td><td>${s.on_proposed_revision && !s.on_base_revision ? `<span class="err">${esc(s.assessment)}</span>` : esc(s.assessment)}</td><td>${esc(s.runs)}</td>
+      <td>${s.tests.map(esc).join("<br>")}</td><td>${s.incidents.map(i => `${esc(i.id)}${i.title ? ` <span class="mut">${esc(i.title)}</span>` : ""}`).join("<br>") || '<span class="mut">none</span>'}</td></tr>`).join("") +
+    `</tbody></table><p class="mut">${esc(rep.failure_signatures.note)}</p>`;
+  return out;
+}
+function scopeHtml(ts) {
+  if (!ts) return "";
+  return regressionHtml(ts.regression) + scopeCore(ts) +
+    (ts.config_checks || []).map(c => `<div class="banner"><b>Configuration</b>: ${esc(c.check)}${c.entry_points.length ? `<br>Entry points: ${c.entry_points.map(e => `<code>${esc(e.entry_point)}</code>`).join(", ")}` : ""}</div>`).join("");
+}
+// the regression answer (docs/MEETING-PAWAN.md): which written test cases to run again because of this change
+function regressionHtml(reg) {
+  if (!reg || !reg.summary || !reg.summary.test_cases) return "";
+  const li = c => `<li><code>${esc(c.id)}</code> ${esc(c.title)}: <span class="mut">${esc(c.reason)}</span></li>`;
+  return `<h2 style="margin-top:16px">${esc(reg.summary.headline)}</h2>` +
+    (reg.selected.length ? `<table id="regtable"><thead><tr><th style="width:34%">Test case to run again</th><th style="width:12%">Change effect</th><th>Why</th></tr></thead><tbody>` +
+      reg.selected.map(c => `<tr><td><code>${esc(c.id)}</code> ${esc(c.title)}${c.priority ? ` <span class="mut">(${esc(c.priority)})</span>` : ""}<br><span class="mut">${esc(c.file || "")}</span></td>
+        <td>${pill(c.change_effect, EFFECT[c.change_effect] || c.change_effect)}</td><td>${esc(c.reason)}</td></tr>`).join("") + `</tbody></table>` : "") +
+    (reg.unmapped.length ? `<div class="banner"><b>Could not be mapped - review by hand</b><ul>${reg.unmapped.map(li).join("")}</ul></div>` : "") +
+    (reg.not_selected.length ? `<details><summary>Not affected by this change (${reg.not_selected.length})</summary><ul>${reg.not_selected.map(li).join("")}</ul></details>` : "") +
+    ((reg.changed_by_this_change || []).length ? `<p>Added or edited by this change (new tests, not regression): ${reg.changed_by_this_change.map(c => `<code>${esc(c.id)}</code> ${esc(c.title)}`).join(", ")}</p>` : "") +
+    `<p class="mut">${esc(reg.basis)}</p>`;
+}
+function scopeCore(ts) {
+  const rows = [...ts.entry_points, ...ts.code_without_entry_point];
+  if (!rows.length && !ts.rule_gaps.length) return `<h2 style="margin-top:16px">What to test</h2><p class="mut">No entry point is reached by this change: nothing to retest.</p>`;
+  return `<h2 style="margin-top:16px">What to test <span class="mut" style="font-weight:normal">(${ts.summary.entry_points} entry point(s), ${ts.summary.tests_linked} test(s) found)</span></h2>
+    <table id="scopetable"><thead><tr><th style="width:21%">Entry point</th><th style="width:12%">Service</th><th style="width:11%">Change effect</th><th style="width:34%">Why</th><th style="width:14%">Tests found</th><th style="width:8%">Graph</th></tr></thead><tbody>` +
+    (PG_ROWS.s = rows).map((e, i) => `<tr><td>${e.label ? `<b>${esc(e.label)}</b><br>` : ""}<code>${esc(e.entry_point)}</code>${e.type !== "endpoint" ? '<br><span class="mut">no analysed API endpoint</span>' : ""}<br>${typeChip(e.type)}</td>
+      <td>${esc(e.service)}</td><td>${pill(e.change_effect, EFFECT[e.change_effect] || e.change_effect)}${["source_confirmed","contract_confirmed","corroborated"].includes(e.evidence_status) ? "" : `<br><span class="mut">${esc(e.evidence_status)}</span>`}</td>
+      <td>${whyHtml({changed: (e.changes || []).join("; "), how: splitReason(e.why)[0], path: e.path, ev: e})}</td><td>${e.tests.map(t => `${esc(t.name)} <span class="mut">(${esc(t.file)})</span>${resultPill(t)}`).join("<br>") || '<span class="err">none found</span>'}</td>
+      <td>${graphBtn("s", i, (e.path || []).length > 1)}</td></tr>`).join("") +
+    `</tbody></table>` + ts.rule_gaps.map(gapHtml).join("") +
+    ts.consistency_checks.map(c => `<div class="banner"><b>Consistency check</b>: ${esc(c.check)}</div>`).join("") +
+    (ts.redacted ? `<p class="mut">${esc(ts.redacted.note)}</p>` : "");
+}
+document.querySelectorAll("[data-ttab]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-ttab]").forEach(x => x.classList.toggle("on", x === b));
+  ["shared","cov","api","ui","tc","flow","script"].forEach(t => $("ttab-" + t).classList.toggle("hidden", t !== b.dataset.ttab));
+  const load = {shared: tShared, cov: tCov, api: tApi, ui: tUi}[b.dataset.ttab];
+  if (load && !$("t" + b.dataset.ttab + "out").dataset.loaded) load();
+});
+async function tview(key, url, render) {
+  const out = $(`t${key}out`); msg(`t${key}msg`, "Loading...");
+  try { const j = await api(url); out.innerHTML = render(j); out.dataset.loaded = "1"; msg(`t${key}msg`, ""); }
+  catch (e) { msg(`t${key}msg`, e.message, "err"); }
+}
+const tShared = () => tview("shared", "/api/v1/graph/shared-components", j =>
+  `<h3 style="font-size:13px">Common components</h3><p class="mut">Endpoints and functions that several entry points depend on: a change to them needs the widest testing.</p>
+   <table id="sharedtable"><thead><tr><th>Component</th><th>Type</th><th>Service</th><th>Entry points depending on it</th></tr></thead><tbody>` +
+  j.shared_components.map(r => `<tr><td><code>${esc(r.name)}</code><br><span class="mut">${esc(r.file)}:${esc(r.line)}</span></td><td>${esc(r.type)}</td><td>${esc(r.service)}</td>
+    <td><b>${esc(r.entry_points)}</b> in ${esc(r.services)} service(s)<br>${r.used_by.map(u => `<span class="mut">${esc(u.label || u.entry_point)} (${esc(u.service)})</span>`).join("<br>")}${r.used_by_withheld ? `<br><span class="mut">+${esc(r.used_by_withheld)} you cannot see</span>` : ""}</td></tr>`).join("") +
+  `</tbody></table>` + (j.shared_components.length ? "" : '<p class="mut">No component is shared by two or more entry points.</p>') +
+  `<h3 style="font-size:13px">Rule gaps</h3>` + (j.rule_gaps.map(gapHtml).join("") || '<p class="mut">No rule gap found between the consumers of a shared endpoint.</p>'));
+const tCov = () => tview("cov", "/api/v1/coverage", j => covHtml(j));
+const tApi = () => tview("api", "/api/v1/automation/api", j => apiHtml(j));
+const tUi = () => tview("ui", "/api/v1/automation/ui", j => uiHtml(j));
+// the three renderers are shared with the tester pack of one analysis (which shows the same views for the touched entry points only)
+const covHtml = j => {
+  const s = j.summary;
+  const kinds = Object.entries(s.by_kind || {}).map(([k, v]) => `<tr><td>${esc(k.replace(/_/g, " "))}</td><td>${v.total}</td><td class="ok">${v.covered}</td><td style="color:var(--warn)">${v.partial}</td><td class="err">${v.missing}</td></tr>`).join("");
+  return `<p id="covsummary"><b>${esc(s.percent)}%</b> of ${esc(s.aspects)} technical aspects covered: ${pill("covered", s.covered + " covered")} ${pill("partial", s.partial + " partial")} ${pill("missing", s.missing + " missing")}
+      <span class="mut">from ${esc(s.automated_tests)} automated test(s) and ${esc(s.written_tests)} written test case(s), over ${esc(s.entry_points)} entry point(s) and page(s)</span></p>
+    <table><thead><tr><th>Aspect kind</th><th>Total</th><th>Covered</th><th>Partial</th><th>Missing</th></tr></thead><tbody>${kinds}</tbody></table>` +
+    j.entry_points.map(e => `<details class="coventry"><summary><b>${esc(e.label || e.entry_point)}</b> <span class="mut">${esc(e.service)}</span> - ${esc(e.covered)}/${esc(e.total)} covered${e.partial ? `, ${esc(e.partial)} partial` : ""} (${esc(e.percent)}%)</summary>
+      <table><thead><tr><th>Status</th><th>Technical aspect</th><th>Addressed by</th></tr></thead><tbody>` +
+      e.aspects.map(a => `<tr><td>${pill(a.status, a.status)}</td><td>${esc(a.title)}${a.values_missing && a.values_missing.length ? `<br><span class="mut">not tested: ${esc(a.values_missing.join(", "))}</span>` : ""}</td>
+        <td>${a.covered_by.map(x => `${x.type === "written" ? `<b>${esc(x.id)}</b> ${esc(x.title)}` : `<code>${esc(x.name)}</code>`} <span class="mut">(${esc(x.type)}: ${esc(x.why)})</span>`).join("<br>") || '<span class="err">no test</span>'}</td></tr>`).join("") + `</tbody></table></details>`).join("") +
+    (j.unmatched_written_tests.length ? `<p class="mut" id="unmatched">Written test cases that match no analysed entry point or page: ${j.unmatched_written_tests.map(u => `<b>${esc(u.id)}</b> ${esc(u.title)} (${esc(u.file)})`).join("; ")}</p>` : "");
+};
+const apiHtml = j =>
+  `<p class="mut">${esc(j.summary.endpoints)} endpoint(s), ${esc(j.summary.inputs)} input(s) (${esc(j.summary.mandatory_inputs)} mandatory, ${esc(j.summary.inputs_with_rules)} with rules), ${esc(j.summary.cases)} test case(s) in the matrices.</p>` +
+  j.endpoints.map(it => `<details class="apientry"><summary><b>${esc(it.label || it.entry_point)}</b> <span class="mut">${esc(it.service)} - ${it.inputs.length} input(s), ${it.case_count} case(s)${it.error_statuses.length ? ", errors " + it.error_statuses.map(s => s.status).join("/") : ""}</span></summary>
+    <div class="wrapx"><table><thead><tr><th>Input</th><th>In</th><th>Mandatory</th><th>Rules</th><th>Valid values</th><th>Invalid values</th></tr></thead><tbody>` +
+    it.inputs.map(i => `<tr><td><code>${esc(i.name)}</code><br><span class="mut">${esc(i.type)}${i.multi ? " (list)" : ""}</span></td><td>${esc(i.in)}</td><td>${i.required ? "yes" : "no"}</td><td>${esc(i.rules) || '<span class="mut">none declared</span>'}</td>
+      <td>${i.valid.map(v => `<code>${esc(v2s(v.value))}</code> <span class="mut">${esc(v.why)}</span>`).join("<br>")}</td><td>${i.invalid.map(v => `<code>${esc(v.value === "<missing>" ? "(left out)" : v2s(v.value))}</code> <span class="mut">${esc(v.why)}</span>`).join("<br>")}</td></tr>`).join("") +
+    `</tbody></table></div>` + (it.error_statuses.length ? `<p>Error answers: ${it.error_statuses.map(s => `<b>${esc(s.status)}</b>${s.detail ? " " + esc(s.detail) : ""} <span class="mut">(${esc(s.function)})</span>`).join("; ")}</p>` : "") +
+    `<div class="wrapx"><table><thead><tr><th>Case</th><th>Kind</th><th>Input</th><th>Expect</th><th>Why</th></tr></thead><tbody>` +
+    it.cases.map(c => `<tr><td>${esc(c.id)}</td><td>${esc(c.kind)}${c.field ? `<br><code>${esc(c.field)}</code>` : ""}</td><td><code>${esc(JSON.stringify(c.input))}</code></td><td>${esc(c.expect)}</td><td class="mut">${esc(c.why)}</td></tr>`).join("") +
+    `</tbody></table></div></details>`).join("");
+const uiHtml = j =>
+  (j.pages.length ? `<p class="mut">${esc(j.summary.pages)} page(s), ${esc(j.summary.elements)} element(s), ${esc(j.summary.without_unique_locator)} without a unique locator.</p>` : '<p class="mut">No front-end page found in the ingested repositories.</p>') +
+  j.pages.map(p => `<details class="uipage"><summary><b>${esc(p.page)}</b> <span class="mut">${esc(p.framework)}${p.component ? " " + esc(p.component) : ""} - ${p.summary.elements} element(s), ${p.summary.mandatory} mandatory${p.summary.without_unique_locator ? `, <span class="err">${p.summary.without_unique_locator} without a unique locator</span>` : ""}</span></summary>
+    <div class="wrapx"><table><thead><tr><th>Element</th><th>Mandatory</th><th>Locator</th><th>Rules</th><th>Values</th></tr></thead><tbody>` +
+    p.elements.map(e => `<tr><td><b>${esc(e.label || e.text || e.name || e.tag)}</b><br><span class="mut">${esc(e.tag)}${e.type && e.tag === "input" ? " " + esc(e.type) : ""}</span></td><td>${e.mandatory ? "yes" : "no"}</td>
+      <td><span class="${e.locator.strategy.startsWith("position") ? "err" : ""}">${esc(e.locator.strategy)}</span><br><code>${esc(e.locator.css || e.locator.xpath)}</code><br><code class="mut">${esc(e.locator.playwright)}</code>${e.locator_note ? `<br><span class="mut">${esc(e.locator_note)}</span>` : ""}</td>
+      <td>${esc(e.rules || "")}</td><td>${e.tag === "select" ? (e.options || []).filter(o => o.value !== "").map(o => esc(o.value ?? o.text)).join(", ") + `<br><span class="mut">${esc(e.options_source || "")}</span>` : ""}</td></tr>`).join("") +
+    `</tbody></table></div><p>Calls: ${p.api_calls.map(c => `<code>${esc(c.method)} ${esc(c.path)}</code> &rarr; ${c.endpoints.length ? c.endpoints.map(x => `${esc(x.entry_point)} <span class="mut">(${esc(x.service)})</span>`).join(", ") : `<span class="mut">${esc(c.note)}</span>`}`).join("; ") || '<span class="mut">none found</span>'}</p></details>`).join("");
+
+// ================= tester pack of one analysis: retest + coverage gate, locator pack, API matrix (the three use cases for one change) ==========
+let PACK = null, PACK_AID = null;
+const GATE_PILL = {covered: "covered", gaps: "missing", not_evaluated: "partial"};
+const gateText = o => String(o || "").replace("_", " ");
+const noIds = html => html.replace(/ id="[^"]*"/g, "");            // the shared renderers carry ids that belong to section 5
+async function loadPack(aid, failed) {
+  PACK = null; PACK_AID = aid;
+  $("packraw").classList.add("hidden"); $("kfraw").classList.add("hidden"); $("kfsum").textContent = "";
+  if (failed) { $("packgate").innerHTML = '<span class="mut">The analysis failed: there is no tester pack.</span>'; ["retest", "ui", "api"].forEach(t => $("pk-" + t).innerHTML = ""); return; }
+  $("packgate").innerHTML = '<span class="mut">Loading the tester pack...</span>';
+  try {
+    const p = await api(`/api/v1/impact-analyses/${encodeURIComponent(aid)}/tester-pack`);
+    if (PACK_AID !== aid) return;                                  // another analysis was opened meanwhile
+    PACK = p; renderPack(p);
+  } catch (e) { if (PACK_AID === aid) $("packgate").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+}
+function renderPack(p) {
+  const g = p.gate;
+  $("packgate").innerHTML = `Coverage gate: ${pill(GATE_PILL[g.outcome], gateText(g.outcome))} ${esc(g.headline)}`;
+  const rows = g.entry_points.map(r => `<tr><td>${r.label ? `<b>${esc(r.label)}</b><br>` : ""}<code>${esc(r.entry_point)}</code><br><span class="mut">${esc(r.kind === "page" ? "page" : r.kind === "api" ? "API" : "no analysed entry point")}</span></td>
+    <td>${esc(r.service)}</td><td>${r.change_effect ? pill(r.change_effect, EFFECT[r.change_effect] || r.change_effect) : '<span class="mut">calls a touched API</span>'}</td>
+    <td>${pill(GATE_PILL[r.outcome], gateText(r.outcome))}<br><span class="mut">${esc(r.reason)}</span></td>
+    <td>${r.missing_aspects.slice(0, 4).map(esc).join("<br>")}${r.missing_aspects.length > 4 ? `<br><span class="mut">... and ${r.missing_aspects.length - 4} more below</span>` : ""}</td>
+    <td>${esc(r.tests_found)}${r.failing_tests.length ? `<br><span class="err">${r.failing_tests.length} FAILED in CI: ${r.failing_tests.map(esc).join(", ")}</span>` : ""}</td></tr>`).join("");
+  const rt = p.retest;
+  $("pk-retest").innerHTML = (rows ? `<div class="wrapx"><table id="gatetable"><thead><tr><th>Entry point or page</th><th>Service</th><th>Change effect</th><th>Gate</th><th>Not covered</th><th>Tests found</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : '<p class="mut">This change reaches no entry point: nothing to retest.</p>') +
+    rt.rule_gaps.map(gapHtml).join("") + rt.consistency_checks.map(c => `<div class="banner"><b>Consistency check</b>: ${esc(c.check)}</div>`).join("") +
+    (p.coverage.entry_points.length ? `<h3 style="font-size:13px">Technical coverage of the touched entry points and pages</h3>` + noIds(covHtml(p.coverage)) : "") +
+    `<p class="mut">${esc(p.basis.note)}${p.basis.unavailable_repositories.length ? " Could not be read at the analysed revision: " + p.basis.unavailable_repositories.map(esc).join(", ") + "." : ""}</p>`;
+  $("pk-ui").innerHTML = p.ui.pages.length ? noIds(uiHtml(p.ui)) : '<p class="mut">No analysed page calls an entry point this change reaches.</p>';
+  $("pk-api").innerHTML = p.api.endpoints.length ? noIds(apiHtml(p.api)) : '<p class="mut">This change reaches no analysed API endpoint.</p>';
+  $("packraw").textContent = JSON.stringify(p, null, 2);
+}
+document.querySelectorAll("[data-ptab]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-ptab]").forEach(x => x.classList.toggle("on", x === b));
+  ["retest", "ui", "api"].forEach(t => $("pk-" + t).classList.toggle("hidden", t !== b.dataset.ptab));
+});
+$("packjson").onclick = () => $("packraw").classList.toggle("hidden");
+$("kfjson").onclick = async () => {
+  if (!PACK_AID) return;
+  if (!$("kfraw").classList.contains("hidden")) { $("kfraw").classList.add("hidden"); return; }
+  busy($("kfjson"), true);
+  try {
+    const r = await api("/query/tia", {method: "POST", body: {analysis_id: PACK_AID}});
+    const cats = {}; r.chunks.forEach(c => { cats[c.category] = (cats[c.category] || 0) + 1 });
+    $("kfsum").textContent = `POST /query/tia {"analysis_id": "${PACK_AID}"} - ${r.chunks.length} chunks (` + Object.entries(cats).map(([k, v]) => `${v} ${k}`).join(", ") +
+      `), ${r.paths.length} paths` + (r.metadata.errors.length ? `, ${r.metadata.errors.length} confidence note(s)` : "");
+    $("kfraw").textContent = JSON.stringify(r, null, 2); $("kfraw").classList.remove("hidden");
+  } catch (e) { $("kfsum").textContent = e.message }
+  busy($("kfjson"), false);
+};
+$("tshared").onclick = tShared; $("tcov").onclick = tCov; $("tapi").onclick = tApi; $("tui").onclick = tUi;
+// ---- execution flow (GET /api/v1/graph/flows) and automation script (POST /api/v1/automation/script) ----
+$("flowrun").onclick = async () => {
+  busy($("flowrun"), true); msg("flowmsg", "Reading the graph...");
+  try {
+    const q = new URLSearchParams();
+    if ($("flowep").value.trim()) q.set("endpoint", $("flowep").value.trim());
+    if ($("flowrepo").value.trim()) q.set("repos", $("flowrepo").value.trim());
+    const j = await api("/api/v1/graph/flows?" + q);
+    const design = (j.design || []).map(d => `<h3 style="font-size:13px">${esc(d.service)} <span class="mut">${Object.entries(d.roles).map(([k, v]) => `${esc(k)}: ${v}`).join(" · ")}</span></h3>
+      <p><b>Controllers</b>: ${d.controllers.map(c => `<code>${esc(c.function)}</code> (${esc(c.serves.join(", "))})`).join(", ") || '<span class="mut">none</span>'}</p>
+      <p><b>Models</b>: ${d.models.map(m => `<code>${esc(m.name)}</code>`).join(", ") || '<span class="mut">none</span>'} &nbsp; <b>Entities</b>: ${d.entities.map(m => `<code>${esc(m.name)}</code> <span class="mut">(${esc(m.used_by.length)} entry point(s))</span>`).join(", ") || '<span class="mut">none</span>'}</p>`).join("");
+    $("flowout").innerHTML = (j.text || []).map(t => `<pre class="json" style="white-space:pre">${esc(t)}</pre>`).join("") + design +
+      (j.flows && j.flows[0] ? `<p class="mut">${esc(j.flows[0].note)}</p>` : '<p class="mut">No entry point found.</p>');
+    msg("flowmsg", `${(j.flows || []).length} entry point(s)`);
+  } catch (e) { msg("flowmsg", e.message, "err"); }
+  busy($("flowrun"), false);
+};
+$("scrrun").onclick = async () => {
+  busy($("scrrun"), true); msg("scrmsg", "Generating...");
+  try {
+    const j = await api("/api/v1/automation/script", {method: "POST", body: {repo: $("scrrepo").value.trim(), from: $("scrfrom").value.trim(), to: $("scrto").value.trim()}});
+    $("scrout").innerHTML = `<p><b>Screens</b>: ${j.screens.map(s => `<code>${esc(s)}</code>`).join(" → ")} &nbsp; <span class="mut">${esc(j.note)}</span></p>` +
+      (j.unknowns.length ? `<div class="banner"><b>To review</b><ul>${j.unknowns.map(u => `<li>${esc(u.screen)}: ${esc(u.what)} - ${esc(u.detail)}</li>`).join("")}</ul></div>` : "") +
+      `<pre class="json" style="white-space:pre" id="scrcode">${esc(j.script)}</pre>`;
+    msg("scrmsg", j.file_name);
+  } catch (e) { msg("scrmsg", e.message, "err"); }
+  busy($("scrrun"), false);
+};
+$("tccheck").onclick = async () => {
+  busy($("tccheck"), true); msg("tcmsg", "Checking...");
+  try {
+    const j = await api("/api/v1/coverage/test-case", {method: "POST", body: {title: $("tctitle").value, entry_point: $("tcentry").value, steps: $("tcsteps").value, expected: $("tcexpected").value}});
+    $("tcout").innerHTML = j.matched.length ? j.matched.map(m => `<h3 style="font-size:13px">${esc(m.label || m.entry_point)} <span class="mut">${esc(m.service)} - this test case covers ${esc(m.percent_of_area)}% of its area</span></h3>
+      <table class="tcresult"><thead><tr><th></th><th>Technical aspect</th><th>Why</th></tr></thead><tbody>` +
+      m.covers.map(c => `<tr><td>${pill("covered", "covers")}</td><td>${esc(c.title)}${c.values_missing ? `<br><span class="mut">not used: ${esc(c.values_missing.join(", "))}</span>` : ""}</td><td class="mut">${esc(c.why)}</td></tr>`).join("") +
+      m.misses.map(c => `<tr><td>${pill("missing", "misses")}</td><td>${esc(c.title)}</td><td></td></tr>`).join("") + `</tbody></table>`).join("") + `<p class="mut">${esc(j.note)}</p>`
+      : `<p class="err">${esc(j.note)}</p>`;
+    msg("tcmsg", "");
+  } catch (e) { msg("tcmsg", e.message, "err"); }
+  busy($("tccheck"), false);
+};
+
+
+// ================= architecture and structure (derived overlays of a report) =================
+let archCy = null;
+const MAXLIST = 10;
+function more(n) { return n > MAXLIST ? `<li class="mut">... and ${n - MAXLIST} more in the full JSON</li>` : ""; }
+function onChange(x) { return x.on_changed_path ? '<span class="tag">on your change</span>' : ""; }
+function renderStructure(rep) {
+  // the diagram: the services involved and the evidence links between them; the changed service outlined in red
+  const d = rep.architecture_diagram;
+  if (archCy) { archCy.destroy(); archCy = null; }
+  const hasDiagram = d && (d.services || []).length;
+  $("archwrap").classList.toggle("none", !hasDiagram);
+  if (hasDiagram) {
+    const fg = css("--fg") || "#222", line = css("--line") || "#ccc", affected = new Set(d.affected_services || []);
+    const els = d.services.map(s => ({data: {id: s, label: s, role: s === d.changed_service ? "changed" : affected.has(s) ? "affected" : "other"}}))
+      .concat((d.edges || []).map((e, i) => ({data: {id: "a" + i, source: e[0], target: e[1], label: e[2], status: e[3]}})));
+    archCy = cytoscape({container: $("archcy"), elements: els, wheelSensitivity: .25, userPanningEnabled: true, boxSelectionEnabled: false,
+      style: [
+        {selector: "node", style: {shape: "round-rectangle", label: "data(label)", "text-valign": "center", "text-halign": "center", "font-size": 11,
+                                   width: "label", height: 28, padding: "8px", "background-color": "#1f4fd8", color: "#fff", "border-width": 1, "border-color": line}},
+        {selector: 'node[role="affected"]', style: {"background-color": "#f5a524", color: "#222"}},
+        {selector: 'node[role="changed"]', style: {"border-color": "#d32f2f", "border-width": 4}},
+        {selector: "edge", style: {width: 2, "curve-style": "bezier", "target-arrow-shape": "triangle", "line-color": "#2e7d32", "target-arrow-color": "#2e7d32",
+                                   label: "data(label)", "font-size": 9, color: fg, "text-background-color": css("--card") || "#fff", "text-background-opacity": .85}},
+        {selector: 'edge[status="inferred"]', style: {"line-style": "dashed", "line-color": "#ef6c00", "target-arrow-color": "#ef6c00"}},
+      ]});
+    archCy.layout({name: "breadthfirst", directed: true, padding: 20, spacingFactor: 1.1, animate: false}).run();
+  }
+  $("archnote").innerHTML = hasDiagram
+    ? `Changed: <b>${esc(d.changed_service || "")}</b>${(d.affected_services || []).length ? "; affected (amber): " + d.affected_services.map(esc).join(", ") : ""}. ${esc(d.note || "")}` +
+      (d.redacted_services ? ` ${esc(d.redacted_services)} service(s) you cannot access are not shown.` : "")
+    : "No architecture diagram in this report.";
+
+  // structural risk and communities: inside the changed repository only
+  const sr = rep.structural_risk, cm = rep.communities;
+  if (!sr && !cm) { $("structure").innerHTML = '<p class="mut">No structural overlay in this report (older report, or a repository you cannot access).</p>'; return; }
+  let out = "";
+  if (sr) {
+    const s = sr.summary || {};
+    const fix = list => list.length && list[0].remediation ? `<p class="mut" style="margin:4px 0">${esc(list[0].explanation || "")} <b>What to do:</b> ${esc(list[0].remediation)}</p>` : "";
+    out += `<p style="margin:8px 0 0">In <b>${esc(sr.repository || rep.change.repository)}</b>: ${s.cycles || 0} circular dependenc${s.cycles === 1 ? "y" : "ies"} (${s.cycles_on_change || 0} on your change),
+      ${s.high_coupling || 0} highly connected file(s) (${s.high_coupling_on_change || 0} on your change), ${s.layer_violations || 0} layer violation(s) (${s.layer_violations_on_change || 0} on your change).</p>
+      <p class="mut" style="margin:2px 0">${esc(sr.note || "")}</p>`;
+    const cyc = sr.cycles || [], hub = sr.high_coupling || [], lay = sr.layer_violations || [];
+    if (cyc.length) out += `<details ${s.cycles_on_change ? "open" : ""}><summary>Circular dependencies (${cyc.length})</summary>${fix(cyc)}<ul>` +
+      cyc.slice(0, MAXLIST).map(c => `<li><code>${c.files.map(esc).join(" &rarr; ")} &rarr; ${esc(c.files[0])}</code>${onChange(c)}</li>`).join("") + more(cyc.length) + "</ul></details>";
+    if (hub.length) out += `<details ${s.high_coupling_on_change ? "open" : ""}><summary>Highly connected files (${hub.length})</summary>${fix(hub)}<ul>` +
+      hub.slice(0, MAXLIST).map(h => `<li><code>${esc(h.file)}</code> - ${esc(h.degree)} call link(s)${onChange(h)}</li>`).join("") + more(hub.length) + "</ul></details>";
+    if (lay.length) out += `<details ${s.layer_violations_on_change ? "open" : ""}><summary>Layer violations (${lay.length})</summary>${fix(lay)}<ul>` +
+      lay.slice(0, MAXLIST).map(v => `<li><code>${esc(v.from)}</code> (${esc(v.from_layer)}) calls <code>${esc(v.to)}</code> (${esc(v.to_layer)}): ${esc(v.suggestion)}${onChange(v)}</li>`).join("") +
+      more(lay.length) + '</ul><p class="mut">Layers are guessed from folder names (ui, api, services, domain, data, utils).</p></details>';
+  }
+  if (cm && (cm.communities || []).length) {
+    out += `<details><summary>Groups of files that call each other (${cm.communities.length})</summary><ul>` +
+      cm.communities.slice(0, MAXLIST).map(c => `<li><b>${esc(c.label)}</b>: ${esc(c.file_count)} file(s) - <code>${c.files.slice(0, 5).map(esc).join(", ")}</code>${c.file_count > 5 ? " ..." : ""}</li>`).join("") +
+      more(cm.communities.length) + "</ul>" +
+      ((cm.god_nodes || []).length ? `<p style="margin:4px 0">Most connected files: ${cm.god_nodes.slice(0, 5).map(g => `<code>${esc(g.file)}</code> (${esc(g.degree)})`).join(", ")}</p>` : "") +
+      `<p class="mut">${esc(cm.note || "")}</p></details>`;
+  }
+  $("structure").innerHTML = out;
+}
+
+// ================= code graph =================
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let cy = null, lastAnalysis = null, gmode = "landscape";
+const STRUCT = new Set(["EXPOSES","USES_SCHEMA","HANDLES","ISSUES","CALLS","TESTS","CONTAINS","MAPS_TO","MAPS_COLUMN","MIGRATES"]);
+const SEV = {critical:"#7f1d1d", high:"#d32f2f", medium:"#f5a524", low:"#9aa3af", unknown:"#cbd5e1"};
+function gstyle() {
+  const fg = css("--fg") || "#222", line = css("--line") || "#ccc";
+  return [
+    {selector:"node", style:{label:"data(label)","font-size":9,color:fg,"text-valign":"bottom","text-margin-y":3,"text-wrap":"ellipsis","text-max-width":110,"background-color":"#9aa3af",width:16,height:16,"border-width":1,"border-color":line}},
+    {selector:'node[type="service"]', style:{shape:"round-rectangle","background-color":"#1f4fd8",width:46,height:30,"font-size":11,"font-weight":"bold","text-valign":"center","text-halign":"center",color:"#fff","text-max-width":90,"text-wrap":"wrap"}},
+    {selector:'node[type="endpoint"]', style:{shape:"diamond","background-color":"#2a9df4",width:20,height:20}},
+    {selector:'node[type="schema"]', style:{shape:"hexagon","background-color":"#8e5bd9"}},
+    {selector:'node[type="function"]', style:{shape:"ellipse","background-color":"#8b95a5",width:12,height:12}},
+    {selector:'node[type="callsite"]', style:{shape:"tag","background-color":"#12a594"}},
+    {selector:'node[type="contract_ref"]', style:{shape:"barrel","background-color":"#8a9a2e"}},
+    {selector:'node[type="test"]', style:{shape:"triangle","background-color":"#3ba55d",width:13,height:13}},
+    {selector:'node[type="entity"]', style:{shape:"round-pentagon","background-color":"#b8651b",width:18,height:18}},
+    {selector:'node[type="table"]', style:{shape:"round-rectangle","background-color":"#0b6e4f",width:22,height:16}},
+    {selector:'node[type="column"]', style:{shape:"ellipse","background-color":"#7bc4a4",width:9,height:9}},
+    {selector:'node[type="migration"]', style:{shape:"cut-rectangle","background-color":"#6b7280",width:14,height:14}},
+    {selector:'node[type="type"]', style:{shape:"rectangle","background-color":"#c2410c",width:14,height:14}},
+    {selector:"node[tcolor]", style:{"background-color":"data(tcolor)"}},          // one colour per type (TYPE_COLOR), same as the tables and the legend
+    {selector:'node[type="unresolved"], node[?unresolved]', style:{shape:"octagon","background-color":"#e5e7eb","border-style":"dashed","border-color":"#6b7280","border-width":2}},
+    {selector:"edge", style:{width:2,"line-color":"#9aa3af","target-arrow-color":"#9aa3af","target-arrow-shape":"triangle","curve-style":"bezier","arrow-scale":.9,"font-size":8,color:fg,"text-background-color":css("--card")||"#fff","text-background-opacity":.85,"text-background-padding":1}},
+    {selector:"edge.struct", style:{width:1,"line-color":line,"target-arrow-color":line}},
+    {selector:'edge[status="source_confirmed"].dep, edge[status="corroborated"].dep', style:{"line-color":"#2e7d32","target-arrow-color":"#2e7d32"}},
+    {selector:'edge[status="corroborated"].dep', style:{width:4}},
+    {selector:'edge[status="contract_confirmed"].dep', style:{"line-color":"#1565c0","target-arrow-color":"#1565c0"}},
+    {selector:'edge[status="runtime_observed"].dep', style:{"line-color":"#00838f","target-arrow-color":"#00838f"}},
+    {selector:'edge[status="inferred"].dep', style:{"line-color":"#ef6c00","target-arrow-color":"#ef6c00","line-style":"dashed"}},
+    {selector:'edge[rel="UNRESOLVED_CALL"]', style:{"line-color":"#9e9e9e","target-arrow-color":"#9e9e9e","line-style":"dotted"}},
+    // a call whose name matched several functions: one inferred candidate edge each (INF-CALL-AMBIGUOUS)
+    {selector:'edge[status="inferred"].struct', style:{"line-color":"#ef6c00","target-arrow-color":"#ef6c00","line-style":"dashed"}},
+    // subclass -> base class: a hollow arrow, as in a class diagram; dashed when the base name matched several classes
+    {selector:'edge[rel="INHERITS"]', style:{width:2,"line-color":"#c2410c","target-arrow-color":"#c2410c","target-arrow-shape":"triangle-backcurve","target-arrow-fill":"hollow"}},
+    {selector:'edge[rel="INHERITS"][status="inferred"]', style:{"line-style":"dashed"}},
+    {selector:"edge[label]", style:{label:"data(label)"}},
+    {selector:'node[role="changed"]', style:{"border-color":"#d32f2f","border-width":5}},
+    {selector:'node[role="via"]', style:{opacity:.8}},
+    {selector:"node[sevcolor]", style:{"background-color":"data(sevcolor)",width:26,height:26,"font-size":10}},
+    {selector:"node:selected, edge:selected", style:{"overlay-color":"#1f4fd8","overlay-opacity":.18,"overlay-padding":6}},
+  ];
+}
+function gelements(data, impact) {
+  const nodes = data.nodes.map(n => { const d = {...n}; if (TYPE_COLOR[n.type]) d.tcolor = TYPE_COLOR[n.type]; if (impact && n.severity) d.sevcolor = SEV[n.severity]; return {data:d}; });
+  const edges = data.edges.map(e => { const d = {...e};
+    if (e.rel === "CONSUMES_API" && e.count) d.label = (e.count > 1 ? e.count + "x " : "") + (e.strategies || []).join("+");
+    else if (e.rel === "CONSUMES_API" && e.strategy) d.label = e.strategy;
+    return {data:d, classes: STRUCT.has(e.rel) ? "struct" : "dep"}; });
+  return [...nodes, ...edges];
+}
+function renderGraph(data, impact) {
+  if (cy) cy.destroy();
+  cy = cytoscape({container:$("cy"), elements:gelements(data, impact), style:gstyle(), wheelSensitivity:.25});
+  const layout = impact && $("glayout").value === "cose" ? "breadthfirst" : $("glayout").value;
+  const opts = {name:layout, animate:false, padding:30, fit:true};
+  if (layout === "cose") Object.assign(opts, {nodeRepulsion:() => 22000, idealEdgeLength:() => 100, nodeOverlap:20, nodeDimensionsIncludeLabels:true, randomize:true, numIter:2500});
+  if (layout === "breadthfirst") Object.assign(opts, {directed:true, spacingFactor:1.2, roots: impact ? cy.nodes('[role="changed"]') : undefined});
+  cy.layout(opts).run();
+  cy.on("tap", "node", e => showNode(e.target.data()));
+  cy.on("tap", "edge", e => showEdge(e.target.data()));
+  cy.on("tap", evt => { if (evt.target === cy) $("gside").innerHTML = '<span class="mut">Click a node or edge.</span>'; });
+  cy.on("dbltap", "node", e => { if (!impact) { $("gq").value = ""; gload(e.target.id()); } });
+}
+function dl(obj, skip) {
+  return "<dl>" + Object.entries(obj).filter(([k, v]) => !skip.includes(k) && v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && !v.length))
+    .map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(Array.isArray(v) ? v.join("\n") : v).replace(/\n/g, "<br>")}</dd>`).join("") + "</dl>";
+}
+function showNode(d) { $("gside").innerHTML = `<b>${esc(d.label)}</b> <span class="pill">${esc(d.type)}</span>${dl(d, ["label","sevcolor","type"])}<p class="mut">${gmode === "landscape" ? "Double-click to focus on neighbours." : ""}</p>`; }
+function showEdge(d) { $("gside").innerHTML = `<b>${esc(d.rel)}</b> <span class="pill">${esc(d.status || "")}</span>${dl(d, ["id","label","rel","status","source","target"])}<dl><dt>from</dt><dd>${esc(d.source)}</dd><dt>to</dt><dd>${esc(d.target)}</dd></dl>`; }
+
+async function gload(focus) {
+  busy($("gload"), true); msg("ginfo", "Loading graph...");
+  try {
+    const p = new URLSearchParams({level:$("glevel").value, limit: $("glevel").value === "function" ? 400 : 600});
+    const repos = [...$("grepos").selectedOptions].map(o => o.value); if (repos.length) p.set("repos", repos.join(","));
+    if ($("gq").value.trim()) p.set("q", $("gq").value.trim());
+    if (focus) { p.set("focus", focus); p.set("depth", 2); }
+    const g = await api("/api/v1/graph?" + p); gmode = "landscape"; $("legimpact").classList.add("hidden");
+    renderGraph(g, false);
+    const st = g.stats;
+    msg("ginfo", `${st.nodes} nodes, ${st.edges} edges` + (st.truncated ? ` (showing the ${st.limit} best-connected of ${st.total_nodes}; narrow by repository, search, or focus)` : "") + (focus ? "  |  focused view: press Load graph for the full view" : "") + (st.unresolved_call_sites ? `  |  ${st.unresolved_call_sites} outbound call(s) could not be resolved` : ""), st.truncated ? "err" : "mut");
+    if (!g.nodes.length) msg("ginfo", "Nothing to show. Ingest repositories first, or change the filters.");
+  } catch (e) { msg("ginfo", e.message, "err"); }
+  busy($("gload"), false);
+}
+async function gimpact() {
+  if (!lastAnalysis) return; busy($("gimpact"), true);
+  try {
+    const g = await api(`/api/v1/impact-analyses/${lastAnalysis}/graph`); gmode = "impact";
+    renderGraph(g, true); $("legimpact").classList.remove("hidden");
+    msg("ginfo", g.nodes.length ? `Impact of ${lastAnalysis}: ${g.stats.nodes} components on ${g.edges.length} evidence edges` : "This analysis has no impact paths to draw.");
+    $("cy").scrollIntoView({behavior:"smooth", block:"center"});
+  } catch (e) { msg("ginfo", e.message, "err"); }
+  busy($("gimpact"), false);
+}
+async function fillRepoFilter() {
+  const repos = await api("/api/v1/repositories"); const cur = new Set([...$("grepos").selectedOptions].map(o => o.value));
+  $("grepos").innerHTML = repos.map(r => `<option value="${esc(r.name)}" ${cur.has(r.name) ? "selected" : ""}>${esc(r.name)}</option>`).join("");
+}
+// ---- ask the graph: consumers / dependencies / tests / what a test covers (GET /api/v1/graph/query) ----
+const AQ_GROUPS = {consumers: [["entry_points", "Entry points that reach it"], ["tests", "Tests attached"], ["consumers", "Everything that depends on it"]],
+  dependencies: [["endpoints_of_other_services", "Endpoints of other services it calls"], ["data", "Data it uses"], ["topics", "Event topics"], ["dependencies", "Everything it depends on"]],
+  tests: [["tests", "Tests that exercise it"]], covers: [["attached_to", "What the test is attached to"], ["entry_points", "Entry points it exercises"], ["also_exercises", "Code it also runs through"]]};
+function aqTable(rows) {
+  return `<div class="wrapx"><table><thead><tr><th>Component</th><th>Service</th><th>Where</th><th>Steps away</th><th>Evidence</th></tr></thead><tbody>` +
+    rows.slice(0, 50).map(r => `<tr><td>${typeChip(r.type, r.name)}${r.covers ? `<br><span class="mut">covers it ${esc(r.covers)}</span>` : ""}</td><td>${esc(r.service || "")}</td>
+      <td class="mut">${esc(r.file || "")}${r.line ? ":" + esc(r.line) : ""}</td><td>${esc(r.depth)}</td>
+      <td>${r.evidence_status === "inferred" ? '<span class="err">inferred (a lead, not a fact)</span>' : esc(String(r.evidence_status || "").replace(/_/g, " "))}</td></tr>`).join("") +
+    (rows.length > 50 ? `<tr><td colspan="5" class="mut">... and ${rows.length - 50} more in the JSON answer</td></tr>` : "") + "</tbody></table></div>";
+}
+async function askGraph(component) {
+  const c = (component || $("aqc").value).trim(); if (!c) { $("aqout").innerHTML = '<p class="err">Name a component first.</p>'; return; }
+  busy($("aqgo"), true);
+  try {
+    const a = await api("/api/v1/graph/query?" + new URLSearchParams({question: $("aqq").value, component: c}));
+    if (a.status === "not_found") $("aqout").innerHTML = `<p class="err">${esc(a.hint)}</p>`;
+    else if (a.status === "ambiguous") {
+      $("aqout").innerHTML = `<p>${esc(a.candidates_total)} components are called <b>${esc(a.asked)}</b>. Choose one (TIA does not guess):</p><p>` +
+        a.candidates.map((x, i) => `<button class="sec" type="button" data-aq="${i}">${esc(x.name)} - ${esc(x.repo)} <span class="mut">${esc(x.file || "")}${x.line ? ":" + esc(x.line) : ""}</span></button>`).join(" ") + "</p>";
+      document.querySelectorAll("[data-aq]").forEach(b => b.onclick = () => askGraph(a.candidates[+b.dataset.aq].node));
+    } else {
+      const s = a.results, k = a.component;
+      $("aqout").innerHTML = `<p>${typeChip(k.type, k.name)} <span class="mut">${esc(k.service || "")} ${esc(k.file || "")}${k.line ? ":" + esc(k.line) : ""}</span>` +
+        (s.services && s.services.length ? ` &nbsp; Other services involved: <b>${s.services.map(esc).join(", ")}</b>` : "") + "</p>" +
+        AQ_GROUPS[a.question].map(([key, title]) => { const rows = s[key] || [];
+          return `<details ${key === AQ_GROUPS[a.question][0][0] ? "open" : ""}><summary>${title} (${rows.length})</summary>${rows.length ? aqTable(rows) : '<p class="mut">None found.</p>'}</details>`; }).join("") +
+        (a.limits.length ? `<p class="mut"><b>Limits of this answer:</b><br>${a.limits.map(esc).join("<br>")}</p>` : "");
+    }
+  } catch (e) { $("aqout").innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  busy($("aqgo"), false);
+}
+$("aqgo").onclick = () => askGraph();
+$("aqc").onkeydown = e => { if (e.key === "Enter") askGraph(); };
+$("gload").onclick = () => gload(); $("gimpact").onclick = gimpact; $("toimpact").onclick = gimpact;
+$("gfit").onclick = () => cy && cy.fit(undefined, 30);
+$("glevel").onchange = () => gload(); $("glayout").onchange = () => cy && (gmode === "impact" ? gimpact() : gload());
+$("gq").onkeydown = e => { if (e.key === "Enter") gload(); };
+
+// ---- sign-in, identity and permissions
+const ROLES = ["viewer", "engineer", "release_manager", "auditor", "administrator"];
+function showSignIn(message) {
+  document.querySelector("main").classList.add("locked"); $("signin").classList.remove("hidden");
+  $("who").textContent = ""; $("signout").classList.add("hidden");
+  if (message) msg("signmsg", message, "err");
+  const q = new URLSearchParams(location.search), saved = (() => { try { return localStorage.getItem("tia.org") } catch { return "" } })();
+  if (!$("org").value) $("org").value = q.get("org") || saved || "";
+}
+async function signOptions() {
+  const org = $("org").value.trim(); msg("signmsg", ""); $("signopts").innerHTML = "";
+  if (!org) return msg("signmsg", "Enter your organisation's name.", "err");
+  const j = await (await fetch("/auth/options?org=" + encodeURIComponent(org))).json();
+  if (!j.providers.length) return msg("signmsg", "No sign-in method is available for that organisation.", "err");
+  try { localStorage.setItem("tia.org", org) } catch {}
+  const back = new URLSearchParams(location.search).get("return_to") || "/";
+  $("signopts").innerHTML = j.providers.map(p => `<p><button type="button" data-login="/auth/login?org=${encodeURIComponent(org)}&idp=${encodeURIComponent(p.name)}&return_to=${encodeURIComponent(back)}">Sign in with ${esc(p.name)} (${esc(p.protocol.toUpperCase())})</button></p>`).join("");
+}
+$("orgnext").onclick = signOptions; $("org").onkeydown = e => { if (e.key === "Enter") signOptions(); };
+$("signout").onclick = async () => { await tfetch("/auth/logout", {method: "POST"}); location.href = "/"; };
+function applyPermissions() {
+  const lock = (ids, ok, why) => ids.forEach(i => { const e = $(i); if (e) { e.disabled = !ok; e.title = ok ? "" : why; } });
+  lock(["add", "disc", "addlocal", "upzip", "upfolder"], can("repo_write"), "needs the engineer role");
+  lock(["run"], can("analyze"), "needs the engineer role");
+  lock(["cfgsave"], can("config_write"), "needs the release manager or administrator role");
+  $("adminsec").classList.toggle("hidden", !can("admin"));
+}
+async function boot() {
+  const c = await (await fetch("/api/v1/config")).json();
+  $("cfg").textContent = c.auth === "required" ? "" : (c.allow_local_paths ? "development mode - local paths enabled, no authentication" : "no authentication configured");
+  if (!c.allow_local_paths) document.querySelector('[data-tab="path"]').classList.add("hidden");
+  const r = await fetch("/auth/me", {credentials: "same-origin"}); ME = await r.json();
+  if (!ME.authenticated) return showSignIn(r.status === 503 ? "Sign-in is temporarily unavailable." : "");
+  CSRF = ME.csrf; PERMS = ME.auth === "required" ? ME.permissions : null;
+  if (ME.auth === "required") {
+    const p = ME.principal; $("who").textContent = `${p.name || p.email || p.subject} (${p.roles.join(", ")})`; $("signout").classList.remove("hidden");
+  }
+  $("signin").classList.add("hidden"); document.querySelector("main").classList.remove("locked");
+  applyPermissions();
+  cfgLoad();
+  if (can("admin")) adminLoad();
+  await loadRepos();
+  restoreRunForm();                                   // after the repositories are listed, so the saved target can be selected
+  gload();
+  await Promise.allSettled([warmAllSections(), restoreLastAnalysis()]);
+}
+// ---- administration (people, repository access, tokens, identity providers)
+const when = d => d ? new Date(d).toLocaleString() : "never";
+async function adminLoad() {
+  $("tkroles").innerHTML = ROLES.filter(r => r !== "administrator").map(r => `<label><input type="checkbox" value="${r}" ${r === "viewer" ? "checked" : ""}> ${r}</label>`).join("");
+  const [users, access, tokens, idps] = await Promise.all(["users", "repo-access", "tokens", "idps"].map(k => api("/api/v1/admin/" + k)));
+  $("adusers").querySelector("tbody").innerHTML = users.map(u => `<tr><td>${esc(u.name || u.email || u.subject)}<br><span class="mut">${esc(u.email)}</span>${u.disabled ? ' <span class="pill err">disabled</span>' : ""}</td>
+    <td class="roles">${ROLES.map(r => `<label><input type="checkbox" data-u="${u.id}" value="${r}" ${(u.roles || []).includes(r) ? "checked" : ""}> ${r}</label>`).join("")}
+      <br><span class="mut">${u.roles === null ? "following the identity provider's groups" : "assigned by an administrator"}</span></td>
+    <td><input data-gh="${u.id}" value="${esc((u.scm_logins || {}).github || "")}" placeholder="GitHub login" style="width:150px"></td><td class="mut">${esc(when(u.last_login))}</td>
+    <td><button class="sec" data-saveu="${u.id}">Save</button> <button class="sec" data-reset="${u.id}">Use group mapping</button> <button class="sec" data-dis="${u.id}" data-to="${!u.disabled}">${u.disabled ? "Enable" : "Disable"}</button></td></tr>`).join("") || '<tr><td colspan="5" class="mut">Nobody has signed in yet.</td></tr>';
+  $("adage").textContent = Math.round(access.freshness_limit_seconds / 60) + " minutes";
+  $("adrepos").querySelector("tbody").innerHTML = access.repositories.map(r => `<tr><td><b>${esc(r.name)}</b></td>
+    <td><select data-mode="${esc(r.name)}" aria-label="Access mode of ${esc(r.name)}">${["scm", "tenant", "restricted"].map(m => `<option ${m === r.mode ? "selected" : ""}>${m}</option>`).join("")}</select>${r.explicit ? "" : ' <span class="mut">(default)</span>'}</td>
+    <td class="mut">${r.mirror ? (r.mirror.ok ? `${r.mirror.collaborators} readers, ${r.mirror.fresh ? "fresh" : "<b>stale</b>"} (${esc(when(r.mirror.synced_at))})` : `<span class="err">${esc(r.mirror.error)}</span>`) : "not synchronised"}</td></tr>`).join("");
+  $("adtokens").querySelector("tbody").innerHTML = tokens.map(t => `<tr><td>${esc(t.name)}</td><td>${esc(t.roles.join(", "))}</td><td>${esc(t.repos === "*" ? "all" : t.repos.join(", "))}</td>
+    <td class="mut">${t.revoked_at ? "revoked" : esc(t.expires_at ? when(t.expires_at) : "never")}</td><td class="mut">${esc(when(t.last_used_at))}</td>
+    <td>${t.revoked_at ? "" : `<button class="sec" data-revoke="${t.id}">Revoke</button>`}</td></tr>`).join("") || '<tr><td colspan="6" class="mut">No tokens.</td></tr>';
+  $("adidps").querySelector("tbody").innerHTML = idps.map(i => `<tr><td>${esc(i.name)}</td><td>${esc(i.protocol.toUpperCase())}</td><td>${i.enabled ? "yes" : "no"}</td>
+    <td><button class="sec" data-editidp="${esc(JSON.stringify({id: i.id, name: i.name, protocol: i.protocol, enabled: i.enabled, config: i.config, client_secret_ref: i.client_secret_ref}))}">Edit</button>
+    <button class="sec" data-delidp="${i.id}">Delete</button></td></tr>`).join("") || '<tr><td colspan="4" class="mut">No identity provider yet: nobody can sign in.</td></tr>';
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  try {
+    if (b.dataset.login) { location.href = b.dataset.login;
+    } else if (b.dataset.saveu) {
+      const id = b.dataset.saveu, roles = [...document.querySelectorAll(`input[data-u="${id}"]:checked`)].map(x => x.value), gh = document.querySelector(`input[data-gh="${id}"]`).value.trim();
+      if (!roles.length) return alert("Pick at least one role, or choose 'Use group mapping' to follow the identity provider's groups.");
+      await api("/api/v1/admin/users/" + id, {method: "PUT", body: {roles, ...(gh ? {scm_logins: {github: gh}} : {})}}); adminLoad();
+    } else if (b.dataset.reset) { await api("/api/v1/admin/users/" + b.dataset.reset, {method: "PUT", body: {roles: null}}); adminLoad();
+    } else if (b.dataset.dis) { await api("/api/v1/admin/users/" + b.dataset.dis, {method: "PUT", body: {disabled: b.dataset.to === "true"}}); adminLoad();
+    } else if (b.dataset.revoke) { await api("/api/v1/admin/tokens/" + b.dataset.revoke, {method: "DELETE"}); adminLoad();
+    } else if (b.dataset.delidp) { if (confirm("Delete this identity provider? Its sessions end now.")) { await api("/api/v1/admin/idps/" + b.dataset.delidp, {method: "DELETE"}); adminLoad(); }
+    } else if (b.dataset.editidp) { const i = JSON.parse(b.dataset.editidp); $("idptext").value = JSON.stringify({name: i.name, protocol: i.protocol, enabled: i.enabled, config: i.config}, null, 2); $("idptext").dataset.id = i.id;
+    }
+  } catch (err) { alert(err.message); }
+});
+document.addEventListener("change", async e => {
+  const sel = e.target.closest("select[data-mode]"); if (!sel) return;
+  try { await api("/api/v1/admin/repo-access/" + sel.dataset.mode, {method: "PUT", body: {mode: sel.value}}); adminLoad(); } catch (err) { alert(err.message); adminLoad(); }
+});
+$("adsync").onclick = async () => {
+  busy($("adsync"), true); msg("adsyncmsg", "Synchronising...");
+  try { const r = await api("/api/v1/admin/repo-access/sync", {method: "POST"}); const bad = r.results.filter(x => !x.ok);
+    msg("adsyncmsg", `${r.results.length - bad.length} synchronised` + (bad.length ? `, ${bad.length} failed (${bad.map(x => x.repo).join(", ")})` : ""), bad.length ? "err" : "ok"); adminLoad(); }
+  catch (err) { msg("adsyncmsg", err.message, "err"); }
+  busy($("adsync"), false);
+};
+$("tkmake").onclick = async () => {
+  const roles = [...document.querySelectorAll("#tkroles input:checked")].map(x => x.value), r = $("tkrepos").value.trim();
+  try { const t = await api("/api/v1/admin/tokens", {method: "POST", body: {name: $("tkname").value.trim(), roles, repos: r === "*" ? "*" : r.split(",").map(x => x.trim()).filter(Boolean), expires_in_days: Number($("tkdays").value) || null}});
+    $("tkshow").textContent = "Copy this token now; it is shown once and cannot be recovered:\n\n" + t.token; $("tkshow").classList.remove("hidden"); msg("tkmsg", "Created.", "ok"); adminLoad(); }
+  catch (err) { msg("tkmsg", err.message, "err"); }
+};
+$("idpsave").onclick = async () => {
+  $("idpproblems").innerHTML = ""; let body; try { body = JSON.parse($("idptext").value) } catch { return msg("idpmsg", "That is not valid JSON.", "err"); }
+  const id = $("idptext").dataset.id, r = await tfetch("/api/v1/admin/idps" + (id ? "/" + id : ""), {method: id ? "PUT" : "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { $("idpproblems").innerHTML = ((j.detail && j.detail.problems) || [j.detail || r.statusText]).map(p => `<li>${esc(p)}</li>`).join(""); return msg("idpmsg", "Not saved.", "err"); }
+  msg("idpmsg", "Saved.", "ok"); delete $("idptext").dataset.id; adminLoad();
+};
+boot();
+</script>
+</body>
+</html>

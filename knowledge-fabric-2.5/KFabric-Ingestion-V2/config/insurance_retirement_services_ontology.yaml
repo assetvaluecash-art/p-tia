@@ -1,0 +1,2377 @@
+version: 1.0.0
+domains:
+- name: property_casualty
+  display_name: Property & Casualty
+  description: Property and casualty insurance products covering personal and commercial risks, policies, underwriting, claims,
+    and servicing.
+  spine:
+  - ProductLine: Personal Auto
+    functions:
+    - Function: Quote & Application
+      subfunctions:
+      - Quote Creation
+      - Application Capture
+      - Driver Information
+      - Vehicle Information
+      - Coverage Selection
+    - Function: Underwriting
+      subfunctions:
+      - Risk Assessment
+      - Driving History Review
+      - Vehicle Risk Assessment
+      - Eligibility Rules
+      - Pricing Decision
+    - Function: Policy Administration
+      subfunctions:
+      - Policy Issuance
+      - Endorsements
+      - Renewals
+      - Cancellation
+      - Policy Documents
+    - Function: Claims
+      subfunctions:
+      - First Notice of Loss
+      - Claim Registration
+      - Coverage Validation
+      - Damage Assessment
+      - Claim Settlement
+    - Function: Billing & Payments
+      subfunctions:
+      - Premium Billing
+      - Payment Processing
+      - Payment Plans
+      - Refunds
+      - Delinquency Management
+  - ProductLine: Commercial Auto
+    functions:
+    - Function: Commercial Vehicle Underwriting
+      subfunctions:
+      - Fleet Risk Assessment
+      - Driver Risk Assessment
+      - Vehicle Classification
+      - Territory Assessment
+      - Underwriting Decision
+    - Function: Policy Administration
+      subfunctions:
+      - Policy Issuance
+      - Fleet Changes
+      - Vehicle Additions
+      - Endorsements
+      - Renewals
+    - Function: Claims
+      subfunctions:
+      - Loss Intake
+      - Coverage Validation
+      - Vehicle Damage Assessment
+      - Liability Assessment
+      - Settlement
+    - Function: Fleet Servicing
+      subfunctions:
+      - Vehicle Management
+      - Driver Management
+      - Certificate Management
+      - Policy Changes
+      - Account Servicing
+  - ProductLine: Homeowners
+    functions:
+    - Function: Property Underwriting
+      subfunctions:
+      - Property Assessment
+      - Construction Assessment
+      - Location Risk
+      - Coverage Eligibility
+      - Pricing Decision
+    - Function: Policy Administration
+      subfunctions:
+      - Policy Issuance
+      - Coverage Changes
+      - Endorsements
+      - Renewals
+      - Cancellation
+    - Function: Claims
+      subfunctions:
+      - Loss Reporting
+      - Coverage Validation
+      - Property Damage Assessment
+      - Adjuster Assignment
+      - Claim Settlement
+    - Function: Billing & Payments
+      subfunctions:
+      - Premium Billing
+      - Payment Processing
+      - Escrow Payments
+      - Refunds
+      - Delinquency Management
+  - ProductLine: Renters
+    functions:
+    - Function: Policy Underwriting
+      subfunctions:
+      - Quote Creation
+      - Property Information
+      - Coverage Selection
+      - Risk Assessment
+      - Pricing Decision
+    - Function: Policy Administration
+      subfunctions:
+      - Policy Issuance
+      - Endorsements
+      - Renewals
+      - Cancellation
+      - Document Management
+    - Function: Claims
+      subfunctions:
+      - Loss Reporting
+      - Coverage Validation
+      - Contents Assessment
+      - Adjuster Assignment
+      - Settlement
+  - ProductLine: Personal Umbrella
+    functions:
+    - Function: Eligibility & Underwriting
+      subfunctions:
+      - Underlying Policy Validation
+      - Risk Assessment
+      - Coverage Eligibility
+      - Limit Selection
+      - Pricing
+    - Function: Policy Administration
+      subfunctions:
+      - Policy Issuance
+      - Endorsements
+      - Renewals
+      - Cancellation
+      - Document Management
+    - Function: Claims
+      subfunctions:
+      - Loss Intake
+      - Coverage Coordination
+      - Liability Assessment
+      - Excess Coverage Review
+      - Settlement
+  - ProductLine: Commercial Property
+    functions:
+    - Function: Property Underwriting
+      subfunctions:
+      - Property Assessment
+      - Occupancy Assessment
+      - Location Risk
+      - Exposure Assessment
+      - Pricing
+    - Function: Policy Administration
+      subfunctions:
+      - Policy Issuance
+      - Endorsements
+      - Location Changes
+      - Renewals
+      - Cancellation
+    - Function: Claims
+      subfunctions:
+      - Loss Intake
+      - Coverage Validation
+      - Property Damage Assessment
+      - Business Interruption Assessment
+      - Settlement
+    - Function: Risk Engineering
+      subfunctions:
+      - Property Inspection
+      - Risk Survey
+      - Loss Prevention
+      - Recommendations
+      - Risk Monitoring
+  - ProductLine: Commercial General Liability
+    functions:
+    - Function: Liability Underwriting
+      subfunctions:
+      - Business Risk Assessment
+      - Exposure Assessment
+      - Coverage Eligibility
+      - Limit Selection
+      - Pricing
+    - Function: Policy Administration
+      subfunctions:
+      - Policy Issuance
+      - Endorsements
+      - Renewals
+      - Cancellation
+      - Certificate Management
+    - Function: Claims
+      subfunctions:
+      - Claim Intake
+      - Coverage Validation
+      - Liability Assessment
+      - Defense Coordination
+      - Settlement
+  - ProductLine: Workers' Compensation
+    functions:
+    - Function: Employer Underwriting
+      subfunctions:
+      - Employer Risk Assessment
+      - Class Code Assignment
+      - Payroll Exposure
+      - Experience Modification
+      - Pricing
+    - Function: Policy Administration
+      subfunctions:
+      - Policy Issuance
+      - Payroll Updates
+      - Endorsements
+      - Renewals
+      - Audit Processing
+    - Function: Claims
+      subfunctions:
+      - Injury Reporting
+      - Claim Registration
+      - Medical Management
+      - Return to Work
+      - Indemnity Settlement
+    - Function: Loss Control
+      subfunctions:
+      - Workplace Assessment
+      - Safety Recommendations
+      - Risk Monitoring
+      - Loss Prevention
+      - Compliance Review
+  - ProductLine: Specialty Insurance
+    functions:
+    - Function: Specialty Underwriting
+      subfunctions:
+      - Risk Submission
+      - Exposure Assessment
+      - Coverage Design
+      - Underwriting Review
+      - Pricing
+    - Function: Policy Administration
+      subfunctions:
+      - Policy Issuance
+      - Endorsements
+      - Renewals
+      - Cancellation
+      - Policy Documents
+    - Function: Claims
+      subfunctions:
+      - Loss Intake
+      - Coverage Review
+      - Investigation
+      - Expert Assessment
+      - Settlement
+- name: life_insurance
+  display_name: Life Insurance
+  description: Life insurance products covering mortality risk, policy administration, underwriting, beneficiaries, premiums,
+    and servicing.
+  spine:
+  - ProductLine: Term Life
+    functions:
+    - Function: Quote & Application
+      subfunctions:
+      - Quote Creation
+      - Application Capture
+      - Coverage Selection
+      - Beneficiary Capture
+      - Illustration
+    - Function: Underwriting
+      subfunctions:
+      - Medical Underwriting
+      - Financial Underwriting
+      - Risk Assessment
+      - Evidence Requirements
+      - Underwriting Decision
+    - Function: Policy Administration
+      subfunctions:
+      - Policy Issuance
+      - Premium Processing
+      - Policy Changes
+      - Renewals
+      - Cancellation
+    - Function: Claims
+      subfunctions:
+      - Death Claim Intake
+      - Coverage Validation
+      - Beneficiary Validation
+      - Claim Review
+      - Benefit Settlement
+  - ProductLine: Whole Life
+    functions:
+    - Function: Product & Illustration
+      subfunctions:
+      - Coverage Illustration
+      - Premium Illustration
+      - Cash Value Projection
+      - Dividend Illustration
+      - Quote Creation
+    - Function: Underwriting
+      subfunctions:
+      - Medical Underwriting
+      - Financial Underwriting
+      - Risk Assessment
+      - Evidence Review
+      - Underwriting Decision
+    - Function: Policy Administration
+      subfunctions:
+      - Policy Issuance
+      - Premium Processing
+      - Cash Value Management
+      - Policy Loans
+      - Beneficiary Management
+    - Function: Claims
+      subfunctions:
+      - Death Claim Intake
+      - Coverage Validation
+      - Beneficiary Validation
+      - Claim Review
+      - Benefit Settlement
+  - ProductLine: Universal Life
+    functions:
+    - Function: Product Illustration
+      subfunctions:
+      - Coverage Illustration
+      - Premium Projection
+      - Cash Value Projection
+      - Lapse Projection
+      - Quote Creation
+    - Function: Underwriting
+      subfunctions:
+      - Risk Assessment
+      - Medical Underwriting
+      - Financial Underwriting
+      - Evidence Review
+      - Underwriting Decision
+    - Function: Policy Administration
+      subfunctions:
+      - Premium Processing
+      - Cash Value Management
+      - Policy Loans
+      - Beneficiary Management
+      - Policy Changes
+    - Function: Claims
+      subfunctions:
+      - Death Claim Intake
+      - Coverage Validation
+      - Beneficiary Validation
+      - Claim Review
+      - Settlement
+  - ProductLine: Variable Universal Life
+    functions:
+    - Function: Product Illustration
+      subfunctions:
+      - Investment Illustration
+      - Coverage Illustration
+      - Cash Value Projection
+      - Premium Projection
+      - Scenario Analysis
+    - Function: Underwriting
+      subfunctions:
+      - Risk Assessment
+      - Medical Underwriting
+      - Financial Underwriting
+      - Evidence Review
+      - Underwriting Decision
+    - Function: Policy Administration
+      subfunctions:
+      - Premium Processing
+      - Separate Account Management
+      - Investment Allocation
+      - Policy Loans
+      - Beneficiary Management
+    - Function: Claims
+      subfunctions:
+      - Death Claim Intake
+      - Coverage Validation
+      - Beneficiary Validation
+      - Claim Review
+      - Settlement
+  - ProductLine: Final Expense
+    functions:
+    - Function: Application & Underwriting
+      subfunctions:
+      - Application Capture
+      - Eligibility Assessment
+      - Simplified Underwriting
+      - Coverage Selection
+      - Issuance Decision
+    - Function: Policy Administration
+      subfunctions:
+      - Policy Issuance
+      - Premium Processing
+      - Beneficiary Management
+      - Policy Changes
+      - Cancellation
+    - Function: Claims
+      subfunctions:
+      - Death Claim Intake
+      - Coverage Validation
+      - Beneficiary Validation
+      - Claim Review
+      - Settlement
+- name: annuities
+  display_name: Annuities
+  description: Annuity products covering accumulation, income guarantees, contract administration, withdrawals, and payout
+    services.
+  spine:
+  - ProductLine: Fixed Annuities
+    functions:
+    - Function: Sales & Application
+      subfunctions:
+      - Application Capture
+      - Suitability Review
+      - Premium Selection
+      - Product Selection
+      - Application Approval
+    - Function: Contract Administration
+      subfunctions:
+      - Contract Issuance
+      - Premium Processing
+      - Interest Crediting
+      - Beneficiary Management
+      - Contract Changes
+    - Function: Accumulation
+      subfunctions:
+      - Value Tracking
+      - Interest Calculation
+      - Statement Generation
+      - Surrender Value
+      - Withdrawal Processing
+    - Function: Income & Payout
+      subfunctions:
+      - Annuitization
+      - Income Calculation
+      - Payment Processing
+      - Payout Changes
+      - Death Benefit Processing
+  - ProductLine: Fixed Indexed Annuities
+    functions:
+    - Function: Sales & Suitability
+      subfunctions:
+      - Application Capture
+      - Suitability Review
+      - Illustration
+      - Product Selection
+      - Application Approval
+    - Function: Contract Administration
+      subfunctions:
+      - Contract Issuance
+      - Premium Processing
+      - Index Strategy Selection
+      - Beneficiary Management
+      - Contract Changes
+    - Function: Index Crediting
+      subfunctions:
+      - Index Performance
+      - Participation Rate
+      - Cap Management
+      - Interest Credit Calculation
+      - Statement Generation
+    - Function: Income & Payout
+      subfunctions:
+      - Annuitization
+      - Income Calculation
+      - Withdrawal Processing
+      - Payment Processing
+      - Death Benefit
+  - ProductLine: Variable Annuities
+    functions:
+    - Function: Sales & Suitability
+      subfunctions:
+      - Application Capture
+      - Suitability Review
+      - Investment Selection
+      - Illustration
+      - Application Approval
+    - Function: Contract Administration
+      subfunctions:
+      - Contract Issuance
+      - Premium Processing
+      - Investment Allocation
+      - Beneficiary Management
+      - Contract Changes
+    - Function: Investment Management
+      subfunctions:
+      - Subaccount Management
+      - Allocation Changes
+      - Investment Valuation
+      - Transfer Processing
+      - Performance Reporting
+    - Function: Income & Payout
+      subfunctions:
+      - Annuitization
+      - Income Calculation
+      - Withdrawal Processing
+      - Payment Processing
+      - Death Benefit
+  - ProductLine: Immediate Annuities
+    functions:
+    - Function: Application & Funding
+      subfunctions:
+      - Application Capture
+      - Suitability Review
+      - Premium Processing
+      - Income Option Selection
+      - Contract Issuance
+    - Function: Income Administration
+      subfunctions:
+      - Income Calculation
+      - Payment Scheduling
+      - Payment Processing
+      - Beneficiary Management
+      - Payment Changes
+    - Function: Contract Servicing
+      subfunctions:
+      - Address Changes
+      - Beneficiary Changes
+      - Tax Reporting
+      - Statements
+      - Contract Inquiry
+- name: health_insurance
+  display_name: Health Insurance
+  description: Health insurance products covering enrollment, eligibility, benefits, claims, providers, networks, premiums,
+    and member services.
+  spine:
+  - ProductLine: Individual & Family Health
+    functions:
+    - Function: Enrollment
+      subfunctions:
+      - Application Capture
+      - Plan Selection
+      - Enrollment Processing
+      - Effective Date Management
+      - Member ID Administration
+    - Function: Eligibility & Benefits
+      subfunctions:
+      - Eligibility Verification
+      - Coverage Validation
+      - Benefit Verification
+      - Cost Share Calculation
+      - Benefit Accumulator Management
+    - Function: Claims
+      subfunctions:
+      - Claim Submission
+      - Claim Registration
+      - Claim Validation
+      - Adjudication
+      - Payment
+    - Function: Member Services
+      subfunctions:
+      - Member Inquiry
+      - ID Card Management
+      - Plan Changes
+      - Grievances
+      - Appeals
+  - ProductLine: Group Health
+    functions:
+    - Function: Employer Onboarding
+      subfunctions:
+      - Group Setup
+      - Plan Configuration
+      - Eligibility Rules
+      - Contribution Setup
+      - Open Enrollment
+    - Function: Member Administration
+      subfunctions:
+      - Enrollment Processing
+      - Eligibility Management
+      - Dependent Management
+      - Member Changes
+      - Termination
+    - Function: Claims & Benefits
+      subfunctions:
+      - Claim Intake
+      - Benefit Validation
+      - Claim Adjudication
+      - Payment
+      - Accumulator Management
+    - Function: Employer Services
+      subfunctions:
+      - Billing
+      - Enrollment Reporting
+      - Eligibility Reporting
+      - Plan Administration
+      - Account Servicing
+  - ProductLine: Medicare
+    functions:
+    - Function: Enrollment & Eligibility
+      subfunctions:
+      - Enrollment Processing
+      - Eligibility Verification
+      - Plan Assignment
+      - Member ID Administration
+      - Coverage Effective Date
+    - Function: Benefits
+      subfunctions:
+      - Benefit Verification
+      - Coverage Determination
+      - Cost Share Calculation
+      - Accumulator Management
+      - Benefit Limits
+    - Function: Claims
+      subfunctions:
+      - Claim Submission
+      - Claim Validation
+      - Adjudication
+      - Provider Payment
+      - Adjustment Processing
+    - Function: Member Services
+      subfunctions:
+      - Member Inquiry
+      - Appeals
+      - Grievances
+      - Care Support
+      - ID Card Management
+  - ProductLine: Medicaid
+    functions:
+    - Function: Eligibility & Enrollment
+      subfunctions:
+      - Eligibility Verification
+      - Enrollment Processing
+      - Program Assignment
+      - Member Administration
+      - Coverage Effective Date
+    - Function: Benefits
+      subfunctions:
+      - Benefit Verification
+      - Coverage Determination
+      - Cost Share
+      - Service Limits
+      - Authorization
+    - Function: Claims
+      subfunctions:
+      - Claim Intake
+      - Claim Validation
+      - Adjudication
+      - Payment
+      - Adjustments
+    - Function: Member Services
+      subfunctions:
+      - Member Inquiry
+      - Appeals
+      - Grievances
+      - Case Support
+      - Member Updates
+  - ProductLine: Dental
+    functions:
+    - Function: Enrollment
+      subfunctions:
+      - Member Enrollment
+      - Eligibility Verification
+      - Plan Selection
+      - Dependent Enrollment
+      - Member ID Administration
+    - Function: Benefits
+      subfunctions:
+      - Benefit Verification
+      - Coverage Validation
+      - Deductible Management
+      - Annual Maximum
+      - Benefit Limit
+    - Function: Claims
+      subfunctions:
+      - Claim Submission
+      - Claim Validation
+      - Adjudication
+      - Provider Payment
+      - Adjustment
+    - Function: Provider Services
+      subfunctions:
+      - Provider Enrollment
+      - Provider Directory
+      - Network Participation
+      - Provider Inquiry
+      - Contract Administration
+  - ProductLine: Vision
+    functions:
+    - Function: Enrollment
+      subfunctions:
+      - Member Enrollment
+      - Eligibility Verification
+      - Plan Selection
+      - Dependent Enrollment
+      - Member Administration
+    - Function: Benefits
+      subfunctions:
+      - Benefit Verification
+      - Coverage Validation
+      - Allowance Management
+      - Benefit Limits
+      - Eligibility
+    - Function: Claims
+      subfunctions:
+      - Claim Submission
+      - Claim Validation
+      - Adjudication
+      - Payment
+      - Adjustment
+    - Function: Provider Services
+      subfunctions:
+      - Provider Enrollment
+      - Network Management
+      - Provider Directory
+      - Provider Inquiry
+      - Contract Administration
+- name: retirement_workplace_benefits
+  display_name: Retirement & Workplace Benefits
+  description: Employer-sponsored retirement and workplace savings products including defined contribution plans, pension
+    plans, and individual retirement accounts.
+  spine:
+  - ProductLine: 401(k)
+    functions:
+    - Function: Plan Setup & Administration
+      subfunctions:
+      - Plan Design
+      - Plan Document Management
+      - Eligibility Rules
+      - Contribution Rules
+      - Investment Menu Setup
+    - Function: Participant Administration
+      subfunctions:
+      - Participant Enrollment
+      - Beneficiary Management
+      - Participant Profile
+      - Eligibility Verification
+      - Participant Termination
+    - Function: Contributions
+      subfunctions:
+      - Payroll Contribution Processing
+      - Employer Match
+      - Employer Contribution
+      - Contribution Reconciliation
+      - Contribution Corrections
+    - Function: Investments
+      subfunctions:
+      - Investment Election
+      - Asset Allocation
+      - Investment Transfer
+      - Fund Performance
+      - Investment Restrictions
+    - Function: Distributions & Loans
+      subfunctions:
+      - Distribution Request
+      - Hardship Withdrawal
+      - Loan Origination
+      - Loan Repayment
+      - Rollover Processing
+  - ProductLine: 403(b)
+    functions:
+    - Function: Plan Administration
+      subfunctions:
+      - Plan Setup
+      - Eligibility Rules
+      - Contribution Rules
+      - Investment Menu
+      - Employer Configuration
+    - Function: Participant Administration
+      subfunctions:
+      - Enrollment
+      - Beneficiary Management
+      - Eligibility Verification
+      - Participant Changes
+      - Termination
+    - Function: Contributions
+      subfunctions:
+      - Payroll Contributions
+      - Employer Contributions
+      - Contribution Reconciliation
+      - Corrections
+      - Contribution Limits
+    - Function: Distributions & Loans
+      subfunctions:
+      - Distribution Request
+      - Hardship Withdrawal
+      - Loan Processing
+      - Rollover
+      - Payment Processing
+  - ProductLine: '457'
+    functions:
+    - Function: Plan Administration
+      subfunctions:
+      - Plan Setup
+      - Eligibility Rules
+      - Contribution Rules
+      - Investment Menu
+      - Employer Configuration
+    - Function: Participant Administration
+      subfunctions:
+      - Enrollment
+      - Beneficiary Management
+      - Eligibility Verification
+      - Participant Changes
+      - Termination
+    - Function: Contributions
+      subfunctions:
+      - Payroll Contributions
+      - Employer Contributions
+      - Contribution Reconciliation
+      - Corrections
+      - Contribution Limits
+    - Function: Distributions
+      subfunctions:
+      - Distribution Request
+      - Payment Processing
+      - Rollover Processing
+      - Tax Withholding
+      - Distribution Reporting
+  - ProductLine: Pension
+    functions:
+    - Function: Plan Administration
+      subfunctions:
+      - Plan Design
+      - Plan Rules
+      - Eligibility Rules
+      - Participant Records
+      - Plan Document Management
+    - Function: Participant Services
+      subfunctions:
+      - Benefit Estimate
+      - Service History
+      - Beneficiary Management
+      - Participant Inquiry
+      - Retirement Eligibility
+    - Function: Benefit Calculation
+      subfunctions:
+      - Accrued Benefit Calculation
+      - Vesting Calculation
+      - Early Retirement Calculation
+      - Normal Retirement Calculation
+      - Benefit Adjustment
+    - Function: Benefit Payments
+      subfunctions:
+      - Retirement Election
+      - Payment Processing
+      - Tax Withholding
+      - Payment Changes
+      - Death Benefit
+  - ProductLine: Profit Sharing
+    functions:
+    - Function: Plan Administration
+      subfunctions:
+      - Plan Setup
+      - Eligibility Rules
+      - Allocation Rules
+      - Employer Configuration
+      - Plan Documents
+    - Function: Contribution Allocation
+      subfunctions:
+      - Employer Contribution
+      - Allocation Calculation
+      - Participant Allocation
+      - Contribution Reconciliation
+      - Correction Processing
+    - Function: Participant Services
+      subfunctions:
+      - Participant Enrollment
+      - Beneficiary Management
+      - Account Inquiry
+      - Statement Generation
+      - Termination
+  - ProductLine: IRA & Individual Retirement
+    functions:
+    - Function: Account Opening
+      subfunctions:
+      - Application Capture
+      - Eligibility Validation
+      - Account Setup
+      - Beneficiary Management
+      - Funding Setup
+    - Function: Contributions
+      subfunctions:
+      - Contribution Processing
+      - Contribution Limits
+      - Contribution Recharacterization
+      - Transfer Processing
+      - Rollover Processing
+    - Function: Investments
+      subfunctions:
+      - Investment Election
+      - Asset Allocation
+      - Investment Transfer
+      - Investment Valuation
+      - Performance Reporting
+    - Function: Distributions
+      subfunctions:
+      - Distribution Request
+      - Required Minimum Distribution
+      - Tax Withholding
+      - Payment Processing
+      - Distribution Reporting
+- name: employee_benefits
+  display_name: Employee Benefits
+  description: Employer-sponsored benefits beyond core retirement plans, including group insurance and voluntary workplace
+    benefits.
+  spine:
+  - ProductLine: Group Life
+    functions:
+    - Function: Employer Setup
+      subfunctions:
+      - Plan Setup
+      - Eligibility Rules
+      - Coverage Configuration
+      - Contribution Setup
+      - Enrollment Rules
+    - Function: Enrollment
+      subfunctions:
+      - Employee Enrollment
+      - Dependent Enrollment
+      - Beneficiary Management
+      - Evidence of Insurability
+      - Enrollment Changes
+    - Function: Policy Administration
+      subfunctions:
+      - Coverage Changes
+      - Premium Processing
+      - Eligibility Updates
+      - Termination
+      - Policy Documents
+    - Function: Claims
+      subfunctions:
+      - Claim Intake
+      - Coverage Validation
+      - Beneficiary Validation
+      - Claim Review
+      - Benefit Payment
+  - ProductLine: Group Disability
+    functions:
+    - Function: Employer Setup
+      subfunctions:
+      - Plan Setup
+      - Eligibility Rules
+      - Coverage Configuration
+      - Contribution Setup
+      - Enrollment Rules
+    - Function: Enrollment
+      subfunctions:
+      - Employee Enrollment
+      - Coverage Selection
+      - Dependent Management
+      - Evidence of Insurability
+      - Enrollment Changes
+    - Function: Claims
+      subfunctions:
+      - Disability Claim Intake
+      - Eligibility Validation
+      - Medical Evidence
+      - Case Management
+      - Benefit Payment
+    - Function: Return to Work
+      subfunctions:
+      - Functional Assessment
+      - Return to Work Planning
+      - Work Accommodation
+      - Case Monitoring
+      - Case Closure
+  - ProductLine: Group Dental
+    functions:
+    - Function: Employer Setup
+      subfunctions:
+      - Plan Setup
+      - Eligibility Rules
+      - Coverage Configuration
+      - Contribution Setup
+      - Enrollment Rules
+    - Function: Enrollment
+      subfunctions:
+      - Employee Enrollment
+      - Dependent Enrollment
+      - Plan Selection
+      - Eligibility Verification
+      - Enrollment Changes
+    - Function: Benefits & Claims
+      subfunctions:
+      - Benefit Verification
+      - Claim Submission
+      - Claim Adjudication
+      - Payment
+      - Appeals
+    - Function: Provider Services
+      subfunctions:
+      - Provider Enrollment
+      - Network Management
+      - Provider Directory
+      - Provider Inquiry
+      - Contract Administration
+  - ProductLine: Group Vision
+    functions:
+    - Function: Employer Setup
+      subfunctions:
+      - Plan Setup
+      - Eligibility Rules
+      - Coverage Configuration
+      - Contribution Setup
+      - Enrollment Rules
+    - Function: Enrollment
+      subfunctions:
+      - Employee Enrollment
+      - Dependent Enrollment
+      - Plan Selection
+      - Eligibility Verification
+      - Enrollment Changes
+    - Function: Benefits & Claims
+      subfunctions:
+      - Benefit Verification
+      - Claim Submission
+      - Claim Adjudication
+      - Payment
+      - Appeals
+    - Function: Provider Services
+      subfunctions:
+      - Provider Enrollment
+      - Network Management
+      - Provider Directory
+      - Provider Inquiry
+      - Contract Administration
+  - ProductLine: Voluntary Benefits
+    functions:
+    - Function: Product Setup
+      subfunctions:
+      - Benefit Configuration
+      - Eligibility Rules
+      - Contribution Setup
+      - Enrollment Rules
+      - Plan Documentation
+    - Function: Enrollment
+      subfunctions:
+      - Employee Enrollment
+      - Coverage Selection
+      - Dependent Enrollment
+      - Beneficiary Management
+      - Enrollment Changes
+    - Function: Administration
+      subfunctions:
+      - Premium Processing
+      - Eligibility Updates
+      - Billing
+      - Termination
+      - Reporting
+  - ProductLine: Leave & Absence Benefits
+    functions:
+    - Function: Leave Administration
+      subfunctions:
+      - Leave Request
+      - Eligibility Validation
+      - Leave Type Determination
+      - Leave Approval
+      - Leave Tracking
+    - Function: Benefit Coordination
+      subfunctions:
+      - Benefit Continuation
+      - Premium Management
+      - Disability Coordination
+      - Return to Work
+      - Benefit Reinstatement
+    - Function: Compliance & Reporting
+      subfunctions:
+      - Leave Reporting
+      - Case Documentation
+      - Regulatory Reporting
+      - Audit Support
+      - Policy Administration
+- name: insurance_operations_services
+  display_name: Insurance Operations & Services
+  description: Cross-product insurance capabilities supporting distribution, policy administration, billing, claims, underwriting,
+    customer service, provider networks, and regulatory controls.
+  spine:
+  - ProductLine: Distribution & Agency
+    functions:
+    - Function: Agency Management
+      subfunctions:
+      - Agency Onboarding
+      - Producer Appointment
+      - Producer Licensing
+      - Hierarchy Management
+      - Agency Servicing
+    - Function: Sales & Distribution
+      subfunctions:
+      - Lead Management
+      - Quote Distribution
+      - Application Submission
+      - Commission Processing
+      - Sales Reporting
+    - Function: Producer Services
+      subfunctions:
+      - Producer Profile
+      - Contract Management
+      - Commission Inquiry
+      - Producer Training
+      - Producer Compliance
+  - ProductLine: Billing & Payments
+    functions:
+    - Function: Billing
+      subfunctions:
+      - Premium Calculation
+      - Invoice Generation
+      - Billing Schedule
+      - Account Billing
+      - Billing Adjustments
+    - Function: Payments
+      subfunctions:
+      - Payment Processing
+      - Payment Allocation
+      - Payment Reversal
+      - Refund Processing
+      - Payment Reconciliation
+    - Function: Collections
+      subfunctions:
+      - Delinquency Management
+      - Collections Workflow
+      - Payment Arrangement
+      - Write-off
+      - Recovery
+  - ProductLine: Policy Administration
+    functions:
+    - Function: Policy Lifecycle
+      subfunctions:
+      - Quote-to-Bind
+      - Policy Issuance
+      - Endorsements
+      - Renewals
+      - Cancellation
+    - Function: Customer Servicing
+      subfunctions:
+      - Policy Inquiry
+      - Address Changes
+      - Beneficiary Changes
+      - Coverage Changes
+      - Document Requests
+    - Function: Policy Documents
+      subfunctions:
+      - Document Generation
+      - Document Delivery
+      - Policy Package
+      - Correspondence
+      - Document Archival
+  - ProductLine: Claims Administration
+    functions:
+    - Function: Claims Intake
+      subfunctions:
+      - First Notice of Loss
+      - Claim Registration
+      - Claim Validation
+      - Document Intake
+      - Assignment
+    - Function: Claims Processing
+      subfunctions:
+      - Coverage Determination
+      - Investigation
+      - Reserve Management
+      - Settlement
+      - Payment
+    - Function: Claims Servicing
+      subfunctions:
+      - Claim Inquiry
+      - Appeals
+      - Reopen Claim
+      - Subrogation
+      - Recovery
+  - ProductLine: Underwriting
+    functions:
+    - Function: Risk Assessment
+      subfunctions:
+      - Application Review
+      - Risk Scoring
+      - Exposure Assessment
+      - Eligibility Assessment
+      - Underwriting Decision
+    - Function: Evidence Management
+      subfunctions:
+      - Evidence Request
+      - Document Review
+      - Third-Party Data
+      - Medical Evidence
+      - Inspection
+    - Function: Pricing
+      subfunctions:
+      - Rate Selection
+      - Risk-Based Pricing
+      - Discount Management
+      - Surcharge Management
+      - Pricing Approval
+  - ProductLine: Customer & Member Services
+    functions:
+    - Function: Customer Support
+      subfunctions:
+      - Customer Inquiry
+      - Case Management
+      - Service Request
+      - Complaint Management
+      - Escalation
+    - Function: Self-Service
+      subfunctions:
+      - Profile Management
+      - Policy Inquiry
+      - Document Access
+      - Payment Management
+      - Service Requests
+    - Function: Communications
+      subfunctions:
+      - Notifications
+      - Correspondence
+      - Statements
+      - Alerts
+      - Customer Outreach
+  - ProductLine: Provider & Network Management
+    functions:
+    - Function: Provider Enrollment
+      subfunctions:
+      - Provider Application
+      - Credentialing
+      - Provider Validation
+      - Contracting
+      - Provider Activation
+    - Function: Network Management
+      subfunctions:
+      - Network Configuration
+      - Network Participation
+      - Directory Management
+      - Network Changes
+      - Network Analytics
+    - Function: Provider Servicing
+      subfunctions:
+      - Provider Inquiry
+      - Provider Claims Support
+      - Contract Servicing
+      - Provider Payments
+      - Provider Communications
+  - ProductLine: Regulatory & Compliance
+    functions:
+    - Function: Regulatory Compliance
+      subfunctions:
+      - Regulatory Rules
+      - Compliance Monitoring
+      - Regulatory Reporting
+      - Policy Compliance
+      - Control Testing
+    - Function: Audit & Governance
+      subfunctions:
+      - Audit Management
+      - Evidence Collection
+      - Control Assessment
+      - Issue Management
+      - Remediation Tracking
+    - Function: Risk & Financial Crime
+      subfunctions:
+      - Fraud Detection
+      - Sanctions Screening
+      - Identity Verification
+      - Suspicious Activity Review
+      - Case Management
+block_categories:
+- name: Requirement
+  description: Functional or non-functional requirement statement. 'The system shall...', capability descriptions, constraints.
+  maps_to_node: Requirement
+- name: Process
+  description: Concrete, named business process or operational procedure with identifiable steps, actors, systems, or inputs/outputs.
+    BPMN activities, SOPs, transactional workflows. NOT abstract methodology descriptions, conceptual frameworks, lifecycle
+    phase names, or sales narratives about approaches.
+  maps_to_node: Process
+- name: Rule
+  description: Business rule with explicit conditional outcome — both condition AND consequence stated. If X then Y, unless
+    X apply Y, when X triggers Y. Threshold constraints without a stated consequence are Requirements not Rules.
+  maps_to_node: Rule
+- name: Control
+  description: Operational control, compliance gate, SOX control, audit checkpoint. Mechanisms that enforce rules or mitigate
+    risks.
+  maps_to_node: Control
+- name: Regulation
+  description: External regulatory mandate, standard, or guideline. Basel III, OFAC, GDPR, PCI-DSS, RBI circular.
+  maps_to_node: Regulation
+- name: TestCase
+  description: Individual test procedure including manual test scripts, UI navigation test steps, and automated test definitions.
+    Blocks with preconditions, numbered steps (Navigate To, Click, Enter, Select, Verify), and expected results. Xray, Zephyr,
+    and Excel-based test sheets. ANY block describing how to manually or automatically execute a test belongs here — NOT in
+    Process. Individual UI steps (Navigate To, Click, Enter) are test steps within the TestCase node, not separate Process
+    entities.
+  maps_to_node: TestCase
+- name: Defect
+  description: Bug report, defect description, issue record from a defect tracking system.
+  maps_to_node: Defect
+- name: Incident
+  description: Production incident record, outage report, operational issue.
+  maps_to_node: Incident
+- name: UserStory
+  description: User story, feature request, change request. 'As a [role], I want [goal]...' or change descriptions.
+  maps_to_node: UserStory
+- name: AcceptanceCriteria
+  description: Acceptance criterion tied to a requirement. Given/When/Then, verification conditions, definition of done.
+  maps_to_node: AcceptanceCriteria
+- name: TechnicalSystem
+  description: Named software application, platform, module, or service described from a business or integration perspective.
+    System overview pages, application capability descriptions, system-to-system interface narratives. The block is primarily
+    ABOUT a system — what it does, what processes it supports, how it integrates. Distinguished from TechnicalSpec which contains
+    machine-readable interface definitions.
+  maps_to_node: System
+- name: TechnicalSpec
+  description: Machine-readable interface definitions — API contracts, OpenAPI/Swagger/WSDL schemas, endpoint definitions,
+    message format specifications. The block IS the interface contract not a narrative about a system. Extract the named API
+    or owning service as a System node (e.g. Loan API from LOAN.API.3). Do not extract operationIds or HTTP methods as System.
+    System narrative descriptions go to TechnicalSystem.
+  maps_to_node: System
+- name: TechnicalOps
+  description: Batch job definitions, ETL schedules, cron jobs, automated event handlers, configuration parameters, feature
+    flags, deployment procedures, environment settings, operational runbooks. Also includes system lifecycle steps like approval
+    events, status transitions, and scheduled data refreshes that are NOT user-facing business processes.
+  maps_to_node: _SKIP_KG
+- name: Reference
+  description: Glossary terms, definitions, acronyms, configurable parameters, reference material.
+  maps_to_node: _SKIP_KG
+- name: Diagram
+  description: Visual content — flowchart, architecture, BPMN, form image. Vision IE extracts entities into KG.
+  maps_to_node: _SKIP_KG
+- name: FormCapture
+  description: Data capture forms, input screens, KYC forms, application forms, Figma screen mockups. Contains field-value
+    pairs and validation rules. ALSO includes system screen guides and field listing documents — Temenos screen descriptions
+    listing visible fields (Username, Password, Arrangement, Status, Balance), screen layout documentation, and any block
+    that describes what fields appear on a system screen. Field names listed within a screen description are form fields,
+    not System entities.
+  maps_to_node: FormCapture
+- name: Narrative
+  description: General prose with no classifiable structure. Last resort — use only when no other category fits.
+  maps_to_node: _SKIP_KG
+node_types:
+- name: DomainRoot
+  layer: domain_structure
+  description: Customer-scoped domain anchor beneath CustomerRoot. Industry is metadata and never a graph root.
+  name_pattern: Exact domain key (snake_case)
+  examples:
+  - corporate_commercial
+  - consumer_retail
+- name: ProductLine
+  layer: domain_structure
+  description: Major business line within a domain. Hub node for graph traversal.
+  name_pattern: Title Case, business name as known to the bank
+  examples:
+  - SME Lending
+  - Trade Finance
+  - Cash Management
+- name: Function
+  layer: domain_structure
+  description: Business function within a product line. Groups related processes and requirements.
+  name_pattern: Title Case, verb-noun phrase preferred
+  examples:
+  - Loan Origination
+  - Loan Servicing
+  - Letter of Credit
+- name: SubFunction
+  layer: domain_structure
+  description: Specific capability within a function. Leaf of the pre-seeded spine.
+  name_pattern: Title Case
+  examples:
+  - Credit Assessment
+  - Collateral Valuation
+  - Repayment Processing
+- name: Requirement
+  layer: context
+  description: Functional or non-functional requirement statement. Core node for coverage and compliance tracing.
+  name_pattern: ID when present in source (FR-xx, REQ-xxx). Else short descriptive phrase ≤80 chars.
+  ie_examples:
+  - block_text: 'FR-04: The system shall auto-generate a repayment schedule (EMI or bullet) upon loan booking, reflecting
+      selected interest type, tenor, and repayment frequency.'
+    block_category: Requirement
+    spine_node: Repayment Processing
+    entities:
+    - type: Requirement
+      value: FR-04
+      description: The system shall auto-generate a repayment schedule (EMI or bullet) upon loan booking, reflecting selected
+        interest type, tenor, and repayment frequency.
+      confidence: 0.95
+    - type: Process
+      value: Loan Booking
+      confidence: 0.9
+    - type: Process
+      value: EMI Schedule Generation
+      confidence: 0.85
+    relationships:
+    - from_type: Requirement
+      from_value: FR-04
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: Loan Booking
+    - from_type: Requirement
+      from_value: FR-04
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: EMI Schedule Generation
+  - block_text: The system must validate that collateral value exceeds 120% of loan amount before approval can proceed.
+    block_category: Requirement
+    spine_node: Collateral Valuation
+    entities:
+    - type: Requirement
+      value: Collateral Validation Threshold
+      description: The system must validate that collateral value exceeds 120% of loan amount before approval can proceed.
+      confidence: 0.95
+    - type: Process
+      value: Loan Approval
+      confidence: 0.9
+    relationships:
+    - from_type: Requirement
+      from_value: Collateral Validation Threshold
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: Loan Approval
+  anti_examples:
+  - Do NOT extract narrative prose or section introductions as Requirement
+  - Do NOT extract section headings like '3. Functional Requirements' as Requirement
+  - Do NOT discard the descriptive text when an entity has an ID. Preserve the ID as `value` and extract the human-readable
+    statement into `description`.
+  - 'Do NOT replace the canonical entity ID with `ID : description`; `value` must remain the stable identifier used for graph
+    linking (e.g. FR-04).'
+  - Do NOT invent a description. It must be grounded in the source block.
+  - Do NOT duplicate the identifier inside description.
+- name: Process
+  layer: context
+  description: Named, executable business process or workflow with concrete operational steps, system interactions, or defined
+    inputs/outputs. Must be a specific process that an organization performs — not an abstract concept, methodology phase,
+    lifecycle stage name, or sales description of an approach.
+  name_pattern: Title Case, descriptive verb-noun phrase ≤80 chars
+  evidence_gate:
+    enabled: true
+    min_evidence_score: 3
+    step_keywords:
+    - step
+    - then
+    - after
+    - before
+    - first
+    - next
+    - followed by
+    - sequence
+    - procedure
+    - workflow
+    - navigate
+    - click
+    - enter
+    - select
+    actor_keywords:
+    - manager
+    - officer
+    - agent
+    - user
+    - team
+    - analyst
+    - clerk
+    - applicant
+    - customer
+    - borrower
+    - maker
+    - checker
+    - approver
+    - administrator
+    system_keywords:
+    - system
+    - module
+    - screen
+    - portal
+    - application
+    - database
+    - API
+    - interface
+    - core banking
+    - T24
+    - LOS
+    - CRM
+    - ERP
+    - SWIFT
+    action_keywords:
+    - execute
+    - process
+    - submit
+    - validate
+    - create
+    - generate
+    - verify
+    - approve
+    - reject
+    - initiate
+    - configure
+    - disburse
+    - accrue
+    - settle
+    - book
+    - capture
+    - assess
+    - classify
+    - compute
+    - reconcile
+    outcome_keywords:
+    - produces
+    - results in
+    - generates
+    - completes
+    - approved
+    - booked
+    - disbursed
+    - settled
+    - report produced
+    - outcome
+    - output
+    exclusion_keywords:
+    - batch
+    - scheduled job
+    - nightly run
+    - daily run
+    - eod processing
+    - eom processing
+    - accrual run
+    - posting run
+    - background job
+    - automated sweep
+    - scheduled task
+    - navigate to
+    - click on
+    - enter the field
+    - pre-requisites
+    - pre-condition
+    - test step
+    - login and approve
+  ie_examples:
+  - block_text: 'Loan disbursement initiation: The maker enters the disbursement instruction in LOS_Core specifying account
+      number, amount, and value date. The system validates available limit against sanctioned amount. On success the maker
+      submits for checker review. The checker approves in LOS_Core. On dual approval the disbursement request is transmitted
+      to Core Banking for fund transfer execution.'
+    block_category: Process
+    spine_node: Loan Disbursement
+    entities:
+    - type: Process
+      value: Loan Disbursement Initiation
+      confidence: 0.95
+    - type: System
+      value: LOS_Core
+      confidence: 0.9
+    - type: System
+      value: Core Banking
+      confidence: 0.88
+    - type: Actor
+      value: Maker
+      confidence: 0.85
+    - type: Actor
+      value: Checker
+      confidence: 0.85
+    relationships:
+    - from_type: Process
+      from_value: Loan Disbursement Initiation
+      rel_type: USES
+      to_type: System
+      to_value: LOS_Core
+    - from_type: Actor
+      from_value: Maker
+      rel_type: PERFORMS
+      to_type: Process
+      to_value: Loan Disbursement Initiation
+  anti_examples:
+  - Do NOT extract flowchart box labels like 'Check band' as Process — these are diagram elements
+  - Do NOT extract state names like 'Rejected' or 'Approved' as Process — these are states
+  - Do NOT extract data values like 'AggressiveProfile' as Process
+  - Do NOT extract abstract methodology stages like 'Requirement Stage', 'Design Stage', 'Test Planning', 'Test Execution',
+    'Test Design' as Process — these are methodology phases, not executable workflows
+  - Do NOT extract sales or marketing descriptions of approaches, capabilities, or value propositions as Process
+  - Do NOT extract lifecycle phase names (e.g., 'Planning Phase', 'Execution Phase') unless they describe concrete operational
+    steps with actors and systems
+  - Do NOT extract single-word abstract capabilities like 'Automation', 'Integration', 'Validation', 'Customization', 'Scale',
+    or 'Governance' as Process — these are generic concepts
+  - Do NOT extract product or tool feature names like 'Pulse Intelligence', 'Pulse Automation', 'Gateway Integration' as Process
+    — these are software components, not business processes
+  - Do NOT extract benefit descriptions or outcome phrases like 'Clarity & Testability', 'Faster Certification', 'Governed
+    Coverage Creation', 'Risk-Based Validation' as Process
+  - Do NOT extract SDLC activity labels like 'Risk Identification', 'System Impact Discovery', 'Historical Defect Intelligence'
+    as Process unless the text describes a specific workflow with concrete steps, actors, and systems
+  - 'Do NOT extract scheduled batch jobs, cron tasks, or automated events as Process — classify as TechnicalOps instead. Examples:
+    ''Daily DPD Calculation Batch'', ''Monthly EMI Due Generation'', ''Benchmark Rate Refresh Job'', ''Interest Accrual Suspension
+    Job'', ''End-of-Day Reconciliation'''
+  - 'Do NOT extract system lifecycle events or state transitions as Process — classify as TechnicalOps. Examples: ''Approval
+    Event'', ''Status Change'', ''File Upload Trigger'', ''Notification Dispatch'''
+  - Do NOT extract SubFunction spine node names as Process entities — EMI Calculation, Eligibility Check, Disbursement, NAB
+    Classification, Repayment Processing are pre-seeded SubFunction nodes. Set spine_node to the matching SubFunction instead.
+  - Do NOT extract API method names or REST endpoint strings as Process — createConsumerLoan, cancelArrangement, LOAN.API.3
+    PUT, POST /loans are API operations. Classify the block as TechnicalSpec.
+- name: Rule
+  layer: context
+  description: Business rule with explicit conditional logic — if X then Y, unless X apply Y, when X triggers Y. BOTH condition
+    AND consequence must be stated. Threshold constraints without a stated consequence are Requirements not Rules. For operational
+    enforcement mechanisms use Control instead.
+  name_pattern: Title Case or RULE-ID if present, descriptive ≤80 chars
+  ie_examples:
+  - block_text: 'Interest accrual ceases when account reaches 90+ DPD and is classified as Non-Accrual of Business (NAB).
+      Repayment priority follows: Interest → Charges → Tax → Principal.'
+    block_category: Rule
+    spine_node: Interest Accrual
+    entities:
+    - type: Rule
+      value: NAB Classification at 90 DPD
+      confidence: 0.95
+    - type: Rule
+      value: Repayment Priority Order
+      confidence: 0.9
+    - type: Process
+      value: Interest Accrual
+      confidence: 0.85
+    relationships:
+    - from_type: Process
+      from_value: Interest Accrual
+      rel_type: GOVERNED_BY
+      to_type: Rule
+      to_value: NAB Classification at 90 DPD
+  - block_text: If a pricing override is submitted, the user must provide documented justification, and the system must log
+      user ID, timestamp, old rate, new rate, and reason for the override.
+    block_category: Rule
+    entities:
+    - type: Rule
+      value: Pricing Override Justification
+      confidence: 0.95
+    - type: Process
+      value: Pricing Override
+      confidence: 0.9
+    relationships:
+    - from_type: Process
+      from_value: Pricing Override
+      rel_type: GOVERNED_BY
+      to_type: Rule
+      to_value: Pricing Override Justification
+  anti_examples:
+  - Do NOT extract narrative descriptions of policy background as Rule
+  - Do NOT extract external regulations (Basel III, OFAC) as Rule — use Regulation
+  - Do NOT extract operational controls (sanctions screening gate) as Rule — use Control
+  - Do NOT extract threshold constraints as Rule when no consequence is stated — collateral must exceed 120% is a Requirement
+    not a Rule
+  - Do NOT extract process sequencing language as Rule — maker submits for checker approval is a Process step not a Rule
+- name: Control
+  layer: context
+  description: Operational enforcement mechanism that mitigates risk or enforces rules. SOX controls, compliance gates, screening
+    checks, audit checkpoints. Distinct from Rule (which states the logic) — Control is the mechanism that enforces it.
+  name_pattern: Title Case, descriptive ≤80 chars
+  ie_examples:
+  - block_text: Real-time sanctions screening must execute on all outbound payments above $5,000. The screening control checks
+      against OFAC SDN, UN, and EU sanctions lists. Flagged transactions are held pending compliance review.
+    block_category: Control
+    entities:
+    - type: Control
+      value: Real-Time Sanctions Screening
+      confidence: 0.95
+    - type: Process
+      value: Outbound Payment Processing
+      confidence: 0.9
+    - type: Regulation
+      value: OFAC SDN List
+      confidence: 0.85
+    relationships:
+    - from_type: Control
+      from_value: Real-Time Sanctions Screening
+      rel_type: MITIGATES
+      to_type: Process
+      to_value: Outbound Payment Processing
+    - from_type: Control
+      from_value: Real-Time Sanctions Screening
+      rel_type: ENFORCED_BY
+      to_type: Regulation
+      to_value: OFAC SDN List
+  - block_text: 'KYC completion gate: No account can be activated until KYC verification status = COMPLETE and risk rating
+      is assigned. This is a mandatory SOX control for new customer onboarding.'
+    block_category: Control
+    entities:
+    - type: Control
+      value: KYC Completion Gate
+      confidence: 0.95
+    - type: Process
+      value: New Customer Onboarding
+      confidence: 0.9
+    relationships:
+    - from_type: Control
+      from_value: KYC Completion Gate
+      rel_type: MITIGATES
+      to_type: Process
+      to_value: New Customer Onboarding
+  anti_examples:
+  - Do NOT extract business logic like 'if amount > $1M then escalate' as Control — that is a Rule
+  - Do NOT extract external regulations as Control — use Regulation
+- name: Regulation
+  layer: context
+  description: External regulatory mandate, industry standard, or compliance guideline. Basel III, OFAC, GDPR, PCI-DSS, RBI
+    Master Circular, SOX. These are external to the bank and enforce Controls.
+  name_pattern: 'Official name or abbreviation as commonly known: Basel III, OFAC, GDPR'
+  ie_examples:
+  - block_text: All capital adequacy calculations must comply with Basel III norms. The bank maintains a minimum CET1 ratio
+      of 8% with a 2.5% conservation buffer as mandated by the central bank.
+    block_category: Regulation
+    entities:
+    - type: Regulation
+      value: Basel III
+      confidence: 0.95
+    - type: Process
+      value: Capital Adequacy Calculation
+      confidence: 0.9
+    - type: Rule
+      value: CET1 Minimum 8% Plus Conservation Buffer
+      confidence: 0.85
+    relationships:
+    - from_type: Process
+      from_value: Capital Adequacy Calculation
+      rel_type: COMPLIANT_WITH
+      to_type: Regulation
+      to_value: Basel III
+    - from_type: Rule
+      from_value: CET1 Minimum 8% Plus Conservation Buffer
+      rel_type: ENFORCED_BY
+      to_type: Regulation
+      to_value: Basel III
+  - block_text: PCI-DSS compliance requires encryption of cardholder data at rest and in transit. Annual penetration testing
+      and quarterly vulnerability scans are mandatory.
+    block_category: Regulation
+    entities:
+    - type: Regulation
+      value: PCI-DSS
+      confidence: 0.95
+    - type: Control
+      value: Cardholder Data Encryption
+      confidence: 0.9
+    relationships:
+    - from_type: Control
+      from_value: Cardholder Data Encryption
+      rel_type: ENFORCED_BY
+      to_type: Regulation
+      to_value: PCI-DSS
+  anti_examples:
+  - Do NOT extract internal policies as Regulation — those are Rules
+  - Do NOT extract control mechanisms as Regulation — those are Controls
+- name: FormCapture
+  description: A data capture form, input screen, or UI mockup. Stores extracted fields as properties and links to governing
+    controls/rules.
+  layer: context
+  name_pattern: Form title or screen name
+  ie_examples:
+  - block_text: 'KYC Verification Form for SME Loan Applicants. Fields: Applicant Name, Date of Incorporation, ID Type, ID
+      Number, Registered Address, Risk Rating, KYC Status, Verified By. Must be completed before account activation per CTRL-KYC-001.'
+    block_category: FormCapture
+    entities:
+    - type: FormCapture
+      value: KYC Verification Form
+      confidence: 0.95
+    - type: Control
+      value: CTRL-KYC-001
+      description: Must be completed before account activation
+      confidence: 0.9
+    relationships: null
+  anti_examples:
+  - System architecture diagram
+  - Process flow chart
+- name: UserStory
+  layer: use_case
+  description: User story or feature request. Links to requirements via IMPLEMENTS.
+  name_pattern: JIRA/tool ID when present (JIRA-xxx, USR-xxx). Else short title ≤80 chars.
+  ie_examples:
+  - block_text: 'As a relationship manager, I want to configure bullet repayment schedules for SME loans, so that product
+      setup reflects the agreed terms. Sprint: Q1-2025, Priority: High'
+    block_category: UserStory
+    entities:
+    - type: UserStory
+      value: Bullet Repayment Configuration
+      description: As a relationship manager, I want to configure bullet repayment schedules for SME loans, so that product
+        setup reflects the agreed terms.
+      confidence: 0.95
+    - type: Requirement
+      value: Bullet Repayment Schedule
+      confidence: 0.9
+    - type: Process
+      value: SME Loan Product Setup
+      confidence: 0.85
+    relationships:
+    - from_type: UserStory
+      from_value: Bullet Repayment Configuration
+      rel_type: IMPLEMENTS
+      to_type: Requirement
+      to_value: Bullet Repayment Schedule
+    - from_type: UserStory
+      from_value: Bullet Repayment Configuration
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: SME Loan Product Setup
+  anti_examples:
+  - Do NOT extract sprint name or priority as entities — these go into extracted_fields
+  - Do NOT extract the actor role from 'As a [role]' as a separate entity
+  - Do NOT discard the story text when an ID or short title is used as `value`; put the story/title summary in `description`.
+  - 'Do NOT replace the canonical entity ID/title with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include sprint, priority, or status metadata in `description` when those belong in extracted_fields.
+  - Do NOT invent a description. It must be grounded in the source block.
+- name: AcceptanceCriteria
+  layer: use_case
+  description: Acceptance criterion tied to a requirement. Validates requirement completeness.
+  name_pattern: AC-{parent_req}-{seq} when parent known. Else descriptive ≤80 chars.
+  ie_examples:
+  - block_text: 'AC-FR04-01: Given a new loan is booked with bullet repayment, When the schedule is generated, Then the system
+      shall create a single principal payment at maturity with periodic interest-only payments.'
+    block_category: AcceptanceCriteria
+    entities:
+    - type: AcceptanceCriteria
+      value: AC-FR04-01
+      description: Given a new loan is booked with bullet repayment, When the schedule is generated, Then the system shall
+        create a single principal payment at maturity with periodic interest-only payments.
+      confidence: 0.95
+    - type: Requirement
+      value: FR-04
+      confidence: 0.9
+    relationships:
+    - from_type: AcceptanceCriteria
+      from_value: AC-FR04-01
+      rel_type: VALIDATES
+      to_type: Requirement
+      to_value: FR-04
+  anti_examples:
+  - Do NOT extract Given/When/Then keywords as entities
+  - Do NOT discard the Given/When/Then statement when an AC ID is used as `value`; put the criterion text in `description`.
+  - 'Do NOT replace the canonical AC ID with `ID : description`; keep `value` as AC-FR04-01 for graph linking.'
+  - Do NOT invent a Requirement description when only the ID (e.g. FR-04) is referenced — leave description empty on that
+    reference.
+  - Do NOT duplicate the identifier inside description.
+- name: TestCase
+  layer: use_case
+  description: Individual test procedure including manual test scripts, UI navigation test steps, and automated test definitions.
+    Blocks with preconditions, numbered steps (Navigate To, Click, Enter, Select, Verify), and expected results. Xray, Zephyr,
+    and Excel-based test sheets. ANY block describing how to manually or automatically execute a test belongs here — NOT in
+    Process. Individual UI steps (Navigate To, Click, Enter) are test steps within the TestCase node, not separate Process
+    entities. Test case with steps, preconditions, expected results. Links to requirements via COVERS.
+  name_pattern: TC-{source_short}-{row#} for spreadsheets. Source ID if available (e.g., CLOS_DEL_SCN_004_TC_001). ≤80 chars.
+  ie_examples:
+  - block_text: 'Test Case CLOS_DEL_SCN_004_TC_001 | Scenario: Delinquency processing for Long Term Loan | Priority: High
+      | Requirement: DEL_CL_RTM_001 | Step 1: Login to LOS_Core | Step 2: Navigate to Delinquency screen | Step 3: Enter mandatory
+      fields | Expected: Delinquency classification applied'
+    block_category: TestCase
+    entities:
+    - type: TestCase
+      value: CLOS_DEL_SCN_004_TC_001
+      description: Delinquency processing for Long Term Loan
+      confidence: 0.95
+    - type: Requirement
+      value: DEL_CL_RTM_001
+      confidence: 0.9
+    - type: Process
+      value: Delinquency Processing
+      confidence: 0.85
+    - type: System
+      value: LOS_Core
+      confidence: 0.85
+    relationships:
+    - from_type: TestCase
+      from_value: CLOS_DEL_SCN_004_TC_001
+      rel_type: COVERS
+      to_type: Requirement
+      to_value: DEL_CL_RTM_001
+  anti_examples:
+  - Do NOT extract individual test steps as separate entities
+  - Do NOT extract test data values as entities
+  - Do NOT discard the scenario/title when a test case ID is used as `value`; put the scenario/title in `description`.
+  - 'Do NOT replace the canonical test case ID with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include priority, status, or step lists in `description` when those belong in extracted_fields.
+  - Do NOT invent a description. It must be grounded in the source block.
+- name: Defect
+  layer: use_case
+  description: Bug report or defect. Links to requirements (VIOLATES), test cases (MISSED_BY), incidents (LINKED_TO).
+  name_pattern: DEF-{ID} or source ID (e.g., SYN-CL-3001). ≤80 chars.
+  ie_examples:
+  - block_text: 'SYN-CL-3015 | Interest Accrual not suspended after NAB classification | Detection: SIT | Root Cause: Business
+      Logic Error | Module: Loan Servicing - Interest Accrual | Severity: High | Linked: USR-365'
+    block_category: Defect
+    entities:
+    - type: Defect
+      value: SYN-CL-3015
+      description: Interest Accrual not suspended after NAB classification
+      confidence: 0.95
+    - type: Requirement
+      value: USR-365
+      confidence: 0.9
+    - type: Process
+      value: Interest Accrual
+      confidence: 0.85
+    relationships:
+    - from_type: Defect
+      from_value: SYN-CL-3015
+      rel_type: VIOLATES
+      to_type: Requirement
+      to_value: USR-365
+    - from_type: Defect
+      from_value: SYN-CL-3015
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: Interest Accrual
+  anti_examples:
+  - Do NOT extract severity level or detection phase as entities — these go into extracted_fields
+  - Do NOT discard the defect title when a defect ID is used as `value`; put the title/summary in `description`.
+  - 'Do NOT replace the canonical defect ID with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include severity, detection phase, root cause, or status in `description` when those belong in extracted_fields.
+  - Do NOT invent a description. It must be grounded in the source block.
+- name: Incident
+  layer: use_case
+  description: Production incident record. Links to defects for root cause analysis.
+  name_pattern: INC-{ID} from source. ≤80 chars.
+  ie_examples:
+  - block_text: 'INC-LOAN-089: Production incident — bullet repayment not applied to 12 new loans booked after config change.
+      Impact: High. Related defect: DEF-2024-0567.'
+    block_category: Incident
+    entities:
+    - type: Incident
+      value: INC-LOAN-089
+      description: Production incident — bullet repayment not applied to 12 new loans booked after config change.
+      confidence: 0.95
+    - type: Defect
+      value: DEF-2024-0567
+      confidence: 0.9
+    - type: Process
+      value: Loan Booking
+      confidence: 0.85
+    relationships:
+    - from_type: Defect
+      from_value: DEF-2024-0567
+      rel_type: LINKED_TO
+      to_type: Incident
+      to_value: INC-LOAN-089
+    - from_type: Incident
+      from_value: INC-LOAN-089
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: Loan Booking
+  - block_text: 'Incident INC-PAY-2024-041: RTGS payment gateway experienced intermittent timeouts between 14:00-16:30 UTC
+      on 2024-06-12. Approximately 340 outbound payments were delayed. Severity P1. Operations team performed manual failover
+      to backup gateway. Root cause under investigation. Impacts RTGS Payment Processing and downstream settlement.'
+    block_category: Incident
+    entities:
+    - type: Incident
+      value: INC-PAY-2024-041
+      description: RTGS payment gateway experienced intermittent timeouts between 14:00-16:30 UTC on 2024-06-12. Approximately
+        340 outbound payments were delayed.
+      confidence: 0.95
+    - type: System
+      value: RTGS Payment Gateway
+      confidence: 0.9
+    - type: Process
+      value: RTGS Payment Processing
+      confidence: 0.85
+    relationships:
+    - from_type: Incident
+      from_value: INC-PAY-2024-041
+      rel_type: IMPACTS
+      to_type: System
+      to_value: RTGS Payment Gateway
+    - from_type: Incident
+      from_value: INC-PAY-2024-041
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: RTGS Payment Processing
+  anti_examples:
+  - Do NOT extract the impact level as an entity
+  - Do NOT discard the incident summary when an incident ID is used as `value`; put the summary in `description`.
+  - 'Do NOT replace the canonical incident ID with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include severity, timestamps, or status alone in `description` when those belong in extracted_fields.
+  - Do NOT invent a description. It must be grounded in the source block.
+- name: System
+  layer: technical
+  description: 'A named, deployable banking software platform, application, integration system, or named API service — something
+    you can install, configure, or connect to. Valid examples: Temenos Transact, Murex, Finastra TI+, Kondour, Payment Hub,
+    Online Banking Portal, Mobile Banking App, SWIFT Gateway, SMS Gateway, Statement Generation System, Core Banking System,
+    LOS_Core, Actimize AML, Loan API. From TechnicalSpec API catalogs, extract the named API or service (Loan API from LOAN.API.3),
+    not the operation. NOT HTTP methods, NOT operationIds, NOT REST paths, NOT accounting transaction codes, NOT customer
+    types, NOT generic module references without a product name.'
+  name_pattern: Title Case, proper product name ≤80 chars
+  ie_examples:
+  - block_text: The payment hub integrates with Temenos Transact for account validation, SWIFT Gateway for cross-border message
+      transmission, and the SMS Gateway for customer notifications. Finastra TI+ handles treasury deal processing and feeds
+      position data to Murex for risk calculation.
+    block_category: TechnicalSystem
+    entities:
+    - type: System
+      value: Payment Hub
+      confidence: 0.97
+    - type: System
+      value: Temenos Transact
+      confidence: 0.97
+    - type: System
+      value: SWIFT Gateway
+      confidence: 0.95
+    - type: System
+      value: SMS Gateway
+      confidence: 0.92
+    - type: System
+      value: Finastra TI+
+      confidence: 0.95
+    - type: System
+      value: Murex
+      confidence: 0.95
+    relationships:
+    - from_type: System
+      from_value: Payment Hub
+      rel_type: INTEGRATES_WITH
+      to_type: System
+      to_value: Temenos Transact
+    - from_type: System
+      from_value: Payment Hub
+      rel_type: INTEGRATES_WITH
+      to_type: System
+      to_value: SWIFT Gateway
+    - from_type: System
+      from_value: Finastra TI+
+      rel_type: INTEGRATES_WITH
+      to_type: System
+      to_value: Murex
+  - block_text: I.NO Method Operation Id Operation Description. LOAN.API.3 PUT cancelArrangement Performs the loan cancellation
+      for buy now pay later service. LOAN.API.4 POST createConsumerLoan Creates the creation of consumer loan for the given
+      product.
+    block_category: TechnicalSpec
+    entities:
+    - type: System
+      value: Loan API
+      confidence: 0.92
+    relationships: []
+  anti_examples:
+  - Do NOT extract accounting entries as System — Dr Cash Arrangement, Cr Loan Account, Repayment To Me, Dr Customer Account
+    are transaction/accounting codes not systems.
+  - Do NOT extract customer types or customer states as System — Individual Customer, Corporate Customer, Unauthorised Customer,
+    Deceased Customer are Actor or DataEntity types not systems.
+  - Do NOT extract process or action names as System — Create Prospect, Activate Customer, Amend Customer, Authorise Customer,
+    Delete External User are Processes not systems.
+  - Do NOT extract abbreviations or transaction codes as System — Cm, Ft, Tt, Bom, Tab Arrangement Bom are codes not named
+    systems.
+  - Do NOT extract UI elements or menus as System — User Menu, Customer Relationship, Individual Customer Portal are UI elements
+    not systems.
+  - Do NOT extract generic words alone as System — System, Module, Engine, Service, Layer without a proper product name are
+    not valid System entities.
+  - Do NOT extract API operationIds, HTTP methods, or REST paths as System — cancelArrangement, createConsumerLoan, PUT, POST
+    /loans are operations on a system, not the system. From a TechnicalSpec API catalog, extract the named API or service
+    (Loan API from LOAN.API.3) as System.
+- name: DataEntity
+  layer: technical
+  description: Named data object, report, or master record. Connected to processes via PRODUCES.
+  name_pattern: Title Case, descriptive ≤80 chars
+  ie_examples:
+  - text: The Loan Disbursement Process produces the Loan Repayment Schedule containing principal, interest, due date, and
+      outstanding balance.
+    entities:
+    - type: DataEntity
+      value: Loan Repayment Schedule
+      confidence: 0.95
+    - type: Process
+      value: Loan Disbursement Process
+      confidence: 0.9
+    relationships:
+    - from_type: Process
+      from_value: Loan Disbursement Process
+      rel_type: PRODUCES
+      to_type: DataEntity
+      to_value: Loan Repayment Schedule
+  - text: The Customer Master Record stores customer identity, contact, risk classification, and KYC status used during customer
+      onboarding.
+    entities:
+    - type: DataEntity
+      value: Customer Master Record
+      confidence: 0.95
+    - type: Process
+      value: Customer Onboarding
+      confidence: 0.9
+    relationships: []
+  anti_examples:
+  - Do NOT extract field names like 'SSN' or 'Email' as DataEntity
+  - Do NOT extract PII types as DataEntity
+- name: Actor
+  layer: context
+  description: A role or persona that performs processes. Extracted from BPMN swimlanes, process docs. Enables role-based
+    testing traversal.
+  name_pattern: 'Title case role name: Relationship Manager, Credit Analyst, Back Office'
+  anti_examples:
+  - Do NOT extract system names as Actor — use System instead
+  - Do NOT extract department names as Actor unless they represent a specific role
+  ie_examples:
+  - text: The Relationship Manager initiates the loan application and submits it to Credit Underwriting.
+    entities:
+    - type: Actor
+      value: Relationship Manager
+      confidence: 0.95
+    - type: Process
+      value: Loan Application
+      confidence: 0.9
+    relationships:
+    - from_type: Actor
+      from_value: Relationship Manager
+      rel_type: PERFORMS
+      to_type: Process
+      to_value: Loan Application
+  - text: The Credit Analyst reviews the applicant's financial information and performs credit assessment before the loan
+      approval decision.
+    entities:
+    - type: Actor
+      value: Credit Analyst
+      confidence: 0.95
+    - type: Process
+      value: Credit Assessment
+      confidence: 0.9
+    relationships:
+    - from_type: Actor
+      from_value: Credit Analyst
+      rel_type: PERFORMS
+      to_type: Process
+      to_value: Credit Assessment
+relationship_types:
+- name: PART_OF
+  allowed_triples:
+  - from: SubFunction
+    to: Function
+  - from: Function
+    to: ProductLine
+  - from: ProductLine
+    to: DomainRoot
+  - from: Process
+    to: Function
+  description: Hierarchical membership. Child is part of parent.
+  verb: is part of
+  example:
+    from: Loan Origination
+    to: SME Lending
+    evidence: Loan Origination is a function within the SME Lending product line
+    from_type: Function
+    to_type: ProductLine
+  anti_example: Do NOT use PART_OF for non-hierarchical connections — use IMPACTS instead
+- name: IMPLEMENTS
+  from: UserStory
+  to: Requirement
+  description: User story implements or realizes a requirement.
+  verb: implements
+  example:
+    from: USR-365
+    to: FR-04
+    evidence: User story USR-365 implements the EMI schedule generation requirement FR-04
+  anti_example: Do NOT use IMPLEMENTS for TestCase→Requirement (use COVERS)
+- name: COVERS
+  from: TestCase
+  to: Requirement
+  description: Test case covers or tests a requirement.
+  verb: covers
+  example:
+    from: CLOS_DEL_SCN_004_TC_001
+    to: DEL_CL_RTM_001
+    evidence: Test case validates delinquency processing requirement
+  anti_example: Do NOT use COVERS for UserStory→Requirement (use IMPLEMENTS)
+- name: VALIDATES
+  from: AcceptanceCriteria
+  to: Requirement
+  description: Acceptance criterion validates a requirement's completeness.
+  verb: validates
+  example:
+    from: AC-FR04-01
+    to: FR-04
+    evidence: AC defines the expected bullet repayment schedule output for requirement FR-04
+  anti_example: Do NOT use VALIDATES for TestCase→Requirement (use COVERS)
+- name: IMPACTS
+  allowed_triples:
+  - from: UserStory
+    to: Process
+  - from: UserStory
+    to: System
+  - from: UserStory
+    to: DataEntity
+  - from: Requirement
+    to: Process
+  - from: Requirement
+    to: System
+  - from: Requirement
+    to: DataEntity
+  - from: Requirement
+    to: Control
+  - from: Defect
+    to: Process
+  - from: Defect
+    to: System
+  - from: Defect
+    to: DataEntity
+  - from: Incident
+    to: Process
+  - from: Incident
+    to: System
+  - from: Incident
+    to: DataEntity
+  - from: Process
+    to: Process
+  description: General impact relationship. Source impacts the target. Used for change analysis and blast radius.
+  verb: impacts
+  example:
+    from: FR-04
+    to: EMI Schedule Generation
+    evidence: Requirement FR-04 impacts the EMI schedule generation process
+    from_type: Requirement
+    to_type: Process
+  anti_example: Do NOT use IMPACTS for hierarchical relationships (use PART_OF)
+- name: GOVERNED_BY
+  allowed_triples:
+  - from: Process
+    to: Rule
+  - from: Process
+    to: Control
+  description: Process is governed by a rule or controlled by an operational control.
+  verb: is governed by
+  example:
+    from: Interest Accrual
+    to: NAB Classification at 90 DPD
+    evidence: Interest accrual ceases when NAB classification rule triggers at 90+ DPD
+    from_type: Process
+    to_type: Rule
+  anti_example: Do NOT use GOVERNED_BY for process-to-process connections (use IMPACTS)
+- name: USES
+  from: Process
+  to: System
+  description: Process executes on or uses a system.
+  verb: uses
+  example:
+    from: Delinquency Processing
+    to: LOS_Core
+    evidence: Delinquency processing runs on the LOS Core system
+  anti_example: Do NOT use USES for process-to-process connections (use IMPACTS)
+- name: VIOLATES
+  allowed_triples:
+  - from: Defect
+    to: Requirement
+  - from: Defect
+    to: AcceptanceCriteria
+  description: Defect violates or breaches a requirement or acceptance criterion.
+  verb: violates
+  example:
+    from: SYN-CL-3015
+    to: FR-04
+    evidence: Defect SYN-CL-3015 violates the interest accrual suspension requirement
+    from_type: Defect
+    to_type: Requirement
+  anti_example: Do NOT use VIOLATES for non-defect entities
+- name: MISSED_BY
+  from: Defect
+  to: TestCase
+  description: Defect was missed by (should have been caught by) a test case.
+  verb: was missed by
+  example:
+    from: SYN-CL-3015
+    to: CLOS_DEL_SCN_004_TC_001
+    evidence: Delinquency test case should have caught the NAB classification defect
+  anti_example: Do NOT use MISSED_BY for test cases that correctly found the defect
+- name: LINKED_TO
+  from: Defect
+  to: Incident
+  description: Bidirectional link between a defect and a production incident.
+  verb: is linked to
+  example:
+    from: DEF-2024-0567
+    to: INC-LOAN-089
+    evidence: Defect DEF-2024-0567 caused production incident INC-LOAN-089
+  anti_example: Do NOT use LINKED_TO for unrelated defect-incident pairs
+- name: PRODUCES
+  from: Process
+  to: DataEntity
+  description: Process produces or generates a data artifact.
+  verb: produces
+  example:
+    from: Regulatory Reporting Batch
+    to: Portfolio Outstanding Report
+    evidence: The batch job generates the portfolio outstanding report
+  anti_example: Do NOT use PRODUCES for process-to-process outputs (use IMPACTS)
+- name: CROSS_DOMAIN_IMPACTS
+  from: Process
+  to: Process
+  description: Process in one domain impacts a process in another domain. Cross-domain only.
+  verb: cross-domain impacts
+  example:
+    from: SME Loan Product Setup
+    to: Capital Adequacy Calculation
+    evidence: Changes to SME loan products affect capital adequacy calculations in the risk domain
+  anti_example: Do NOT use CROSS_DOMAIN_IMPACTS for same-domain process connections (use IMPACTS)
+- name: PERFORMS
+  from: Actor
+  to: Process
+  description: Actor/role performs or executes a process. Enables role-based testing queries.
+  verb: performs
+  example:
+    from: Relationship Manager
+    to: Loan Application
+    evidence: The RM initiates and manages the loan application process
+  anti_example: Do NOT use PERFORMS for Process-to-System — use USES instead. PERFORMS is Actor-to-Process only.
+- name: MITIGATES
+  allowed_triples:
+  - from: Control
+    to: Process
+  - from: Control
+    to: Rule
+  description: Control mitigates risk in a process or enforces a rule. Control → Process means the control governs/gates the
+    process.
+  verb: mitigates
+  example:
+    from: Real-Time Sanctions Screening
+    to: Outbound Payment Processing
+    evidence: Sanctions screening control gates all outbound payments before release
+    from_type: Control
+    to_type: Process
+  anti_example: Do NOT use MITIGATES for Process-to-Rule or Process-to-Control — use GOVERNED_BY instead. MITIGATES is Control-to-Process
+    or Control-to-Rule.
+- name: ENFORCED_BY
+  allowed_triples:
+  - from: Rule
+    to: Regulation
+  - from: Control
+    to: Regulation
+  description: Rule or control is enforced by an external regulation. Links internal governance to external mandates.
+  verb: is enforced by
+  example:
+    from: CET1 Minimum 8% Plus Conservation Buffer
+    to: Basel III
+    evidence: The CET1 ratio rule is mandated by Basel III capital adequacy norms
+    from_type: Rule
+    to_type: Regulation
+  anti_example: Do NOT use ENFORCED_BY between two internal rules — use GOVERNED_BY
+- name: COMPLIANT_WITH
+  from: Process
+  to: Regulation
+  description: Process must comply with an external regulation. Used for compliance tracing.
+  verb: complies with
+  example:
+    from: Capital Adequacy Calculation
+    to: Basel III
+    evidence: Capital adequacy calculations must meet Basel III requirements
+  anti_example: Do NOT use COMPLIANT_WITH for internal rules (use GOVERNED_BY)
+- name: INTEGRATES_WITH
+  from: System
+  to: System
+  description: System-to-system integration point. Captures interfaces, APIs, file feeds, and messaging between systems without
+    creating a separate Interface node.
+  verb: integrates with
+  example:
+    from: LOS_Core
+    to: Core Banking System
+    evidence: LOS sends approved loan records to Core Banking via real-time API for account creation
+  anti_example: Do NOT use INTEGRATES_WITH for process-to-system — use USES instead
+vision_ie_type_mapping:
+  entity_types:
+    Decision: Process
+    Component: System
+    Activity: Process
+    Actor: Actor
+    Control: Control
+    Form: FormCapture
+    Screen: FormCapture
+    InputForm: FormCapture
+  relationship_types:
+    NEXT_STEP: _EXTRACTED_KNOWLEDGE
+    GATEWAY_TO: _EXTRACTED_KNOWLEDGE
+    CONDITION_IF_YES: _EXTRACTED_KNOWLEDGE
+    CONDITION_IF_NO: _EXTRACTED_KNOWLEDGE
+    PERFORMED_BY: PERFORMS
+    ACTED_BY: PERFORMS
+    CONTROL_PROTECTS_PROCESS: MITIGATES
+path_format:
+  style: natural_with_metadata
+  include_evidence: true
+  include_provenance: true
+  template: "CHAIN_SYMBOLIC: {chain_symbolic}\nCHAIN_NATURAL: {chain_natural}\nRELATIONSHIP: {from_name} {rel_type_natural}\
+    \ {to_name}\n  TYPE: {from_type} -> {to_type} ({rel_type})\n  EVIDENCE: \"{source_evidence}\"\n  SOURCE: {source_file}\
+    \ [Page: {source_page}, Block: {source_block_id}]\n"
+  rel_type_to_natural:
+    PART_OF: is part of
+    IMPLEMENTS: implements
+    COVERS: covers
+    VALIDATES: validates
+    IMPACTS: impacts
+    GOVERNED_BY: is governed by
+    USES: uses
+    VIOLATES: violates
+    MISSED_BY: was missed by
+    LINKED_TO: is linked to
+    PRODUCES: produces
+    CROSS_DOMAIN_IMPACTS: cross-domain impacts
+    PERFORMS: performs
+    MITIGATES: mitigates
+    ENFORCED_BY: is enforced by
+    COMPLIANT_WITH: complies with
+    INTEGRATES_WITH: integrates with
+    NODE_IN_DOMAIN: is in domain

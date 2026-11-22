@@ -1,0 +1,485 @@
+# =============================================================================
+# Knowledge Fabric Ingestion Service - Perses Dashboard
+# =============================================================================
+# Service: kf-ingestion
+# Import: Perses UI → Dashboards → Import
+# =============================================================================
+
+kind: Dashboard
+metadata:
+  name: kf-ingestion
+  project: knowledge-fabric
+  version: "1.0.0"
+  createdAt: "2024-12-15T00:00:00Z"
+spec:
+  display:
+    name: KF Ingestion Dashboard
+    description: Knowledge Fabric Ingestion Service Observability
+  
+  duration: 1h
+  refreshInterval: 30s
+  
+  variables:
+    - kind: ListVariable
+      spec:
+        name: domain
+        display:
+          name: Domain
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus
+            labelName: kbfabric_domain
+            matchers:
+              - ray_job_total{job="kf-ingestion"}
+
+  layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: ""
+        items:
+          # Row 1: Ray Jobs
+          - x: 0
+            y: 0
+            width: 24
+            height: 1
+            content:
+              $ref: "#/spec/panels/section_ray_jobs"
+          - x: 0
+            y: 1
+            width: 6
+            height: 4
+            content:
+              $ref: "#/spec/panels/active_jobs"
+          - x: 6
+            y: 1
+            width: 6
+            height: 4
+            content:
+              $ref: "#/spec/panels/total_jobs"
+          - x: 12
+            y: 1
+            width: 6
+            height: 4
+            content:
+              $ref: "#/spec/panels/success_rate"
+          - x: 18
+            y: 1
+            width: 6
+            height: 4
+            content:
+              $ref: "#/spec/panels/job_duration"
+          
+          # Row 2: LLM Operations
+          - x: 0
+            y: 5
+            width: 24
+            height: 1
+            content:
+              $ref: "#/spec/panels/section_llm"
+          - x: 0
+            y: 6
+            width: 8
+            height: 6
+            content:
+              $ref: "#/spec/panels/llm_call_rate"
+          - x: 8
+            y: 6
+            width: 8
+            height: 6
+            content:
+              $ref: "#/spec/panels/llm_latency"
+          - x: 16
+            y: 6
+            width: 8
+            height: 6
+            content:
+              $ref: "#/spec/panels/token_usage"
+          
+          # Row 3: Database Operations
+          - x: 0
+            y: 12
+            width: 24
+            height: 1
+            content:
+              $ref: "#/spec/panels/section_database"
+          - x: 0
+            y: 13
+            width: 12
+            height: 6
+            content:
+              $ref: "#/spec/panels/weaviate_ops"
+          - x: 12
+            y: 13
+            width: 12
+            height: 6
+            content:
+              $ref: "#/spec/panels/neo4j_ops"
+          - x: 0
+            y: 19
+            width: 8
+            height: 4
+            content:
+              $ref: "#/spec/panels/chunks_upserted"
+          - x: 8
+            y: 19
+            width: 8
+            height: 4
+            content:
+              $ref: "#/spec/panels/nodes_created"
+          - x: 16
+            y: 19
+            width: 8
+            height: 4
+            content:
+              $ref: "#/spec/panels/relationships_created"
+          
+          # Row 4: Document Processing
+          - x: 0
+            y: 23
+            width: 24
+            height: 1
+            content:
+              $ref: "#/spec/panels/section_documents"
+          - x: 0
+            y: 24
+            width: 12
+            height: 6
+            content:
+              $ref: "#/spec/panels/parse_duration"
+          - x: 12
+            y: 24
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/blocks_by_type"
+          - x: 18
+            y: 24
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/entities_by_type"
+          
+          # Row 5: Security
+          - x: 0
+            y: 30
+            width: 24
+            height: 1
+            content:
+              $ref: "#/spec/panels/section_security"
+          - x: 0
+            y: 31
+            width: 12
+            height: 6
+            content:
+              $ref: "#/spec/panels/pii_detections"
+          - x: 12
+            y: 31
+            width: 12
+            height: 6
+            content:
+              $ref: "#/spec/panels/pii_masking"
+
+  panels:
+    # Section Headers
+    section_ray_jobs:
+      kind: Markdown
+      spec:
+        display:
+          name: ""
+        content: "## 1 · Ray Jobs Overview"
+    
+    section_llm:
+      kind: Markdown
+      spec:
+        display:
+          name: ""
+        content: "## 2 · LLM Operations (OTel Gen AI)"
+    
+    section_database:
+      kind: Markdown
+      spec:
+        display:
+          name: ""
+        content: "## 3 · Database Operations (OTel Database)"
+    
+    section_documents:
+      kind: Markdown
+      spec:
+        display:
+          name: ""
+        content: "## 4 · Document Processing"
+    
+    section_security:
+      kind: Markdown
+      spec:
+        display:
+          name: ""
+        content: "## 5 · Security & Compliance"
+    
+    # Ray Jobs Panels
+    active_jobs:
+      kind: StatChart
+      spec:
+        display:
+          name: Active Jobs
+          description: Currently running ingestion jobs
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: ray_job_active{job="kf-ingestion"}
+        calculation: last
+        thresholds:
+          steps:
+            - value: 0
+              color: green
+            - value: 3
+              color: yellow
+            - value: 5
+              color: red
+    
+    total_jobs:
+      kind: StatChart
+      spec:
+        display:
+          name: Total Jobs (24h)
+          description: Jobs completed in last 24 hours
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(increase(ray_job_total{job="kf-ingestion"}[24h]))
+        calculation: last
+    
+    success_rate:
+      kind: GaugeChart
+      spec:
+        display:
+          name: Job Success Rate
+          description: Percentage of successful jobs
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(ray_job_total{job="kf-ingestion",ray_job_status="succeeded"}) / sum(ray_job_total{job="kf-ingestion"}) * 100
+        calculation: last
+        unit:
+          kind: Percent
+        max: 100
+        thresholds:
+          steps:
+            - value: 0
+              color: red
+            - value: 90
+              color: yellow
+            - value: 95
+              color: green
+    
+    job_duration:
+      kind: TimeSeriesChart
+      spec:
+        display:
+          name: Job Duration (p95)
+          description: 95th percentile job execution time
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: histogram_quantile(0.95, sum(rate(ray_job_duration_seconds_bucket{job="kf-ingestion"}[5m])) by (le))
+              legend: "p95"
+        yAxis:
+          unit:
+            kind: Seconds
+    
+    # LLM Panels
+    llm_call_rate:
+      kind: TimeSeriesChart
+      spec:
+        display:
+          name: LLM Call Rate
+          description: Calls per minute by operation
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(rate(gen_ai_client_operation_duration_seconds_count{job="kf-ingestion"}[1m])) by (gen_ai_operation_name) * 60
+              legend: "{{gen_ai_operation_name}}"
+    
+    llm_latency:
+      kind: TimeSeriesChart
+      spec:
+        display:
+          name: LLM Latency (p95)
+          description: 95th percentile latency by operation
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: histogram_quantile(0.95, sum(rate(gen_ai_client_operation_duration_seconds_bucket{job="kf-ingestion"}[5m])) by (le, gen_ai_operation_name))
+              legend: "{{gen_ai_operation_name}}"
+        yAxis:
+          unit:
+            kind: Seconds
+    
+    token_usage:
+      kind: TimeSeriesChart
+      spec:
+        display:
+          name: Token Usage
+          description: Input/output tokens over time
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(rate(gen_ai_client_token_usage_total{job="kf-ingestion",gen_ai_token_type="input"}[5m]))
+              legend: "Input"
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(rate(gen_ai_client_token_usage_total{job="kf-ingestion",gen_ai_token_type="output"}[5m]))
+              legend: "Output"
+    
+    # Database Panels
+    weaviate_ops:
+      kind: TimeSeriesChart
+      spec:
+        display:
+          name: Weaviate Operations
+          description: Weaviate upsert rate and latency
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(rate(db_client_operation_duration_seconds_count{job="kf-ingestion",db_system="weaviate"}[1m]))
+              legend: "Ops/sec"
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: histogram_quantile(0.95, sum(rate(db_client_operation_duration_seconds_bucket{job="kf-ingestion",db_system="weaviate"}[5m])) by (le))
+              legend: "p95 Latency"
+    
+    neo4j_ops:
+      kind: TimeSeriesChart
+      spec:
+        display:
+          name: Neo4j Operations
+          description: Neo4j write rate and latency
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(rate(db_client_operation_duration_seconds_count{job="kf-ingestion",db_system="neo4j"}[1m]))
+              legend: "Ops/sec"
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: histogram_quantile(0.95, sum(rate(db_client_operation_duration_seconds_bucket{job="kf-ingestion",db_system="neo4j"}[5m])) by (le))
+              legend: "p95 Latency"
+    
+    chunks_upserted:
+      kind: StatChart
+      spec:
+        display:
+          name: Chunks Upserted
+          description: Total chunks written to Weaviate
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(db_client_rows_affected_total{job="kf-ingestion",db_system="weaviate"})
+        calculation: last
+    
+    nodes_created:
+      kind: StatChart
+      spec:
+        display:
+          name: Nodes Created
+          description: Total nodes written to Neo4j
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(db_client_rows_affected_total{job="kf-ingestion",db_system="neo4j",db_operation="create_node"})
+        calculation: last
+    
+    relationships_created:
+      kind: StatChart
+      spec:
+        display:
+          name: Relationships Created
+          description: Total relationships in Neo4j
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(db_client_rows_affected_total{job="kf-ingestion",db_system="neo4j",db_operation="create_relationship"})
+        calculation: last
+    
+    # Document Processing Panels
+    parse_duration:
+      kind: TimeSeriesChart
+      spec:
+        display:
+          name: Parse Duration by File Type
+          description: Document parsing time
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: avg(rate(kbfabric_document_parse_duration_seconds_sum{job="kf-ingestion"}[5m]) / rate(kbfabric_document_parse_duration_seconds_count{job="kf-ingestion"}[5m])) by (file_type)
+              legend: "{{file_type}}"
+        yAxis:
+          unit:
+            kind: Seconds
+    
+    blocks_by_type:
+      kind: BarChart
+      spec:
+        display:
+          name: Blocks by Type
+          description: Distribution of block types
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(kbfabric_document_blocks_total{job="kf-ingestion"}) by (block_type)
+              legend: "{{block_type}}"
+    
+    entities_by_type:
+      kind: BarChart
+      spec:
+        display:
+          name: Entities by Type
+          description: Distribution of extracted entities
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(kbfabric_entities_extracted_total{job="kf-ingestion"}) by (entity_type)
+              legend: "{{entity_type}}"
+    
+    # Security Panels
+    pii_detections:
+      kind: TimeSeriesChart
+      spec:
+        display:
+          name: PII Detections
+          description: PII entities detected over time
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: sum(rate(kbfabric_pii_detections_total{job="kf-ingestion"}[5m])) by (pii_type)
+              legend: "{{pii_type}}"
+    
+    pii_masking:
+      kind: TimeSeriesChart
+      spec:
+        display:
+          name: PII Masking Duration
+          description: Time spent masking PII
+        queries:
+          - kind: PrometheusTimeSeriesQuery
+            spec:
+              query: histogram_quantile(0.95, sum(rate(kbfabric_pii_masking_duration_seconds_bucket{job="kf-ingestion"}[5m])) by (le))
+              legend: "p95"
+        yAxis:
+          unit:
+            kind: Seconds
+
+  datasources:
+    prometheus:
+      default: true
+      plugin:
+        kind: PrometheusDatasource
+        spec:
+          proxy:
+            kind: HTTPProxy
+            spec:
+              url: http://prometheus:9090
+

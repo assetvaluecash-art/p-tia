@@ -1,0 +1,200 @@
+# =============================================================================
+# Knowledge Fabric Ingestion Service - Metrics Specification
+# =============================================================================
+# Service: kf-ingestion (kbfabric-ingest)
+# Port: 6002
+# Metrics Endpoint: /metrics
+# 
+# This is the source of truth for all metrics emitted by the ingestion service.
+# Generated from: kbfabric_ingest/_common/telemetry.py
+# =============================================================================
+
+metadata:
+  service_name: kf-ingestion
+  service_version: "1.0.0"
+  prometheus_job: kf-ingestion
+  metrics_endpoint: http://localhost:6002/metrics
+  scrape_interval: 15s
+  last_updated: "2024-12-15"
+
+# =============================================================================
+# OTel Semantic Convention Metrics
+# =============================================================================
+otel_metrics:
+  # ---------------------------------------------------------------------------
+  # Gen AI Metrics (https://opentelemetry.io/docs/specs/semconv/gen-ai/)
+  # ---------------------------------------------------------------------------
+  - name: gen_ai_client_operation_duration_seconds
+    type: histogram
+    convention: OTel Gen AI
+    description: Duration of Generative AI operations
+    labels:
+      - gen_ai_system      # ollama, sentence_transformers
+      - gen_ai_request_model  # qwen2.5:14b, finbert
+      - gen_ai_operation_name # ie_text, ie_image, embed
+      - server_address     # localhost:11434
+    buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60, 120]
+    promql_examples:
+      avg_duration: |
+        avg(rate(gen_ai_client_operation_duration_seconds_sum{job="kf-ingestion"}[5m]) 
+        / rate(gen_ai_client_operation_duration_seconds_count{job="kf-ingestion"}[5m]))
+      p95_duration: |
+        histogram_quantile(0.95, sum(rate(gen_ai_client_operation_duration_seconds_bucket{job="kf-ingestion"}[5m])) by (le))
+      calls_per_minute: |
+        sum(rate(gen_ai_client_operation_duration_seconds_count{job="kf-ingestion"}[1m])) * 60
+
+  - name: gen_ai_client_token_usage_total
+    type: counter
+    convention: OTel Gen AI
+    description: Number of tokens used in Generative AI operations
+    labels:
+      - gen_ai_system
+      - gen_ai_request_model
+      - gen_ai_operation_name
+      - gen_ai_token_type  # input, output
+    promql_examples:
+      total_tokens: sum(gen_ai_client_token_usage_total{job="kf-ingestion"})
+      tokens_by_model: sum(gen_ai_client_token_usage_total{job="kf-ingestion"}) by (gen_ai_request_model)
+      input_vs_output: sum(gen_ai_client_token_usage_total{job="kf-ingestion"}) by (gen_ai_token_type)
+
+  # ---------------------------------------------------------------------------
+  # Database Metrics (https://opentelemetry.io/docs/specs/semconv/database/)
+  # ---------------------------------------------------------------------------
+  - name: db_client_operation_duration_seconds
+    type: histogram
+    convention: OTel Database
+    description: Duration of database operations
+    labels:
+      - db_system       # weaviate, neo4j
+      - db_operation    # upsert, write_blocks, create_node, create_relationship
+      - db_namespace    # domain name (e.g., wealth_portfolio)
+      - server_address  # localhost:8080, localhost:7687
+    buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10]
+    promql_examples:
+      weaviate_avg: |
+        avg(rate(db_client_operation_duration_seconds_sum{job="kf-ingestion",db_system="weaviate"}[5m]) 
+        / rate(db_client_operation_duration_seconds_count{job="kf-ingestion",db_system="weaviate"}[5m]))
+      neo4j_p99: |
+        histogram_quantile(0.99, sum(rate(db_client_operation_duration_seconds_bucket{job="kf-ingestion",db_system="neo4j"}[5m])) by (le))
+
+  - name: db_client_rows_affected_total
+    type: counter
+    convention: OTel Database
+    description: Number of rows/documents affected by database operations
+    labels:
+      - db_system
+      - db_operation
+      - db_namespace
+    promql_examples:
+      weaviate_chunks: sum(db_client_rows_affected_total{job="kf-ingestion",db_system="weaviate"})
+      neo4j_nodes: sum(db_client_rows_affected_total{job="kf-ingestion",db_system="neo4j",db_operation="create_node"})
+      neo4j_relationships: sum(db_client_rows_affected_total{job="kf-ingestion",db_system="neo4j",db_operation="create_relationship"})
+
+# =============================================================================
+# Ray Job Metrics (Custom, aligned with Ray conventions)
+# =============================================================================
+ray_metrics:
+  - name: ray_job_total
+    type: counter
+    convention: Custom (Ray-aligned)
+    description: Total number of Ray jobs by status
+    labels:
+      - ray_job_status   # submitted, succeeded, failed
+      - kbfabric_domain  # wealth_portfolio, etc.
+    promql_examples:
+      total_jobs: sum(ray_job_total{job="kf-ingestion"})
+      success_rate: |
+        sum(ray_job_total{job="kf-ingestion",ray_job_status="succeeded"}) 
+        / sum(ray_job_total{job="kf-ingestion"}) * 100
+      jobs_by_domain: sum(ray_job_total{job="kf-ingestion"}) by (kbfabric_domain)
+
+  - name: ray_job_duration_seconds
+    type: histogram
+    convention: Custom (Ray-aligned)
+    description: Duration of Ray job execution
+    labels:
+      - kbfabric_domain
+    buckets: [1, 5, 10, 30, 60, 120, 300, 600, 1800]
+    promql_examples:
+      avg_duration: |
+        avg(rate(ray_job_duration_seconds_sum{job="kf-ingestion"}[1h]) 
+        / rate(ray_job_duration_seconds_count{job="kf-ingestion"}[1h]))
+      p95_duration: |
+        histogram_quantile(0.95, sum(rate(ray_job_duration_seconds_bucket{job="kf-ingestion"}[1h])) by (le))
+
+  - name: ray_job_active
+    type: gauge
+    convention: Custom (Ray-aligned)
+    description: Number of currently active Ray jobs
+    labels: []
+    promql_examples:
+      current_active: ray_job_active{job="kf-ingestion"}
+
+# =============================================================================
+# KnowledgeFabric Custom Metrics
+# =============================================================================
+custom_metrics:
+  # Document Processing
+  - name: kbfabric_document_parse_duration_seconds
+    type: histogram
+    convention: Custom
+    description: Duration of document parsing
+    labels:
+      - kbfabric_domain
+      - file_type  # docx, pdf, xlsx, pptx
+    buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60]
+    promql_examples:
+      avg_parse_time: |
+        avg(rate(kbfabric_document_parse_duration_seconds_sum{job="kf-ingestion"}[5m]) 
+        / rate(kbfabric_document_parse_duration_seconds_count{job="kf-ingestion"}[5m]))
+      parse_time_by_type: |
+        avg(rate(kbfabric_document_parse_duration_seconds_sum{job="kf-ingestion"}[5m]) 
+        / rate(kbfabric_document_parse_duration_seconds_count{job="kf-ingestion"}[5m])) by (file_type)
+
+  - name: kbfabric_document_blocks_total
+    type: counter
+    convention: Custom
+    description: Total number of document blocks created
+    labels:
+      - kbfabric_domain
+      - block_type  # text, table, image, heading
+    promql_examples:
+      total_blocks: sum(kbfabric_document_blocks_total{job="kf-ingestion"})
+      blocks_by_type: sum(kbfabric_document_blocks_total{job="kf-ingestion"}) by (block_type)
+
+  # Entity Extraction
+  - name: kbfabric_entities_extracted_total
+    type: counter
+    convention: Custom
+    description: Total number of entities extracted
+    labels:
+      - kbfabric_domain
+      - entity_type  # entity types from IE
+    promql_examples:
+      total_entities: sum(kbfabric_entities_extracted_total{job="kf-ingestion"})
+      entities_by_type: sum(kbfabric_entities_extracted_total{job="kf-ingestion"}) by (entity_type)
+
+  # PII Detection (Security/Compliance)
+  - name: kbfabric_pii_detections_total
+    type: counter
+    convention: Custom
+    description: Total number of PII entities detected
+    labels:
+      - kbfabric_domain
+      - pii_type  # EMAIL, PHONE, SSN, etc.
+    promql_examples:
+      total_pii: sum(kbfabric_pii_detections_total{job="kf-ingestion"})
+      pii_by_type: sum(kbfabric_pii_detections_total{job="kf-ingestion"}) by (pii_type)
+
+  - name: kbfabric_pii_masking_duration_seconds
+    type: histogram
+    convention: Custom
+    description: Duration of PII masking operations
+    labels:
+      - kbfabric_domain
+    buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2]
+    promql_examples:
+      avg_masking_time: |
+        avg(rate(kbfabric_pii_masking_duration_seconds_sum{job="kf-ingestion"}[5m]) 
+        / rate(kbfabric_pii_masking_duration_seconds_count{job="kf-ingestion"}[5m]))
+

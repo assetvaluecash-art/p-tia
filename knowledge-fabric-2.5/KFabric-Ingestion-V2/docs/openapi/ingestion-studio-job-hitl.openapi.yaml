@@ -1,0 +1,2184 @@
+openapi: 3.1.0
+info:
+  title: Pulse Knowledge Fabric Ingestion and HITL API
+  version: 2.5.0-working
+  description: UI-facing contract for Ingestion Studio, job monitoring, cancellation/resume, and post-pipeline HITL
+    review. Operations are labeled Implemented, Partial, or Planned using x-implementation-status. Planned operations
+    describe target behavior and are not claims of current implementation. PostgreSQL is authoritative for run,
+    event, checkpoint, and review audit state; Ray executes ingestion workers. The selected customer/domain/product-line
+    and ontology/policy versions are frozen for a run. Document content never determines product line. Customer
+    onboarding endpoints are included to document the path from industry/customer setup into ingestion. Industry
+    is context metadata, not a knowledge-graph root.
+  contact:
+    name: Pulse Knowledge Fabric
+servers:
+- url: /
+  description: Current service base path
+security:
+- bearerAuth: []
+tags:
+- name: Ingestion Configuration
+  description: Bootstrap values for the Ingestion Studio submission screen.
+- name: Ingestion Jobs
+  description: Submit, monitor, cancel, resume, and inspect ingestion runs.
+- name: HITL Review
+  description: Post-pipeline review and audited decision actions.
+- name: Reports
+  description: Per-run report discovery and retrieval.
+paths:
+  /ingestion/customers:
+    get:
+      tags:
+      - Ingestion Configuration
+      operationId: listIngestionCustomers
+      summary: List active customer workspaces
+      description: Existing interim customer selector. Customer selection is context selection and does not itself
+        establish user entitlement; customer-level authorization integration is a separate requirement.
+      x-implementation-status: Partial
+      responses:
+        '200':
+          description: Active customers available to the caller's current context.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - customers
+                properties:
+                  customers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomerOption'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /ingestion/context:
+    get:
+      tags:
+      - Ingestion Configuration
+      operationId: getIngestionContext
+      summary: Get configured domains and product lines for a customer
+      description: Existing bootstrap operation. Returns the active persisted customer ontology's applicable domains/product
+        lines and version context. The UI selects a domain first, then an applicable product line. Until the customer
+        authorization integration is complete, customer_id selects context but does not prove entitlement.
+      x-implementation-status: Partial
+      parameters:
+      - name: customer_id
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+        description: Active customer selected for this ingestion workspace.
+      responses:
+        '200':
+          description: Frozen-context inputs available for selection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestionContext'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Customer has no active persisted ontology.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Customer is not active or does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /ingestion/review-policies:
+    get:
+      tags:
+      - Ingestion Configuration
+      operationId: listIngestionReviewPolicies
+      summary: Get review policy choices
+      description: Existing setup-time policy service. This configures the ingestion run; it is separate from post-pipeline
+        HITL review APIs. Policy choice never bypasses hard scope, endpoint-type, ontology, or allowed-triple checks.
+      x-implementation-status: Partial
+      responses:
+        '200':
+          description: Available review policies and default.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - policies
+                - default
+                - applies_to
+                properties:
+                  policies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReviewPolicy'
+                  default:
+                    $ref: '#/components/schemas/ReviewPolicyValue'
+                  applies_to:
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                      - node_admission
+                      - triplet_admission
+  /jobs:
+    post:
+      tags:
+      - Ingestion Jobs
+      operationId: submitIngestionJob
+      summary: Submit a server-side directory for ingestion
+      description: Existing. Validates the explicitly selected customer/domain/product line against the active customer
+        ontology, freezes the runtime context, and submits a Ray job. New scope metadata fields are accepted by
+        the target contract when supplied; optional project IDs/tags are metadata and are not authorization controls.
+      x-implementation-status: Partial
+      x-contract-additions: New optional project_ids and context_tags; durable queue acceptance semantics.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitJobRequest'
+            examples:
+              retailCards:
+                summary: Explicit product-line selection
+                value:
+                  customer_id: customer-123
+                  input_dir: /mounted/input/batch-42
+                  domain: consumer_retail
+                  product_line_id: DOMAIN:consumer_retail|PRODUCT_LINE:Retail Cards
+                  document_nature: qe_assets
+                  hitl_mode: review_ambiguous
+                  project_ids:
+                  - project-alpha
+                  context_tags:
+                  - system=Temenos T24
+      responses:
+        '200':
+          description: Existing immediate/scheduled submission response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentSubmitJobResponse'
+        '202':
+          description: Target durable-queue acceptance response (not implemented).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitJobResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Caller is not authorized, including force-rewrite permission failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Scope conflict or coordinated schema migration is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Domain or product line is not configured for this customer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          description: Capacity/quota rejected the request; this response does not create a queued job.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+              description: Suggested seconds before retry, when known.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      tags:
+      - Ingestion Jobs
+      operationId: listIngestionJobs
+      summary: List jobs visible to the caller
+      description: 'Partial implementation: reads the durable PostgreSQL run registry and limits results to the
+        submitter unless the caller has ingestion:jobs:read_all. Customer/project entitlement filtering and live
+        progress joins remain planned.'
+      x-implementation-status: Partial
+      x-authorization-hardening: Partial; customer/project entitlement integration remains planned
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/JobStatus'
+      - name: customer_id
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: domain_id
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: product_line_id
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Caller-authorized jobs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /jobs/upload:
+    post:
+      tags:
+      - Ingestion Jobs
+      operationId: submitUploadedIngestionJob
+      summary: Upload files and submit an ingestion job
+      description: Existing multipart upload operation. The selected product line must be explicit and configured
+        under the selected customer/domain. Current limit is 50 files, 100 MB per file; the total request size is
+        also constrained by the HTTP server. The target contract adds optional project_ids and context_tags as semicolon-delimited
+        strings or repeated form values.
+      x-implementation-status: Partial
+      x-contract-additions: New optional project_ids and context_tags fields.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - customer_id
+              - domain
+              - product_line_id
+              - document_nature
+              - files
+              properties:
+                customer_id:
+                  type: string
+                  minLength: 1
+                domain:
+                  type: string
+                  minLength: 1
+                product_line_id:
+                  type: string
+                  minLength: 1
+                document_nature:
+                  $ref: '#/components/schemas/DocumentNature'
+                hitl_mode:
+                  $ref: '#/components/schemas/ReviewPolicyValue'
+                force_rewrite:
+                  type: boolean
+                  default: false
+                scheduled_at:
+                  type: string
+                  format: date-time
+                project_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional metadata; not an authorization check.
+                context_tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional free-text context tags; not an authorization check.
+                files:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: string
+                    format: binary
+                  description: Individual files are limited to 100 MB.
+      responses:
+        '200':
+          description: Existing immediate/scheduled submission response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentSubmitJobResponse'
+        '202':
+          description: Target durable-queue acceptance response (not implemented).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitJobResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Caller is not authorized, including force-rewrite permission failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Scope conflict or coordinated schema migration is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '413':
+          description: Total upload request exceeds the server limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: Invalid scope, file count, or request fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          description: Capacity/quota rejected the request; no job was queued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /jobs/queue:
+    get:
+      tags:
+      - Ingestion Jobs
+      operationId: getIngestionQueue
+      summary: Get visible queue and capacity
+      description: New. Returns only the caller-authorized queue view. Never expose other customers' job metadata.
+        Exact global versus tenant capacity fields are deployment policy and must be finalized with Ray/gateway
+        capacity.
+      x-implementation-status: Planned
+      responses:
+        '200':
+          description: Queue snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueSnapshot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /jobs/{job_id}:
+    get:
+      tags:
+      - Ingestion Jobs
+      operationId: getIngestionJob
+      summary: Get the durable base job details and stage rows
+      description: Reads the PostgreSQL run ledger and its 15 persisted stage records. Until customer/project entitlements
+        are supplied by the auth service, access is limited to the submitter or a caller with ingestion:jobs:read_all.
+        A missing or unauthorized job returns the same 404 response.
+      x-implementation-status: Partial
+      x-authorization-limit: Submitter ownership or ingestion:jobs:read_all; customer/project entitlements pending.
+      parameters:
+      - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Current job snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      tags:
+      - Ingestion Jobs
+      operationId: legacyStopIngestionJob
+      summary: Legacy direct Ray stop (avoid for normal cancellation)
+      description: Current legacy operation stops the Ray job directly. It is not the cooperative pre-publish cancellation
+        flow and may stop a worker mid-stage/write. The UI should use POST /jobs/{job_id}/cancel when the service
+        supports it.
+      x-implementation-status: Existing; unsafe UI semantics
+      parameters:
+      - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Ray stop requested.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /jobs/{job_id}/events:
+    get:
+      tags:
+      - Ingestion Jobs
+      operationId: streamIngestionJobEvents
+      summary: Replay persisted job events over SSE
+      description: PostgreSQL-backed SSE endpoint. Events are persisted before delivery. Use Last-Event-ID to resume
+        replay after reconnecting. Stage lifecycle and checkpoint events must not be dropped; progress events may
+        be coalesced. No prompt, raw LLM response, hidden reasoning, or unmasked source content is streamed.
+      x-implementation-status: Partial
+      x-authorization-limit: Submitter ownership or ingestion:jobs:read_all; customer/project entitlements pending.
+      parameters:
+      - $ref: '#/components/parameters/JobId'
+      - name: Last-Event-ID
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Opaque ID of the last event received; replay starts after it.
+      responses:
+        '200':
+          description: Server-sent event stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: SSE frames with event ID, event name, and JSON data envelope.
+              examples:
+                stageProgress:
+                  value: 'id: evt_42
+
+                    event: stage.progress
+
+                    data: {"schema_version":1,"sequence":42,"stage_id":"lane2.pass2","status":"RUNNING"}'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /jobs/{job_id}/cancel:
+    post:
+      tags:
+      - Ingestion Jobs
+      operationId: cancelIngestionJob
+      summary: Request safe cancellation before publishing
+      description: Cooperative cancellation. The request is persisted with the authenticated actor and observed
+        after Pass 2/admission reaches a durable checkpoint. Cancellation and entry into Stage 14 publishing contend
+        atomically. Once publishing starts, return RESOURCE_CONFLICT and do not interrupt an in-flight Neo4j or
+        Weaviate write. Queued-job immediate cancellation and live worker acknowledgement remain under verification.
+        Current DELETE /jobs/{job_id} stops the Ray job directly and is not this safe contract.
+      x-implementation-status: Existing
+      parameters:
+      - $ref: '#/components/parameters/JobId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '202':
+          description: Cancellation accepted; worker will stop at a safe boundary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobActionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Job is publishing, already terminal, or cancellation is otherwise disallowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /jobs/{job_id}/resume:
+    post:
+      tags:
+      - Ingestion Jobs
+      operationId: resumeIngestionJob
+      summary: Resume a failed or cancelled job from its latest durable checkpoint
+      description: Partially implemented user-initiated resume. It restores the latest verified blocks.prepared,
+        lane2.pass2, or admission.plan artifact under the frozen run context. An interrupted publish with an admission.plan
+        checkpoint replays deterministic Weaviate and Neo4j upserts. A completed store stage is not replayed; report-only
+        recovery remains future work. A database transaction claims a new idempotent attempt and dispatches a distinct
+        Ray submission ID.
+      x-implementation-status: Partial
+      parameters:
+      - $ref: '#/components/parameters/JobId'
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 128
+        description: Prevents duplicate resume attempts from UI retries.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '202':
+          description: Checkpoint restore accepted as a new execution attempt in the same run lineage.
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/JobActionResponse'
+                - type: object
+                  required:
+                  - restart_mode
+                  - ray_submission_id
+                  properties:
+                    restart_mode:
+                      type: string
+                      enum:
+                      - FROM_CHECKPOINT
+                    checkpoint_stage:
+                      type: string
+                      enum:
+                      - blocks.prepared
+                      - lane2.pass2
+                      - admission.plan
+                    resume_from_stage:
+                      type: string
+                      enum:
+                      - privacy.applied
+                      - ontology.admission
+                      - stores.write
+                      description: First stage after the restored artifact.
+                    reconciliation_mode:
+                      type: string
+                      enum:
+                      - CONTINUE_FROM_CHECKPOINT
+                      - IDEMPOTENT_STORE_REPLAY
+                    ray_submission_id:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Run has no valid checkpoint, source/context changed, or completed publishing/report recovery
+            is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          description: Ray execution capacity is full.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /jobs/{job_id}/logs:
+    get:
+      tags:
+      - Ingestion Jobs
+      operationId: getIngestionJobLogs
+      summary: Get operational logs for a job
+      description: Existing Ray log retrieval; scope authorization must be enforced before returning logs.
+      x-implementation-status: Partial
+      parameters:
+      - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Job logs.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - job_id
+                - logs
+                properties:
+                  job_id:
+                    type: string
+                  logs:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /progress/{job_id}:
+    get:
+      tags:
+      - Ingestion Jobs
+      operationId: getIngestionJobProgress
+      summary: Get latest job progress snapshot
+      description: Existing file-backed progress snapshot. New durable stage history is provided through job details
+        and SSE events.
+      x-implementation-status: Partial
+      parameters:
+      - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Latest progress snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressSnapshot'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /hitl/reviews:
+    get:
+      tags:
+      - HITL Review
+      operationId: listHITLReviews
+      summary: List review items for a batch and product-line scope
+      description: Existing post-pipeline queue. All three scope parameters are required; optional status, queue_type,
+        limit, and offset filter/paginate the results.
+      x-implementation-status: Partial
+      parameters:
+      - $ref: '#/components/parameters/BatchIdQuery'
+      - $ref: '#/components/parameters/DomainIdQuery'
+      - $ref: '#/components/parameters/ProductLineIdQuery'
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/ReviewStatus'
+      - name: queue_type
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/ReviewQueueType'
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: Page of scoped review items.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HITLReviewList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /hitl/reviews/{review_id}:
+    get:
+      tags:
+      - HITL Review
+      operationId: getHITLReview
+      summary: Get review evidence and ranked choices
+      description: Existing. Returns source/document provenance, ontology context, scores, candidates, and execution
+        plan in the supplied frozen scope.
+      x-implementation-status: Partial
+      parameters:
+      - $ref: '#/components/parameters/ReviewId'
+      - $ref: '#/components/parameters/BatchIdQuery'
+      - $ref: '#/components/parameters/DomainIdQuery'
+      - $ref: '#/components/parameters/ProductLineIdQuery'
+      responses:
+        '200':
+          description: Review item with evidence.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HITLReviewItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /hitl/reviews/{review_id}/history:
+    get:
+      tags:
+      - HITL Review
+      operationId: getHITLReviewHistory
+      summary: Get append-only reviewer action history
+      x-implementation-status: Partial
+      parameters:
+      - $ref: '#/components/parameters/ReviewId'
+      - $ref: '#/components/parameters/BatchIdQuery'
+      - $ref: '#/components/parameters/DomainIdQuery'
+      - $ref: '#/components/parameters/ProductLineIdQuery'
+      responses:
+        '200':
+          description: Review history.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - review_id
+                - events
+                properties:
+                  review_id:
+                    type: string
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HITLReviewEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /hitl/reviews/{review_id}/decision:
+    post:
+      tags:
+      - HITL Review
+      operationId: recordHITLDecision
+      summary: Record a decision and execute an approved plan
+      description: Existing. Node reuse and relationship endpoint selections must reference candidates persisted
+        with that item. The decision and audit event are committed atomically; approved plan writes execute synchronously
+        and return persisted write status.
+      x-implementation-status: Partial
+      parameters:
+      - $ref: '#/components/parameters/ReviewId'
+      - $ref: '#/components/parameters/BatchIdQuery'
+      - $ref: '#/components/parameters/DomainIdQuery'
+      - $ref: '#/components/parameters/ProductLineIdQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HITLDecisionRequest'
+            examples:
+              approveNewNode:
+                value:
+                  action: APPROVE_AS_NEW
+                  notes: Evidence supports a distinct process.
+              reuseWithAlias:
+                value:
+                  action: APPROVE_REUSE_WITH_ALIAS
+                  selected_entity_id: existing-node-id
+              approveTriplet:
+                value:
+                  action: APPROVE_REUSE
+                  endpoint_choices:
+                  - rel_type: PART_OF
+                    direction: outgoing
+                    target_type: SubFunction
+                    target_value: Credit Assessment
+                    entity_id: candidate-123
+      responses:
+        '200':
+          description: Persisted reviewer decision and write result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HITLDecisionResponse'
+        '400':
+          description: Invalid action or endpoint/candidate selection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /hitl/reviews/{review_id}/execute:
+    post:
+      tags:
+      - HITL Review
+      operationId: retryApprovedHITLWrite
+      summary: Retry an eligible approved knowledge-graph write
+      description: Existing. Retries only a persisted approved plan with pending, failed, or recoverable in-progress
+        write status.
+      x-implementation-status: Partial
+      parameters:
+      - $ref: '#/components/parameters/ReviewId'
+      - $ref: '#/components/parameters/BatchIdQuery'
+      - $ref: '#/components/parameters/DomainIdQuery'
+      - $ref: '#/components/parameters/ProductLineIdQuery'
+      responses:
+        '200':
+          description: Write attempt result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HITLExecutionResponse'
+        '400':
+          description: Item is not approved or not retryable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /reports:
+    get:
+      tags:
+      - Reports
+      operationId: listReports
+      summary: List available HTML reports
+      description: Existing report listing. New job-scoped authorization should be enforced before exposing report
+        links.
+      x-implementation-status: Partial
+      responses:
+        '200':
+          description: Reports ordered by modified time.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - reports
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - name
+                      - url
+                      - size_kb
+                      - modified
+                      properties:
+                        name:
+                          type: string
+                        url:
+                          type: string
+                        size_kb:
+                          type: number
+                        modified:
+                          type: string
+                          format: date-time
+  /reports/get-report/{job_id}:
+    get:
+      tags:
+      - Reports
+      operationId: getUnifiedReport
+      summary: Download the unified HTML report for a job
+      x-implementation-status: Partial
+      parameters:
+      - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Unified HTML report.
+          content:
+            text/html:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /domains:
+    get:
+      tags:
+      - Ingestion Configuration
+      operationId: listCustomerDomains
+      summary: List configured domains and product lines for a customer
+      description: Existing customer-filtered catalog. Use GET /ingestion/context for the richer bootstrap response.
+        The selected customer is context, not proof of customer entitlement.
+      x-implementation-status: Existing
+      parameters:
+      - name: customer_id
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Customer domains with configured product lines.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - customer_id
+                - domains
+                properties:
+                  customer_id:
+                    type: string
+                  domains:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DomainOption'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Customer context unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /fabric-foundry/industries:
+    get:
+      tags:
+      - Customer onboarding
+      operationId: listIndustries
+      summary: List active industries
+      description: Existing Fabric Foundry bootstrap endpoint. Use the returned industry_id when onboarding a customer.
+        Industry is metadata for customer context; it is not an ingestion graph root.
+      x-implementation-status: Existing
+      responses:
+        '200':
+          description: Active industries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IndustryOption'
+              example:
+              - industry_id: banking
+                industry_name: Banking
+                status: ACTIVE
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /fabric-foundry/industries/{industry_id}/ontologies:
+    get:
+      tags:
+      - Customer onboarding
+      operationId: listIndustryOntologies
+      summary: List active ontology metadata for an industry
+      description: Existing. Returns ontology metadata only, not the domain or product-line tree. The customer ontology
+        is initialized separately on onboarding.
+      x-implementation-status: Existing
+      parameters:
+      - name: industry_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Active ontology metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndustryOntologies'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /fabric-foundry/customers:
+    post:
+      tags:
+      - Customer onboarding
+      operationId: onboardCustomer
+      summary: Create customer workspace and initialize its ontology
+      description: Existing onboarding flow. Customer and tenant IDs are generated by the service. A customer-specific
+        ontology is initialized for this context.
+      x-implementation-status: Existing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerOnboardingRequest'
+            example:
+              customer_name: Acme Bank
+              industry_id: banking
+      responses:
+        '201':
+          description: Customer workspace created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerOnboardingResponse'
+              example:
+                tenant_id: 550e8400-e29b-41d4-a716-446655440000
+                customer_id: Pulse AI_Acme Bank_550e8400-e29b-41d4-a716-446655440000
+                customer_name: Acme Bank
+                industry_id: banking
+                industry_name: Banking
+                status: ACTIVE
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Customer already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          $ref: '#/components/responses/InvalidRequest'
+        '500':
+          $ref: '#/components/responses/ServiceUnavailable'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    JobId:
+      name: job_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    ReviewId:
+      name: review_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    BatchIdQuery:
+      name: ingestion_batch_id
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    DomainIdQuery:
+      name: domain_id
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    ProductLineIdQuery:
+      name: product_line_id
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+  responses:
+    Unauthorized:
+      description: Bearer token is missing, invalid, or expired.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Resource is absent or outside the caller's authorized scope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    InvalidRequest:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ServiceUnavailable:
+      description: A required service is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+          description: Shared platform error catalogue code.
+          examples:
+          - RESOURCE_CONFLICT
+        message:
+          type: string
+          description: Safe user-facing message.
+        details:
+          type: object
+          additionalProperties: true
+      description: Target standard error envelope. Some existing FastAPI routes still return legacy detail strings;
+        normalizing all error responses is New work.
+    CustomerOption:
+      type: object
+      required:
+      - customer_id
+      - customer_name
+      - industry_id
+      properties:
+        customer_id:
+          type: string
+        customer_name:
+          type: string
+        industry_id:
+          type: string
+    ProductLineOption:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: string
+          description: Canonical configured product-line ID.
+        name:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+    DomainOption:
+      type: object
+      required:
+      - id
+      - name
+      - product_lines
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+        product_lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductLineOption'
+    IngestionContext:
+      type: object
+      required:
+      - customer_id
+      - customer_name
+      - tenant_id
+      - industry_id
+      - customer_ontology_id
+      - customer_ontology_version
+      - domains
+      properties:
+        customer_id:
+          type: string
+        customer_name:
+          type: string
+        tenant_id:
+          type: string
+        industry_id:
+          type: string
+        customer_ontology_id:
+          type: string
+        customer_ontology_version:
+          type: integer
+          minimum: 1
+        domains:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainOption'
+    ReviewPolicyValue:
+      type: string
+      enum:
+      - review_all
+      - review_ambiguous
+      - auto_write
+    ReviewPolicy:
+      type: object
+      required:
+      - value
+      - label
+      - description
+      properties:
+        value:
+          $ref: '#/components/schemas/ReviewPolicyValue'
+        label:
+          type: string
+        description:
+          type: string
+    DocumentNature:
+      type: string
+      enum:
+      - qe_assets
+      - technology_artifacts
+    SubmitJobRequest:
+      type: object
+      required:
+      - customer_id
+      - input_dir
+      - domain
+      - product_line_id
+      - document_nature
+      properties:
+        customer_id:
+          type: string
+          minLength: 1
+        input_dir:
+          type: string
+          minLength: 1
+          description: Server-side directory visible to the worker.
+        domain:
+          type: string
+          minLength: 1
+        product_line_id:
+          type: string
+          minLength: 1
+          description: Explicit configured product-line ID; never inferred from content.
+        document_nature:
+          $ref: '#/components/schemas/DocumentNature'
+        force_rewrite:
+          type: boolean
+          default: false
+          description: Requires environment enablement and ingestion:force_rewrite permission.
+        hitl_mode:
+          $ref: '#/components/schemas/ReviewPolicyValue'
+        scheduled_at:
+          type: string
+          format: date-time
+        project_ids:
+          type: array
+          items:
+            type: string
+          description: New optional metadata; never an authorization substitute.
+        context_tags:
+          type: array
+          items:
+            type: string
+          description: New optional free-text tags; never an authorization substitute.
+    JobList:
+      type: object
+      required:
+      - jobs
+      - total
+      properties:
+        jobs:
+          type: array
+          items:
+            type: object
+            properties:
+              job_id:
+                type: string
+              status:
+                $ref: '#/components/schemas/JobStatus'
+              domain_id:
+                type: string
+                nullable: true
+              product_line_id:
+                type: string
+                nullable: true
+              current_stage_id:
+                type: string
+                nullable: true
+              progress_pct:
+                type: integer
+                minimum: 0
+                maximum: 100
+                nullable: true
+              pending_review_count:
+                type: integer
+                minimum: 0
+        total:
+          type: integer
+          minimum: 0
+    CurrentSubmitJobResponse:
+      type: object
+      required:
+      - job_id
+      - status
+      - message
+      - ray_dashboard_url
+      properties:
+        job_id:
+          type: string
+        run_id:
+          type: string
+          nullable: true
+        submitted_by:
+          type: string
+          nullable: true
+        status:
+          type: string
+          examples:
+          - submitted
+          - scheduled
+        message:
+          type: string
+        ray_dashboard_url:
+          type: string
+          format: uri
+    SubmitJobResponse:
+      type: object
+      required:
+      - job_id
+      - status
+      - message
+      properties:
+        job_id:
+          type: string
+        run_id:
+          type: string
+          nullable: true
+        ingestion_batch_id:
+          type: string
+        submitted_by:
+          type: string
+          nullable: true
+        submitted_at:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        message:
+          type: string
+        queue_position:
+          type: integer
+          minimum: 1
+          nullable: true
+        queue_reason:
+          type: string
+          nullable: true
+        links:
+          type: object
+          properties:
+            details:
+              type: string
+            events:
+              type: string
+    JobStatus:
+      type: string
+      enum:
+      - SUBMITTED
+      - QUEUED
+      - VALIDATING
+      - RUNNING
+      - RETRY_WAIT
+      - CANCEL_REQUESTED
+      - CANCELLED
+      - COMPLETED
+      - COMPLETED_WITH_REVIEW_PENDING
+      - FAILED
+    StageStatus:
+      type: string
+      enum:
+      - PENDING
+      - RUNNING
+      - RETRY_WAIT
+      - SUCCEEDED
+      - SKIPPED
+      - FAILED
+    StageSnapshot:
+      type: object
+      required:
+      - stage_id
+      - display_name
+      - status
+      - attempt
+      properties:
+        stage_id:
+          type: string
+        display_name:
+          type: string
+        chapter:
+          type: string
+        status:
+          $ref: '#/components/schemas/StageStatus'
+        skip_reason:
+          type: string
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        attempt:
+          type: integer
+          minimum: 1
+        duration_ms:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Elapsed time for the current attempt; null before the stage starts.
+        progress:
+          type: object
+          additionalProperties: true
+          description: Completed/total units and safe aggregate counts.
+        checkpoint_id:
+          type: string
+          nullable: true
+        error:
+          $ref: '#/components/schemas/JobError'
+    JobError:
+      type: object
+      required:
+      - code
+      - message
+      - retryable
+      properties:
+        code:
+          type: string
+          description: Shared catalogue code or registered ingestion-specific code.
+        message:
+          type: string
+        retryable:
+          type: boolean
+        attempt:
+          type: integer
+        details:
+          type: object
+          additionalProperties: true
+    JobDetails:
+      type: object
+      required:
+      - job_id
+      - run_id
+      - ingestion_batch_id
+      - status
+      - stages
+      properties:
+        job_id:
+          type: string
+        run_id:
+          type: string
+        ingestion_batch_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        execution_attempt:
+          type: integer
+          minimum: 1
+          default: 1
+        submitted_by:
+          type: string
+        submitted_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        customer_id:
+          type: string
+        tenant_id:
+          type: string
+        industry_id:
+          type: string
+        domain_id:
+          type: string
+        product_line_id:
+          type: string
+        customer_ontology_id:
+          type: string
+        customer_ontology_version:
+          type: integer
+        canonical_ontology_id:
+          type: string
+        canonical_ontology_version:
+          type: string
+        extraction_policy_version:
+          type: string
+          nullable: true
+        document_nature:
+          $ref: '#/components/schemas/DocumentNature'
+        hitl_mode:
+          $ref: '#/components/schemas/ReviewPolicyValue'
+        current_stage_id:
+          type: string
+          nullable: true
+        progress_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+        resume_available:
+          type: boolean
+          default: false
+        resume_mode:
+          type: string
+          enum:
+          - FROM_CHECKPOINT
+          - REPORT_ONLY
+          nullable: true
+          description: REPORT_ONLY resumes report generation after stores.write is verified complete.
+        checkpoint_stage:
+          type: string
+          nullable: true
+          description: Latest verified completed checkpoint stage.
+        resume_from_stage:
+          type: string
+          nullable: true
+          description: First stage the worker will execute after restoring the checkpoint.
+        auto_retry_count:
+          type: integer
+          minimum: 0
+        automatic_retry_pending:
+          type: boolean
+          description: A bounded automatic retry is enabled and waiting for its due time.
+        cancel_available:
+          type: boolean
+          default: false
+        pending_review_count:
+          type: integer
+          minimum: 0
+        hitl_summary:
+          type: object
+          properties:
+            pending_decisions:
+              type: integer
+              minimum: 0
+            approved_decisions:
+              type: integer
+              minimum: 0
+            rejected_decisions:
+              type: integer
+              minimum: 0
+            pending_writes:
+              type: integer
+              minimum: 0
+            failed_writes:
+              type: integer
+              minimum: 0
+            succeeded_writes:
+              type: integer
+              minimum: 0
+        warning_count:
+          type: integer
+          minimum: 0
+        partial_write_summary:
+          type: object
+          additionalProperties: true
+        store_reconciliation_required:
+          type: boolean
+        store_write_units:
+          type: array
+          description: Durable store-unit ledger; UNKNOWN outcomes are replayed idempotently from the admission
+            checkpoint.
+          items:
+            type: object
+            required:
+            - store_name
+            - unit_key
+            - status
+            - attempt
+            properties:
+              store_name:
+                type: string
+                enum:
+                - weaviate
+                - neo4j
+              unit_key:
+                type: string
+              status:
+                type: string
+                enum:
+                - IN_PROGRESS
+                - SUCCEEDED
+                - FAILED
+                - UNKNOWN
+              attempt:
+                type: integer
+                minimum: 1
+              progress_json:
+                type: object
+                additionalProperties: true
+              error_json:
+                type: object
+                additionalProperties: true
+                nullable: true
+              started_at:
+                type: string
+                format: date-time
+              updated_at:
+                type: string
+                format: date-time
+              completed_at:
+                type: string
+                format: date-time
+                nullable: true
+        stages:
+          type: array
+          minItems: 15
+          maxItems: 15
+          items:
+            $ref: '#/components/schemas/StageSnapshot'
+        run_context_json:
+          type: object
+          additionalProperties: true
+          description: Frozen submission context and version evidence recorded for this run.
+        force_rewrite_requested:
+          type: boolean
+        auth_source:
+          type: string
+          enum:
+          - kong_jwt
+          - dev_test_token
+        ray_dashboard_url:
+          type: string
+          format: uri
+        error:
+          $ref: '#/components/schemas/JobError'
+        reports:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArtifactLink'
+        links:
+          type: object
+          additionalProperties:
+            type: string
+    ArtifactLink:
+      type: object
+      required:
+      - kind
+      - label
+      - href
+      properties:
+        kind:
+          type: string
+          enum:
+          - report
+          - log
+          - hitl_queue
+          - trace
+        label:
+          type: string
+        href:
+          type: string
+    QueueSnapshot:
+      type: object
+      required:
+      - active_count
+      - queued_count
+      - capacity_state
+      properties:
+        active_count:
+          type: integer
+          minimum: 0
+        queued_count:
+          type: integer
+          minimum: 0
+        capacity_state:
+          type: string
+          enum:
+          - AVAILABLE
+          - BUSY
+          - FULL
+          - UNKNOWN
+        max_active:
+          type: integer
+          minimum: 1
+          nullable: true
+        caller_queued_count:
+          type: integer
+          minimum: 0
+        caller_active_count:
+          type: integer
+          minimum: 0
+        queue_position:
+          type: integer
+          minimum: 1
+          nullable: true
+        estimated_wait_seconds:
+          type: integer
+          minimum: 0
+          nullable: true
+    JobActionResponse:
+      type: object
+      required:
+      - job_id
+      - run_id
+      - status
+      - attempt
+      properties:
+        job_id:
+          type: string
+        run_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        restart_mode:
+          type: string
+          enum:
+          - FROM_CHECKPOINT
+          - REPORT_ONLY
+          description: REPORT_ONLY skips Neo4j and Weaviate writers.
+        attempt:
+          type: integer
+          minimum: 1
+        checkpoint_id:
+          type: string
+          nullable: true
+        resume_available:
+          type: boolean
+        message:
+          type: string
+    ProgressSnapshot:
+      type: object
+      required:
+      - job_id
+      - status
+      - phase
+      properties:
+        job_id:
+          type: string
+        status:
+          type: string
+        phase:
+          type: string
+        progress_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+        files_done:
+          type: integer
+          minimum: 0
+        files_total:
+          type: integer
+          minimum: 0
+        blocks_extracted:
+          type: integer
+          minimum: 0
+        entities_found:
+          type: integer
+          minimum: 0
+        relationships_found:
+          type: integer
+          minimum: 0
+        weaviate_chunks:
+          type: integer
+          minimum: 0
+        neo4j_nodes:
+          type: integer
+          minimum: 0
+        neo4j_relationships:
+          type: integer
+          minimum: 0
+        updated_at:
+          type: string
+          format: date-time
+    ReviewStatus:
+      type: string
+      enum:
+      - PENDING
+      - APPROVED
+      - REJECTED
+    ReviewQueueType:
+      type: string
+      enum:
+      - NODE_ADMISSION
+      - CONTEXT_RESOLUTION
+      - UNRESOLVED_TARGET
+    ReviewAction:
+      type: string
+      enum:
+      - APPROVE_REUSE
+      - APPROVE_REUSE_WITH_ALIAS
+      - APPROVE_AS_NEW
+      - REJECT
+      - LEAVE_UNRESOLVED
+    HITLReviewItem:
+      type: object
+      required:
+      - review_id
+      - ingestion_batch_id
+      - plan_id
+      - queue_type
+      - status
+      - execution_plan_json
+      properties:
+        review_id:
+          type: string
+          format: uuid
+        ingestion_batch_id:
+          type: string
+        plan_id:
+          type: string
+        queue_type:
+          $ref: '#/components/schemas/ReviewQueueType'
+        status:
+          $ref: '#/components/schemas/ReviewStatus'
+        priority:
+          type: string
+        reason_code:
+          type: string
+        admission_behavior:
+          type: string
+        short_summary:
+          type: string
+          nullable: true
+        decision_question:
+          type: string
+          nullable: true
+        source_context_json:
+          type: object
+          additionalProperties: true
+        document_context_json:
+          type: object
+          additionalProperties: true
+        ontology_context_json:
+          type: object
+          additionalProperties: true
+        mapping_context_json:
+          type: object
+          additionalProperties: true
+        context_resolution_json:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        relationship_evidence_json:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        provenance_json:
+          type: object
+          additionalProperties: true
+        review_payload_json:
+          type: object
+          additionalProperties: true
+        execution_plan_json:
+          type: object
+          additionalProperties: true
+        resolved_plan_json:
+          type: object
+          additionalProperties: true
+          nullable: true
+        reviewer_action:
+          $ref: '#/components/schemas/ReviewAction'
+        reviewer_id:
+          type: string
+          nullable: true
+        reviewer_notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        write_status:
+          type: string
+          enum:
+          - NOT_STARTED
+          - PENDING
+          - IN_PROGRESS
+          - SUCCEEDED
+          - FAILED
+        write_result_json:
+          type: object
+          additionalProperties: true
+        write_error:
+          type: string
+          nullable: true
+        write_attempts:
+          type: integer
+          minimum: 0
+    HITLReviewList:
+      type: object
+      required:
+      - items
+      - total
+      - limit
+      - offset
+      - scope
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/HITLReviewItem'
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+        scope:
+          type: object
+          required:
+          - ingestion_batch_id
+          - domain_id
+          - product_line_id
+          properties:
+            ingestion_batch_id:
+              type: string
+            domain_id:
+              type: string
+            product_line_id:
+              type: string
+    EndpointChoice:
+      type: object
+      required:
+      - rel_type
+      - direction
+      - target_type
+      - target_value
+      - entity_id
+      properties:
+        rel_type:
+          type: string
+        direction:
+          type: string
+          enum:
+          - incoming
+          - outgoing
+        target_type:
+          type: string
+        target_value:
+          type: string
+        entity_id:
+          type: string
+          description: Must refer to a candidate persisted with this review item.
+    HITLDecisionRequest:
+      type: object
+      required:
+      - action
+      properties:
+        action:
+          $ref: '#/components/schemas/ReviewAction'
+        notes:
+          type: string
+          maxLength: 4000
+          nullable: true
+        selected_entity_id:
+          type: string
+          nullable: true
+        endpoint_choices:
+          type: array
+          items:
+            $ref: '#/components/schemas/EndpointChoice'
+    HITLDecisionResponse:
+      type: object
+      required:
+      - review_id
+      - status
+      - reviewer_action
+      - reviewer_id
+      - event_id
+      - execution_status
+      properties:
+        review_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReviewStatus'
+        reviewer_action:
+          $ref: '#/components/schemas/ReviewAction'
+        reviewer_id:
+          type: string
+        reviewer_notes:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        event_id:
+          type: string
+        execution_status:
+          type: string
+          enum:
+          - PENDING
+          - IN_PROGRESS
+          - SUCCEEDED
+          - FAILED
+          - NOT_REQUIRED
+        write_result:
+          type: object
+          additionalProperties:
+            type: integer
+        write_error:
+          type: string
+          nullable: true
+        write_attempts:
+          type: integer
+          minimum: 0
+    HITLExecutionResponse:
+      type: object
+      required:
+      - review_id
+      - execution_status
+      properties:
+        review_id:
+          type: string
+        execution_status:
+          type: string
+        write_result:
+          type: object
+          additionalProperties:
+            type: integer
+        write_error:
+          type: string
+          nullable: true
+        write_attempts:
+          type: integer
+          minimum: 0
+    HITLReviewEvent:
+      type: object
+      required:
+      - event_id
+      - review_id
+      - event_type
+      - action
+      - status_before
+      - status_after
+      - reviewer_id
+      - created_at
+      properties:
+        event_id:
+          type: string
+        review_id:
+          type: string
+        event_type:
+          type: string
+        action:
+          $ref: '#/components/schemas/ReviewAction'
+        status_before:
+          $ref: '#/components/schemas/ReviewStatus'
+        status_after:
+          $ref: '#/components/schemas/ReviewStatus'
+        reviewer_id:
+          type: string
+        reviewer_notes:
+          type: string
+          nullable: true
+        resolved_plan_json:
+          type: object
+          additionalProperties: true
+          nullable: true
+        event_details_json:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    IndustryOption:
+      type: object
+      required:
+      - industry_id
+      - industry_name
+      - status
+      properties:
+        industry_id:
+          type: string
+          description: Stable ID supplied back to onboarding.
+        industry_name:
+          type: string
+        status:
+          type: string
+          enum:
+          - ACTIVE
+    IndustryOntologies:
+      type: object
+      required:
+      - industry_id
+      - industry_name
+      - ontologies
+      properties:
+        industry_id:
+          type: string
+        industry_name:
+          type: string
+        ontologies:
+          type: array
+          items:
+            type: object
+            required:
+            - ontology_id
+            - ontology_name
+            - version
+            - status
+            properties:
+              ontology_id:
+                type: string
+              ontology_name:
+                type: string
+              version:
+                type: string
+              status:
+                type: string
+    CustomerOnboardingRequest:
+      type: object
+      required:
+      - customer_name
+      - industry_id
+      properties:
+        customer_name:
+          type: string
+          minLength: 1
+        industry_id:
+          type: string
+          minLength: 1
+          description: Active ID from GET /fabric-foundry/industries.
+    CustomerOnboardingResponse:
+      type: object
+      required:
+      - tenant_id
+      - customer_id
+      - customer_name
+      - industry_id
+      - industry_name
+      - status
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        customer_id:
+          type: string
+          description: Generated by the service.
+        customer_name:
+          type: string
+        industry_id:
+          type: string
+        industry_name:
+          type: string
+        status:
+          type: string
+          enum:
+          - ACTIVE

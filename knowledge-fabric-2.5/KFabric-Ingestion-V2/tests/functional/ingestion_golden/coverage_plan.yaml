@@ -1,0 +1,71 @@
+version: 1
+name: ingestion-golden-full-user-journey
+principles:
+  - Persist one independent JSONL result per assertion, including failures and 4xx/5xx responses.
+  - Every case records method/path, expected status and semantic result, actual status/result, request correlation, and code/store touchpoints.
+  - Functional journeys and performance ramps have separate run IDs and result directories.
+  - Use new QA customer, domain, product-line, run, batch, review, and document IDs; preserve all prior data.
+  - Test exact combinations where behavior changes; use pairwise coverage only for noncritical metadata permutations.
+industries:
+  banking:
+    customers: [single-domain, same-customer-multiple-domains]
+    domain_product_lines:
+      - [consumer_retail, Retail Cards]
+      - [corporate_commercial, Lending]
+      - [wealth_securities_management, Wealth Management]
+    review_modes: [review_all, review_ambiguous, auto_write]
+  insurance:
+    customers: [single-domain, same-customer-multiple-domains]
+    domain_product_lines:
+      - [health_insurance, Individual & Family Health]
+      - [property_casualty, Personal Auto]
+    review_modes: [review_all, review_ambiguous, auto_write]
+  health_insurance_care_services:
+    customers: [single-domain, same-customer-multiple-domains]
+    domain_product_lines:
+      - [care, Care Management]
+      - [pharmacy, Pharmacy & Pharmacy Benefits]
+    review_modes: [review_all, review_ambiguous, auto_write]
+workflow_assertions:
+  - onboarding creates an active customer, tenant, and industry-owned ontology
+  - contextualization validates every selected domain and product line and preserves ontology version history
+  - each accepted job freezes customer, tenant, industry, domain, product line, actor, auth source, source manifest, document nature, review mode, and ontology/policy versions
+  - all 15 stages have truthful status, attempt, timestamps, counters, errors, and checkpoint references
+  - SSE initial events and reconnect replay match persisted PostgreSQL event sequence
+  - each terminal run has a report; each store has an independent finalized outcome; all writes are batch-scoped and idempotent
+  - HITL details preserve masked evidence and ranked candidate evidence; every reviewer action has actor and append-only history
+  - approval writes the persisted plan once; failed approved writes can be retried without duplicate nodes, edges, or aliases
+  - cancellation and resume are exercised from a valid checkpoint before store publishing, and rejected after the publishing boundary
+  - graph hierarchy is customer-scoped CustomerRoot -> DomainRoot -> ProductLine -> Function -> SubFunction; industry_id is metadata
+api_surface:
+  inventory_from_openapi: true
+  methods:
+    - GET: valid authenticated read, missing/invalid auth, unknown scope/resource, pagination/filter bounds
+    - POST: valid create/action, missing required body/fields, malformed body, unknown resource, duplicate/idempotency replay
+  areas:
+    - health and readiness
+    - industry catalog and ontology catalog
+    - customer onboarding and active-customer listing
+    - customer ontology read, current snapshot, versions, history, and contextualization
+    - ingestion domain/product-line/review-policy configuration
+    - directory and upload submission
+    - jobs listing, detail, logs, progress, event replay, cancellation, resume, and legacy delete negative case
+    - HITL queue, detail, history, all node and relationship decisions, and approved-write retry
+    - report list and per-job report
+    - metrics, service config, and root UI response
+failure_branches:
+  - API 400/401/403/404/409/413/422/429/500/503 behavior and safe error envelope
+  - parsing rejection/unsupported format and oversized input
+  - LLM timeout/429/5xx and bounded retry exhaustion
+  - PostgreSQL outage and transaction conflict
+  - Ray worker launch, worker environment, checkpoint read/hash/context mismatch, and restart
+  - Weaviate schema/create/write/verification failure
+  - Neo4j connection, run-context validation, write, and partial-write reconciliation
+  - report generation failure after successful store writes
+performance:
+  ingestion: [20, 30, 40, 50]
+  hitl: [20, 30, 40, 50]
+  separate_runs: true
+  per_rung_metrics: [p50, p90, p95, p99, throughput, status_distribution, terminal_job_distribution]
+  ramp_guard: Do not increase ingestion concurrency while a prior rung still has active jobs.
+  actor_note: Development test tokens are distinct actor IDs but do not verify Kong JWT signatures or user entitlements.

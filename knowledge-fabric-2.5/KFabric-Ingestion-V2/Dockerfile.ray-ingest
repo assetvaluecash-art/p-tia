@@ -1,0 +1,62 @@
+FROM rayproject/ray:2.9.3-py311-cpu
+
+USER root
+
+# Prefer HTTPS apt mirrors (same idea as QiBa-Python debian.sources fix).
+# Ray base is Ubuntu-based — cover sources.list and *.list / *.sources if present.
+RUN set -eux; \
+    if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+      sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
+      sed -i 's|http://security.debian.org|https://security.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
+    fi; \
+    if [ -f /etc/apt/sources.list ]; then \
+      sed -i 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' /etc/apt/sources.list; \
+      sed -i 's|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list; \
+      sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list; \
+      sed -i 's|http://security.debian.org|https://security.debian.org|g' /etc/apt/sources.list; \
+    fi; \
+    for f in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do \
+      [ -f "$f" ] || continue; \
+      sed -i 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' "$f"; \
+      sed -i 's|http://security.ubuntu.com|https://security.ubuntu.com|g' "$f"; \
+      sed -i 's|http://deb.debian.org|https://deb.debian.org|g' "$f"; \
+      sed -i 's|http://security.debian.org|https://security.debian.org|g' "$f"; \
+    done
+
+# Use full libreoffice (not -nogui) - headless --convert-to needs libcuilo.so (bug #158695)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreoffice \
+    default-jre-headless \
+    imagemagick \
+    libwmf-bin \
+    libgl1 \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# .venv_ray symlinks point to /usr/bin/python3.11 (host-created venv).
+# Ray base image has Python at /home/ray/anaconda3/bin/python3.11.
+# This alias lets the same venv work on both host and container.
+RUN ln -sf /home/ray/anaconda3/bin/python3.11 /usr/bin/python3.11
+
+# ---------------------------------------------------------------------------
+# Install KnowledgeFabric ingestion dependencies into the Ray worker env.
+# This ensures Ray job workers can import torch/transformers/opentelemetry, etc.
+# ---------------------------------------------------------------------------
+WORKDIR /app/kbfabric-ingest
+
+# Copy only requirements first for better Docker layer caching.
+COPY requirements.txt /app/kbfabric-ingest/requirements.txt
+
+# Ray base image uses conda Python at /home/ray/anaconda3/bin/python3.11
+RUN /home/ray/anaconda3/bin/python -m pip install --no-cache-dir --upgrade pip && \
+    /home/ray/anaconda3/bin/python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.5.1 && \
+    /home/ray/anaconda3/bin/python -m pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+
+# Now copy the application code.
+COPY . /app/kbfabric-ingest/
+
+USER ray

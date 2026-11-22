@@ -1,0 +1,233 @@
+version: 5.0.1
+block_categories:
+- name: Requirement
+  description: A source-supported obligation, capability, constraint, or desired system behavior.
+  maps_to_node: Requirement
+- name: Process
+  description: A named operational or business procedure supported by steps, actors, decisions, or system interactions.
+  maps_to_node: Process
+- name: Rule
+  description: An explicit condition and resulting decision or action.
+  maps_to_node: Rule
+- name: Control
+  description: A concrete checkpoint or mechanism that verifies, restricts, authorizes, reconciles, or records an
+    action.
+  maps_to_node: Control
+- name: Regulation
+  description: An explicitly identified external law, regulation, standard, or official instrument.
+  maps_to_node: Regulation
+- name: TestCase
+  description: An individual test procedure with a stated subject and verification intent.
+  maps_to_node: TestCase
+- name: Defect
+  description: A reported product or process malfunction with evidence of unintended behavior.
+  maps_to_node: Defect
+- name: Incident
+  description: A specific operational event such as an outage or service interruption.
+  maps_to_node: Incident
+- name: UserStory
+  description: A user role’s stated goal or requested capability.
+  maps_to_node: UserStory
+- name: AcceptanceCriteria
+  description: A testable condition that defines when a requirement or story is satisfied.
+  maps_to_node: AcceptanceCriteria
+- name: TechnicalSystem
+  description: A specifically named software application, platform, module, or service.
+  maps_to_node: System
+- name: TechnicalSpec
+  description: A machine-readable or otherwise explicit interface contract, schema, or endpoint definition.
+  maps_to_node: System
+- name: TechnicalOps
+  description: Operational technical detail such as scheduled jobs, configuration, deployment, or system events.
+  maps_to_node: _SKIP_KG
+- name: Reference
+  description: A glossary item, definition, acronym, or reference information.
+  maps_to_node: _SKIP_KG
+- name: Diagram
+  description: Visual content such as a workflow, architecture diagram, or form image.
+  maps_to_node: _SKIP_KG
+- name: FormCapture
+  description: A specifically identified form or screen used to capture structured information.
+  maps_to_node: FormCapture
+- name: Narrative
+  description: General prose that does not meet a more specific supported category.
+  maps_to_node: _SKIP_KG
+node_types:
+- name: DomainRoot
+  layer: domain_structure
+- name: ProductLine
+  layer: domain_structure
+- name: Function
+  layer: domain_structure
+- name: SubFunction
+  layer: domain_structure
+- name: Requirement
+  layer: context
+- name: Process
+  layer: context
+- name: Rule
+  layer: context
+- name: Control
+  layer: context
+- name: Regulation
+  layer: context
+- name: FormCapture
+  layer: context
+- name: UserStory
+  layer: use_case
+- name: AcceptanceCriteria
+  layer: use_case
+- name: TestCase
+  layer: use_case
+- name: Defect
+  layer: use_case
+- name: Incident
+  layer: use_case
+- name: System
+  layer: technical
+- name: DataEntity
+  layer: technical
+- name: Actor
+  layer: context
+relationship_types:
+- name: PART_OF
+  allowed_triples:
+  - from: SubFunction
+    to: Function
+  - from: Function
+    to: ProductLine
+  - from: ProductLine
+    to: DomainRoot
+  - from: Process
+    to: Function
+- name: IMPLEMENTS
+  from: UserStory
+  to: Requirement
+- name: COVERS
+  from: TestCase
+  to: Requirement
+- name: VALIDATES
+  from: AcceptanceCriteria
+  to: Requirement
+- name: IMPACTS
+  allowed_triples:
+  - from: UserStory
+    to: Process
+  - from: UserStory
+    to: System
+  - from: UserStory
+    to: DataEntity
+  - from: Requirement
+    to: Process
+  - from: Requirement
+    to: System
+  - from: Requirement
+    to: DataEntity
+  - from: Requirement
+    to: Control
+  - from: Defect
+    to: Process
+  - from: Defect
+    to: System
+  - from: Defect
+    to: DataEntity
+  - from: Incident
+    to: Process
+  - from: Incident
+    to: System
+  - from: Incident
+    to: DataEntity
+  - from: Process
+    to: Process
+- name: GOVERNED_BY
+  allowed_triples:
+  - from: Process
+    to: Rule
+  - from: Process
+    to: Control
+- name: USES
+  from: Process
+  to: System
+- name: VIOLATES
+  allowed_triples:
+  - from: Defect
+    to: Requirement
+  - from: Defect
+    to: AcceptanceCriteria
+- name: MISSED_BY
+  from: Defect
+  to: TestCase
+- name: LINKED_TO
+  from: Defect
+  to: Incident
+- name: PRODUCES
+  from: Process
+  to: DataEntity
+- name: CROSS_DOMAIN_IMPACTS
+  from: Process
+  to: Process
+- name: PERFORMS
+  from: Actor
+  to: Process
+- name: MITIGATES
+  allowed_triples:
+  - from: Control
+    to: Process
+  - from: Control
+    to: Rule
+- name: ENFORCED_BY
+  allowed_triples:
+  - from: Rule
+    to: Regulation
+  - from: Control
+    to: Regulation
+- name: COMPLIANT_WITH
+  from: Process
+  to: Regulation
+- name: INTEGRATES_WITH
+  from: System
+  to: System
+vision_ie_type_mapping:
+  entity_types:
+    Decision: Process
+    Component: System
+    Activity: Process
+    Actor: Actor
+    Control: Control
+    Form: FormCapture
+    Screen: FormCapture
+    InputForm: FormCapture
+  relationship_types:
+    NEXT_STEP: _EXTRACTED_KNOWLEDGE
+    GATEWAY_TO: _EXTRACTED_KNOWLEDGE
+    CONDITION_IF_YES: _EXTRACTED_KNOWLEDGE
+    CONDITION_IF_NO: _EXTRACTED_KNOWLEDGE
+    PERFORMED_BY: PERFORMS
+    ACTED_BY: PERFORMS
+    CONTROL_PROTECTS_PROCESS: MITIGATES
+path_format:
+  style: natural_with_metadata
+  include_evidence: true
+  include_provenance: true
+  template: "CHAIN_SYMBOLIC: {chain_symbolic}\nCHAIN_NATURAL: {chain_natural}\nRELATIONSHIP: {from_name} {rel_type_natural}\
+    \ {to_name}\n  TYPE: {from_type} -> {to_type} ({rel_type})\n  EVIDENCE: \"{source_evidence}\"\n  SOURCE: {source_file}\
+    \ [Page: {source_page}, Block: {source_block_id}]\n"
+  rel_type_to_natural:
+    PART_OF: is part of
+    IMPLEMENTS: implements
+    COVERS: covers
+    VALIDATES: validates
+    IMPACTS: impacts
+    GOVERNED_BY: is governed by
+    USES: uses
+    VIOLATES: violates
+    MISSED_BY: was missed by
+    LINKED_TO: is linked to
+    PRODUCES: produces
+    CROSS_DOMAIN_IMPACTS: cross-domain impacts
+    PERFORMS: performs
+    MITIGATES: mitigates
+    ENFORCED_BY: is enforced by
+    COMPLIANT_WITH: complies with
+    INTEGRATES_WITH: integrates with
+    NODE_IN_DOMAIN: is in domain

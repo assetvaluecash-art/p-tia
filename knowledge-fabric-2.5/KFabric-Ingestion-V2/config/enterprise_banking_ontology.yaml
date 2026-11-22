@@ -1,0 +1,2479 @@
+version: 5.0.1
+domains:
+- name: corporate_commercial
+  display_name: Corporate / Commercial / Institutional Banking
+  description: Corporate, commercial, and institutional banking services for businesses, including lending, trade finance,
+    treasury, cash management, and large-value payment and liquidity operations.
+  spine:
+  - ProductLine: Lending
+    functions:
+    - Function: Loan Origination
+      subfunctions:
+      - Multi-Stage Application Workflow
+      - Document Capture
+      - Pricing & Risk Assessment
+      - Credit Scoring
+      - Underwriting
+      - Verification & Approval
+      - Deviation Management
+      - Simulation & Auto Policy Check
+    - Function: Credit Limit Management
+      subfunctions:
+      - Limit Definition
+      - Account Linkage
+      - Coverage Definition
+      - Limit Hierarchy
+      - Limit Earmarking
+      - Limit Utilisation
+      - Limit Closure
+    - Function: Collateral Management
+      subfunctions:
+      - Collateral Definition
+      - Asset Linking & De-Linking
+      - Guarantor Linking
+      - Portfolio of Collaterals
+      - Collateral Execution
+      - Collateral Insurance Definition
+      - Pledging & De-Pledging
+      - Collateral Earmarking
+      - Collateral Release
+    - Function: Loan Disbursement
+      subfunctions:
+      - Loan Template Definition
+      - Loan Simulation
+      - Repayment Schedule Generation
+      - Disbursement Initiation
+      - Multi-Beneficiary Disbursement
+      - Customer Communication & Advice Generation
+    - Function: Loan Servicing
+      subfunctions:
+      - Loan Top-Up & Rollover
+      - Disbursement Reschedule
+      - Repayment Processing
+      - Non-Financial Updates
+      - Payment Dues Reschedule
+      - Waivers & Refunds
+      - Loan Securitisation
+      - Bulk Repayment Upload
+      - Interest Rate Setup
+    - Function: Delinquency Management
+      subfunctions:
+      - DPD Calculation
+      - NAB Classification
+      - Delinquency Bucketing
+      - Auto Reminders
+      - Case Prioritisation
+      - Customer Response Management
+      - Collector Load Balancing
+      - Agent Performance Tracking
+      - Legal Repossession
+      - Legal Collection
+      - Debt Portfolio Segmentation
+    - Function: Loan Closure
+      subfunctions:
+      - Prepayment
+      - Closure Simulation
+      - Settlement
+      - Write-off
+  - ProductLine: Corporate Cards
+    functions:
+    - Function: Card Origination
+      subfunctions:
+      - Credit Assessment & Scoring
+      - Application Data Capture
+      - Limits Assignment
+      - KCP Assisted Onboarding
+      - Credit & Company Underwriting
+      - PIN Generation & Management
+      - Workflow & Business Rules Setup
+    - Function: Authorisation
+      subfunctions:
+      - Velocity & Limits Checks
+      - Exchange Rate Processing
+      - Online & Batch Authorisation
+      - Policy Checks
+      - Company & Connection Checks
+      - Store & Forward Processing
+      - Positive & Negative Balance File Processing
+    - Function: Transaction Processing
+      subfunctions:
+      - Scheme File Processing
+      - Fees Charges & Interest
+      - Transaction Posting & Reversals
+      - Billing Cycle
+      - Interchange Clearing
+      - Instalment Processing
+      - Financial Adjustments
+      - Customer Billing & Reconciliation
+    - Function: Payment Processing
+      subfunctions:
+      - Auto Debits
+      - Manual & Digital Payments
+      - Online OTB Replenishment
+      - Overdue & Delinquency Tracking
+      - Write-off Management
+      - Payment Reversals
+    - Function: Customer Services
+      subfunctions:
+      - Card Lifecycle Servicing
+      - Fee Reversals
+      - Lost Re-Issues & Renewals
+      - Balance Transfers
+      - Credit Limits Management
+      - Product Swaps & Upgrades
+      - Non-Financial Updates
+    - Function: Fraud & Risk Management
+      subfunctions:
+      - FEWS Parameters Definition
+      - Risk Rules Configuration
+      - Company & Collection Level Rules
+      - Real Time Fraud Detection
+      - Queue Allocation
+      - Case Review
+      - Follow-Up & Closure
+    - Function: Loyalty Management
+      subfunctions:
+      - Reward Schemes Definition
+      - Transaction & Events Generated Rewards
+      - Accrual & Redemption
+      - Rewards Transfer & Reversals
+      - Rewards Capping & Expiry
+      - Rewards Points Gifting
+      - Co-Brand Conversions
+      - Company Level Rewards
+    - Function: Product Configuration
+      subfunctions:
+      - Multi-Organisation Setup
+      - Card Personalisation
+      - Fee Configuration
+      - Interest Configuration
+      - Statement & Billing Configuration
+      - Risk Parameters
+      - Rewards Configuration
+      - Company & Connection Setup
+    - Function: Collections
+      subfunctions:
+      - Workflow Setup
+      - Portfolio Management
+      - Queue Definition
+      - Customer Segmentation
+      - Worklist Actions
+      - Agency Management
+      - Credit Restructuring
+  - ProductLine: Treasury
+    functions:
+    - Function: Deal Capture
+      subfunctions:
+      - Manual Deal Entry
+      - Automated Deal Feeds
+      - Deal Upload
+      - B2B Deals
+      - Deal Templates
+      - Currency Adjustment
+      - Position Adjustment
+      - Portfolio Transfer
+    - Function: Limits & Control
+      subfunctions:
+      - Pre-Settlement Limits
+      - Open Position Monitoring
+      - Counterparty Limits
+      - Portfolio Limits
+      - Deal Size Limits
+      - Country Limits
+      - What-If Analysis
+      - Concurrent Audit
+    - Function: Settlement
+      subfunctions:
+      - Deal Confirmation
+      - Payment Processing
+      - Authorisation
+      - Enrichment
+      - Delivery
+      - Multiple Standard Settlement
+      - Split Currency Settlement
+      - CLS Settlement
+    - Function: Accounting
+      subfunctions:
+      - Contingent Accounting
+      - Settlement Accounting
+      - Accruals
+      - Liquidation
+      - Maturity Processing
+      - Revaluation
+      - Amortisation
+      - Redemption
+      - Reprice
+    - Function: Cashflow Positions Enquiry
+      subfunctions:
+      - Confirmation Matching
+      - Recon Rules
+      - Nostro Recon
+      - Coupon Recon
+      - Position Recon
+      - Exception Manager
+    - Function: Risk & PL
+      subfunctions:
+      - Interest Rate Risk
+      - Counterparty Risk
+      - Dealer Profit
+      - Portfolio Duration
+      - Portfolio Convexity
+      - FX Revaluation P&L
+      - Risk Adjustments
+    - Function: Analytics
+      subfunctions:
+      - Pre-Deal Limit Checks
+      - Multi-Dealer Analytics
+      - MTM Valuation
+      - RFR Pricing & Analytics
+      - P&L Reporting
+      - Greeks
+      - Scenario Analysis
+    - Function: Portfolio Risk Analytics
+      subfunctions:
+      - Cash Flow Projections
+      - Duration Metrics
+      - VAR Metrics
+      - Performance Attribution
+      - Ratio Analysis
+      - Strategy Attribution
+      - Profitability Monitoring
+      - Variance Analysis
+    - Function: Contextual ALM
+      subfunctions:
+      - Fund Planning & Forecasting
+      - Cashflow Models
+      - Liquidity Risk Management
+      - Interest Rate Risk Management
+      - Fund Analytics & Stress Testing
+    - Function: Basel-III Liquidity Risk
+      subfunctions:
+      - Liquidity Coverage Ratio
+      - Net Stable Funding Ratio
+      - LCR Stress Testing
+      - Monitoring Tools
+  - ProductLine: Payments
+    functions:
+    - Function: Payment Origination
+      subfunctions:
+      - SWIFT & SWIFT Service Bureau
+      - ERP & Treasury Management System
+      - Manually Initiated Funds Transfer
+      - Branch
+      - Mobile
+      - Portal
+      - Host to Host (H2H)
+    - Function: Payment Formats
+      subfunctions:
+      - XML
+      - JSON & CJSON
+      - CSV
+      - Fixed Width
+      - Delimited
+      - Canonical Models
+      - Message & File Transformation
+    - Function: Enrichment & Validation
+      subfunctions:
+      - Syntax Validations
+      - Control Sums
+      - Duplicate Checks
+      - IBAN Validation
+      - Customer Validations
+      - Bank Validations
+      - SWIFT Pre-Validations
+      - Route Derivation
+      - Cut-Off Time
+    - Function: Overlay Services
+      subfunctions:
+      - Confirmation of Payee
+      - Request to Pay
+      - Tokenization
+      - Proxy Services
+      - Remittance Data Management
+      - Contextual Payments Engine
+    - Function: Orchestration
+      subfunctions:
+      - AML Screening
+      - Sanctions Screening
+      - Fraud Detection
+      - Treasury Integration
+      - Accounting Integration
+      - Core Banking Integration
+    - Function: Transaction Limits Management
+      subfunctions:
+      - Account & Limit Structure Setup
+      - Limit Types Configuration
+      - Real-Time Funds Control
+      - Availability Calculation
+      - Manual Referral
+      - Auto Retry
+      - Pay & No-Pay Decisioning
+    - Function: Payment Execution
+      subfunctions:
+      - Bank Liquidity Management
+      - Throttling
+      - Correspondent Banking
+      - Partner Banking
+      - Direct Clearing
+      - Indirect Clearing
+      - Net Settlement
+      - Gross Settlement
+    - Function: Clearing & Settlement
+      subfunctions:
+      - Clearing Handoff
+      - Clearing Acknowledgement
+      - Clearing Recon
+      - Returns Processing
+      - Settlement Account Funding
+      - Nostro Funding
+      - Cheque Clearing
+    - Function: Exception & Investigation
+      subfunctions:
+      - Non-STP Queue
+      - Manual Repair
+      - Auto Repair
+      - Retry Process
+      - Reject Handling
+  - ProductLine: Receivables & Collections
+    functions:
+    - Function: Onboarding
+      subfunctions:
+      - Product Setup
+      - Customer Product Setup
+      - Day Arrangement & Credit Consolidation
+      - Account Template Definition
+      - Advices & Alerts Preferences
+      - Auto Debit Exception Handling
+      - Enrichment Configuration
+    - Function: Collections Processing
+      subfunctions:
+      - Collections Lodgement
+      - Enrichment
+      - Clearing Handoff & Reverse Handoff
+      - Credit Consolidation & Payout
+      - Accounting Update & Narration Building
+      - Auto Debit Exception Disbursement
+      - PDC Management
+      - Mandate Based Direct Debit
+    - Function: Bill Collections & Receivables Recon
+      subfunctions:
+      - Rule Based Auto Receivables Recon
+      - Payment by Link Processing
+      - Payer Registration
+      - Bill Presentment Orchestration
+      - Bill Payment Orchestration
+      - Auto-Debit Bill Payment
+      - Aggregator Based Bill Payment
+    - Function: Doorstep Banking
+      subfunctions:
+      - New Customer Acquisitions
+      - Pickup & Delivery Point Feasibility
+      - Startup & Dry Run
+      - Cash & Cheque Pickup Services
+      - Coordinator Vault & Recon
+      - Return & Funding Marking
+      - Coordinator Charges & Billing
+    - Function: Credit Limits & Recon Management
+      subfunctions:
+      - Guaranteed Funds & Liquidation Credit Payout
+      - Hierarchy & Division Wise Credits
+      - Scheduled & Online Credits
+      - Exposure Limit Setup
+      - Consolidated & Net-Off Credits
+      - Adjustments & Reversals
+      - Correspondent Bank Recon
+      - Balance Justification
+      - GL Recon
+    - Function: Exception Management
+      subfunctions:
+      - Returns
+      - Reversals
+      - Limit Breach Flows
+      - Adjustments
+      - Reversal of Recon & Manual Recon
+      - Auto Debit Retrial
+      - Partial Direct Debit
+    - Function: Follow-Ups
+      subfunctions:
+      - Template Definition
+      - Email & Fax & SMS
+      - Configurable Follow-Up Rules
+      - Configurable Frequency
+      - Customised Schedules
+      - Automatic Follow-Ups
+      - Manual Follow-Ups
+      - Follow-Up History
+  - ProductLine: Virtual Accounts & Escrow Deposits
+    functions:
+    - Function: Account Management
+      subfunctions:
+      - Bank & Product Configuration
+      - Account Series Configuration
+      - Structure Issuance
+      - Sub-Account Issuance & Maintenance
+      - KYC Processing
+      - Context ID Issuance & Maintenance
+      - Virtual Account Closure
+      - Dormancy Management
+    - Function: Invoice & Receipt Management
+      subfunctions:
+      - Context Validation
+      - Context Based Receivable Tracking
+      - Configurations & Invoice Management
+      - Receipt Management
+      - Receivables Matching
+      - File Upload Invoices & Receipts
+    - Function: Transaction Management
+      subfunctions:
+      - Funding & Allocation
+      - Payouts
+      - Automated Transfers
+      - Multi-Currency Payment Processing
+      - Hierarchical Payment Decision
+      - Transaction Processing
+      - Ledger & Balance Management
+      - Transaction Exception Management
+    - Function: Interest Management
+      subfunctions:
+      - Interest Definition
+      - Back-Value Interest Rate Modification
+      - Interest Processing
+      - Back-Value Interest Processing
+      - Interest P&L
+    - Function: API Banking
+      subfunctions:
+      - Account Issuance & Amendment
+      - Account Closure
+      - Incoming Debit Transactions
+      - Incoming Credit Transactions
+      - Transaction Status Update
+      - Transaction Enquiry
+      - Balance Enquiry
+      - Account Statement
+  - ProductLine: Liquidity Management
+    functions:
+    - Function: Sweep Instruction Setup
+      subfunctions:
+      - Control Account Management
+      - Contra Account Management
+      - Internal Balance Management
+      - Group Sweep Rules
+      - Sweep Constraints
+      - Execution Mode
+      - Execution Frequency
+      - Overdraft Limits
+      - Non-Working Days
+      - Automated Investments
+    - Function: Sweep Execution
+      subfunctions:
+      - Instruction Identification
+      - Internal Account Entries Generation
+      - External Account Entries Generation
+      - Transaction Request
+      - External Account Code Attachment
+      - Failure Marking
+      - Exception Alerts Generation
+      - Sweep Priority Determination
+      - Funds Availability Check
+    - Function: Inter-Company Loan Management
+      subfunctions:
+      - Branch & Currency Setup
+      - Loan Parameters
+      - Bank Commission
+      - Maturity Handling
+      - Participants Management
+      - Interest Calculation
+      - Repayments Handling
+      - Loan Rollover
+      - Tax Posting
+    - Function: Notional Pooling
+      subfunctions:
+      - Simple Pool
+      - Aggregate Pool
+      - Sub-Product Definition
+      - Principal Creation
+      - Bank Share Calculation
+      - Interest Type Creation
+      - Balance Set-Off Pooling
+      - Pool Simulation
+      - Interest Settlement
+    - Function: Investment Sweeps
+      subfunctions:
+      - Funds Management
+      - Time Deposit Management
+      - Control Account
+      - Sweep Details
+      - Commission Account
+      - Priority Determination
+      - Deposit Lifecycle
+      - Deposit Rollover
+      - Deposit Cancellation
+    - Function: Accounting Entry Management
+      subfunctions:
+      - Internal Accounts Entries Generation
+      - External Accounts Entries Generation
+      - Transaction Reference Generation
+      - Transaction Code Attachment
+      - Accounting Entry Handoff
+    - Function: Back Value Processing
+      subfunctions:
+      - Back Value Transaction Initiation
+      - Updated Interest Calculation
+      - Re-Execute Day-Zero Sweeps
+      - Re-Execute Time Triggered Sweeps
+      - Re-Execute EOD Sweeps
+      - Back Value Interest Calculation
+  - ProductLine: Trade Finance
+    functions:
+    - Function: Trade Operations
+      subfunctions:
+      - LC Issuance & Advising
+      - LC Amendment & Adjustment
+      - Document Presentation & Booking
+      - Acceptance
+      - Loan Lifecycle Management
+      - Claim Processing
+      - Settlement & Retirement
+      - Closure & Cancellation
+      - Delinquency Management
+    - Function: Charges & Pricing
+      subfunctions:
+      - Preferential Pricing
+      - Fixed & Tiered Pricing
+      - Tenor & Volume Based Pricing
+      - Accrual
+      - Amortization
+      - Periodic Charging
+      - Charge Adjustment
+      - Refund
+    - Function: Limit Monitoring
+      subfunctions:
+      - Hierarchical Limits
+      - Multi-Entity & Multi-Option Facilities
+      - Multi-Currency Limits
+      - Revolving & Non-Revolving Limits
+      - Collateral Based Limits
+      - Credit Line Earmarking & Release
+      - Real-Time Limit Monitoring
+      - Centralized Exposure Tracking
+    - Function: SWIFT Processing
+      subfunctions:
+      - MT7XX Messaging (LC/SBLC/BG)
+      - MT4XX Messaging (Collections)
+      - MT9X Proprietary Messages
+      - MTQ99 Free Format Messages
+      - MT & MX Payment Messages
+      - SWIFT Validations
+      - ACK & NACK Status Update
+      - Duplicate Checks
+    - Function: Workflow Management
+      subfunctions:
+      - Process Modelling
+      - Manual Processing
+      - Auto Processing (STP)
+      - Queue Management
+      - Delegation
+      - Escalation
+      - SLA Management
+      - Priority Processing
+      - Audit Trail
+    - Function: Document Imaging
+      subfunctions:
+      - Scanning
+      - Batch Upload
+      - Remote Scanning
+      - Image Viewer
+      - Image Data Mapping
+      - Image Annotation
+      - Image Archival
+    - Function: Value Added Services
+      subfunctions:
+      - Risk Distribution
+      - Multi-Lingual Correspondences
+      - Built-in Authorisation Matrix
+      - Plug-in Clauses
+      - Copy Transaction
+      - File Export
+      - Email & Fax Integration
+      - Template Definition
+  - ProductLine: Supply Chain Finance
+    functions:
+    - Function: SCF Program Management
+      subfunctions:
+      - Program Setup
+      - Anchor Customer Management
+      - Counterparty Management
+      - Relationship Management
+      - Multi-Lingual Support
+      - Multi-Currency Support
+      - Multi-Entity Management
+    - Function: Instrument Lifecycle
+      subfunctions:
+      - PO Creation
+      - PO Amendment & Cancellation
+      - Invoice Creation
+      - Invoice Amendment
+      - Invoice Acceptance & Cancellation
+      - Debit & Credit Notes
+      - PO & Invoice Reconciliation
+      - Dispute Management
+    - Function: Finance Lifecycle
+      subfunctions:
+      - Finance Request Auto & Manual
+      - Finance Rate & Tenure Amendment
+      - Settlement
+      - Repayment Appropriation
+      - Risk Participation
+      - Syndication
+      - Insurance
+      - Overdue Treatment
+      - Business Validations
+    - Function: Delinquency Management
+      subfunctions:
+      - Delinquency Classification Via Core Banking
+      - Delinquency Classification in SCF Platform
+      - Hybrid Delinquency Classification
+      - Exception Handling for NPA
+      - Appropriation Sequence for NPA
+      - Accounting for NPA
+      - Write-Offs
+    - Function: Exception Handling
+      subfunctions:
+      - RM Exception For Finance Request
+      - Credit Exception For Finance Request
+      - Compliance Exception For Finance Request
+      - Interface Exception Release & Re-Trigger
+      - Overdue Exception
+      - Escalation
+      - Exception Alerts
+      - SLA Management
+    - Function: Limits Management
+      subfunctions:
+      - Hierarchical Limits
+      - Multi-Entity & Currency Limits
+      - Revolving & Non-Revolving Limits
+      - Seasonal Limits
+      - With & Without Recourse Limits
+      - Commodity-Wise Limits
+      - Anchor & Counterparty Limits
+      - Account Earmarking
+      - Limit Earmarking
+    - Function: Charges & Pricing
+      subfunctions:
+      - Fixed & Floating Interest Rate
+      - Reference Rate Based Pricing
+      - Front & Rear-End Periodic Pricing
+      - Tiered Pricing
+      - Volume Based Pricing
+      - Manual Override & Waivers
+      - Multiple Charges Accounts
+      - Accrual & Amortisation
+      - Charges Posting
+- name: consumer_retail
+  display_name: Consumer / Personal / Retail / Digital Banking
+  description: Consumer and retail banking covering individual customers, digital channels, and day-to-day financial services
+    including onboarding, account servicing, payments, and customer experience.
+  spine:
+  - ProductLine: Lending
+    functions:
+    - Function: Loan Origination
+      subfunctions:
+      - Multi-Stage Application Workflow
+      - Document Capture
+      - Pricing & Risk Assessment
+      - Credit Scoring
+      - Underwriting
+      - Verification & Approval
+      - Deviation Management
+      - Simulation & Auto Policy Check
+    - Function: Credit Limit Management
+      subfunctions:
+      - Limit Definition
+      - Account Linkage
+      - Coverage Definition
+      - Limit Hierarchy
+      - Limit Earmarking
+      - Limit Utilisation
+      - Limit Closure
+    - Function: Collateral Management
+      subfunctions:
+      - Collateral Definition
+      - Asset Linking & De-Linking
+      - Guarantor Linking
+      - Portfolio of Collaterals
+      - Collateral Execution
+      - Collateral Insurance Definition
+      - Pledging & De-Pledging
+      - Collateral Earmarking
+      - Collateral Release
+    - Function: Loan Disbursement
+      subfunctions:
+      - Loan Template Definition
+      - Loan Simulation
+      - Repayment Schedule Generation
+      - Disbursement Initiation
+      - Multi-Beneficiary Disbursement
+      - Customer Communication & Advice Generation
+    - Function: Loan Servicing
+      subfunctions:
+      - Loan Top-Up & Rollover
+      - Disbursement Reschedule
+      - Repayment Processing
+      - Non-Financial Updates
+      - Payment Dues Reschedule
+      - Waivers & Refunds
+      - Loan Securitisation
+      - Bulk Repayment Upload
+      - Interest Rate Setup
+    - Function: Delinquency Management
+      subfunctions:
+      - DPD Calculation
+      - NAB Classification
+      - Delinquency Bucketing
+      - Auto Reminders
+      - Case Prioritisation
+      - Customer Response Management
+      - Collector Load Balancing
+      - Agent Performance Tracking
+      - Legal Repossession
+      - Legal Collection
+      - Debt Portfolio Segmentation
+    - Function: Loan Closure
+      subfunctions:
+      - Prepayment
+      - Closure Simulation
+      - Settlement
+      - Write-off
+  - ProductLine: Payments
+    functions:
+    - Function: Payment Origination
+      subfunctions:
+      - SWIFT & SWIFT Service Bureau
+      - ERP & Treasury Management System
+      - Manually Initiated Funds Transfer
+      - Branch
+      - Mobile
+      - Portal
+      - Host to Host (H2H)
+    - Function: Payment Formats
+      subfunctions:
+      - XML
+      - JSON & CJSON
+      - CSV
+      - Fixed Width
+      - Delimited
+      - Canonical Models
+      - Message & File Transformation
+    - Function: Enrichment & Validation
+      subfunctions:
+      - Syntax Validations
+      - Control Sums
+      - Duplicate Checks
+      - IBAN Validation
+      - Customer Validations
+      - Bank Validations
+      - SWIFT Pre-Validations
+      - Route Derivation
+      - Cut-Off Time
+    - Function: Overlay Services
+      subfunctions:
+      - Confirmation of Payee
+      - Request to Pay
+      - Tokenization
+      - Proxy Services
+      - Remittance Data Management
+      - Contextual Payments Engine
+    - Function: Orchestration
+      subfunctions:
+      - AML Screening
+      - Sanctions Screening
+      - Fraud Detection
+      - Treasury Integration
+      - Accounting Integration
+      - Core Banking Integration
+    - Function: Transaction Limits Management
+      subfunctions:
+      - Account & Limit Structure Setup
+      - Limit Types Configuration
+      - Real-Time Funds Control
+      - Availability Calculation
+      - Manual Referral
+      - Auto Retry
+      - Pay & No-Pay Decisioning
+    - Function: Payment Execution
+      subfunctions:
+      - Bank Liquidity Management
+      - Throttling
+      - Correspondent Banking
+      - Partner Banking
+      - Direct Clearing
+      - Indirect Clearing
+      - Net Settlement
+      - Gross Settlement
+    - Function: Clearing & Settlement
+      subfunctions:
+      - Clearing Handoff
+      - Clearing Acknowledgement
+      - Clearing Recon
+      - Returns Processing
+      - Settlement Account Funding
+      - Nostro Funding
+      - Cheque Clearing
+    - Function: Exception & Investigation
+      subfunctions:
+      - Non-STP Queue
+      - Manual Repair
+      - Auto Repair
+      - Retry Process
+      - Reject Handling
+  - ProductLine: Branch Operations
+    functions:
+    - Function: Relationship Management
+      subfunctions:
+      - Customer Onboarding
+      - Bulk Onboarding
+      - Customer Hierarchy & Group
+      - KYC Management
+      - Signatories Setup
+      - Preferential Pricing Interest & Forex Rates
+      - Hierarchical Credit Limits
+      - Welcome Kit Administration
+    - Function: Cash Transactions
+      subfunctions:
+      - Cash Deposit & Withdrawal
+      - Currency Exchange
+      - Cash Maintenance
+      - Cash Transfers - Vault
+      - Cash Transfers - Teller
+      - Cash Session Management
+      - Teller Proofing & Reconciliation
+      - TC Issuance & Purchase
+      - Cash Transaction Advice
+    - Function: Front Office Transactions
+      subfunctions:
+      - Funds Transfers - A2A
+      - Domestic Funds Transfers
+      - Cross Border Funds Transfers
+      - Utility Payments
+      - Instruments - DD & PO
+      - Cheque Deposit
+      - Certified Cheques
+      - Cash Card & Cash Passport
+      - Complaints & Enquiries
+    - Function: Account Services
+      subfunctions:
+      - Earmarking
+      - Cheque Book
+      - Statements
+      - Account Nomination
+      - Covering Instructions
+      - Debit Card Management
+      - Account Modifications & Closure
+      - Account Activation
+      - Advices
+    - Function: Operations Functions
+      subfunctions:
+      - Pricing
+      - Loyalty & Rewards
+      - Limits Definition
+      - Standing Orders
+      - Clearing & Collections
+      - Delivery Tracking - Cheque Book & Debit Card
+      - Deposit Closure & Rollover
+      - Fixed Asset Administration
+      - Stock & Inventory Management
+    - Function: Business Setup
+      subfunctions:
+      - Branch
+      - Product
+      - Currency & Holiday
+      - Interest & FX Rate
+      - Fees & Charges
+      - Teller Limits
+      - Correspondent Banks
+      - GL Accounts
+      - User Management
+  - ProductLine: Consumer Digital
+    functions:
+    - Function: CASA
+      subfunctions:
+      - Summary & Details
+      - Account Statement
+      - Multi-Account Statement
+      - E-Statement Registration
+      - Open New Account
+      - Transaction History
+      - Share Account Info
+      - Cheque Services
+    - Function: Deposits
+      subfunctions:
+      - Summary & Details
+      - Deposit Calculator
+      - Open New Term Deposit
+      - Redeem Deposit
+      - Deposit Closure Simulation
+      - Amend Maturity
+    - Function: Fund Transfers
+      subfunctions:
+      - Own Account Transfer
+      - Within Bank Transfer
+      - Domestic Transfer
+      - International Transfer
+      - Add & Manage Beneficiary
+      - Pay a Friend (P2P)
+      - Pay a New Beneficiary
+      - Transfer & Payment History
+      - Favourite Transfers
+      - Scheduled Transfers
+      - Scan & Pay
+      - Manage Standing Instructions
+    - Function: Payments
+      subfunctions:
+      - Utility Bill Payments
+      - Pay Bill
+      - Multiple Bill Payments
+      - Ad Hoc Bill Payments
+      - Government Payments
+      - Favourite Bill Payments
+      - Top-Up & Recharge
+      - QR Code Payments
+      - Tap & Pay (Apple & Google)
+      - Merchant Payments
+    - Function: Credit Cards
+      subfunctions:
+      - Summary & Details
+      - Supplementary Card Request
+      - Card Payment
+      - Balance Transfer
+      - Manage Limits
+      - Block Card
+      - Replace Card & Unblock Card
+      - Set & Change PIN
+      - Activate Card
+      - Reward Points Redemption
+      - Flash Card
+      - EMI Conversion
+    - Function: Debit & Prepaid Card
+      subfunctions:
+      - Summary & Details
+      - Activate Card
+      - Link Card to Account
+      - Unblock Card
+      - Set & Change Card PIN
+      - Manage Debit Card Limits
+      - Flash Card
+      - Renew & Replace Card
+      - Manage Services
+      - Block Card
+      - Virtual Cards
+      - Forex Cards
+    - Function: Loans
+      subfunctions:
+      - Summary & Details
+      - Loan Statement
+      - Loan Payment
+      - Recent Transactions
+      - Repayment Summary
+      - Interest Certificate
+      - Disbursement Schedule
+      - Loan Disbursement Request
+      - Loan Reschedule Request
+      - Loan Top-Up Request
+      - Loan Closure Simulation
+      - Buy Now Pay Later
+    - Function: Onboarding
+      subfunctions:
+      - Self-Onboarding
+      - Assisted Onboarding
+      - CASA Origination
+      - Loan Origination
+      - Card Origination
+      - Identity Management
+      - eKYC
+    - Function: Pre-Login
+      subfunctions:
+      - Self-Onboarding
+      - ATM & Branch Locator
+      - Login
+      - Forgot Login Credentials
+      - Self Registration
+      - Contact Us
+      - FAQ
+      - Promotions & Offers
+      - Apply for Products
+      - Quick Balance
+      - Language Preference
+  - ProductLine: Retail Cards
+    functions:
+    - Function: Card Origination
+      subfunctions:
+      - Credit Assessment & Scoring
+      - Application Data Capture
+      - Limits Assignment
+      - KCP Assisted Onboarding
+      - Credit & Company Underwriting
+      - PIN Generation & Management
+      - Workflow & Business Rules Setup
+    - Function: Authorisation
+      subfunctions:
+      - Velocity & Limits Checks
+      - Exchange Rate Processing
+      - Online & Batch Authorisation
+      - Policy Checks
+      - Company & Connection Checks
+      - Store & Forward Processing
+      - Positive & Negative Balance File Processing
+    - Function: Transaction Processing
+      subfunctions:
+      - Scheme File Processing
+      - Fees Charges & Interest
+      - Transaction Posting & Reversals
+      - Billing Cycle
+      - Interchange Clearing
+      - Instalment Processing
+      - Financial Adjustments
+      - Customer Billing & Reconciliation
+    - Function: Payment Processing
+      subfunctions:
+      - Auto Debits
+      - Manual & Digital Payments
+      - Online OTB Replenishment
+      - Overdue & Delinquency Tracking
+      - Write-off Management
+      - Payment Reversals
+    - Function: Customer Services
+      subfunctions:
+      - Card Lifecycle Servicing
+      - Fee Reversals
+      - Lost Re-Issues & Renewals
+      - Balance Transfers
+      - Credit Limits Management
+      - Product Swaps & Upgrades
+      - Non-Financial Updates
+    - Function: Fraud & Risk Management
+      subfunctions:
+      - FEWS Parameters Definition
+      - Risk Rules Configuration
+      - Company & Collection Level Rules
+      - Real Time Fraud Detection
+      - Queue Allocation
+      - Case Review
+      - Follow-Up & Closure
+    - Function: Loyalty Management
+      subfunctions:
+      - Reward Schemes Definition
+      - Transaction & Events Generated Rewards
+      - Accrual & Redemption
+      - Rewards Transfer & Reversals
+      - Rewards Capping & Expiry
+      - Rewards Points Gifting
+      - Co-Brand Conversions
+      - Company Level Rewards
+    - Function: Product Configuration
+      subfunctions:
+      - Multi-Organisation Setup
+      - Card Personalisation
+      - Fee Configuration
+      - Interest Configuration
+      - Statement & Billing Configuration
+      - Risk Parameters
+      - Rewards Configuration
+      - Company & Connection Setup
+    - Function: Collections
+      subfunctions:
+      - Workflow Setup
+      - Portfolio Management
+      - Queue Definition
+      - Customer Segmentation
+      - Worklist Actions
+      - Agency Management
+      - Credit Restructuring
+- name: wealth_securities_management
+  display_name: Wealth & Securities Management
+  description: Wealth management services covering investments, advisory, portfolio management, and client servicing for affluent
+    and high-net-worth customers.
+  spine:
+  - ProductLine: Wealth Management
+    functions:
+    - Function: RM Operations & Advisory
+      subfunctions:
+      - Client 360 Degree View
+      - Client Prospect Onboarding
+      - Client & Risk Profiling
+      - Multi-Level Portfolio Views
+      - Portfolio Comparison
+      - Performance Analytics & Attribution
+      - Simulations
+      - Rebalancing
+      - Order Capture
+      - Client Reports
+      - Performance Dashboard
+      - BUM Asset & Liabilities
+      - Revenues Tracking
+      - Targets vs Performance
+      - Top Clients & RMs
+      - GEO Team Asset Product Drilldown
+      - Portfolio Alerts
+      - Compliance Alerts
+      - Market Alerts
+      - Documentation Alerts
+      - Meeting Alerts
+      - Dashboard Widgets
+      - Alert Thresholds
+      - Personalisation
+    - Function: Relationship Services
+      subfunctions:
+      - Lead & Prospect Management
+      - Customer Onboarding
+      - Customer Family Groups
+      - Contact Management
+      - Customer Assignment & Handover
+      - Document Management
+      - Campaign Management
+      - Referral Management
+      - Customer Communication
+      - Service Log System
+    - Function: Financial Need Analysis
+      subfunctions:
+      - Client Risk Profiling
+      - Asset Allocation
+      - Financial Position Analysis
+      - Goal Planning
+      - Insurance Planning
+      - Retirement Planning
+      - Portfolio Construction
+      - Deviation Analysis
+      - Simulation
+      - Proposal Management
+    - Function: Order Management
+      subfunctions:
+      - Order Capture
+      - Order Validation
+      - Batching Aggregation & Tracking
+      - Order Routing
+      - Dealer Blotter
+      - Execution Capture
+      - Insurance Processing
+      - IPO & NFO Processing
+      - Limit Management
+    - Function: Trade Management
+      subfunctions:
+      - Trade Capture
+      - Reconciliation
+      - Correction & Reversal
+      - Trade Allocation
+      - Contracts
+      - Advice Generation
+      - Settlement
+      - Trade Lot Accounting
+    - Function: Portfolio Management
+      subfunctions:
+      - Model Portfolio Maintenance
+      - Advisory & Discretionary
+      - Transfers
+      - Assignment
+      - Simulation
+      - Goal Mapping & Tracking
+      - Alerts Management
+      - Corporate Actions
+    - Function: Portfolio Analytics
+      subfunctions:
+      - 360-Degree Portfolio View
+      - Geo Spatial & Multi-Dimensional Drilldown
+      - Gain & Loss Analytics
+      - Cash Flow Projections
+      - Portfolio Revaluation
+      - Risk-Adjusted Return Analytics
+      - Portfolio Back Testing & Monte Carlo
+      - Duration & Convexity
+      - BI & Advanced Analytics
+    - Function: Margin Lending
+      subfunctions:
+      - Facility Group Setup
+      - Haircut Definition
+      - Concentration Risk Definition
+      - Cross Currency Risk Definition
+      - Margin Monitoring
+      - Simulation
+      - Loan Against Shares
+      - Margin Financing & Trading
+      - Portfolio-Facility Mapping
+      - Collateral Management
+    - Function: Fees & Charges
+      subfunctions:
+      - Event & Criteria Definition
+      - Method of Pricing
+      - Distribution Commission
+      - Upfront & Backend Charges
+      - Trailer & AUM Based Fees
+      - RM & Brokers Commission
+      - Billing
+      - Payment Tracking
+    - Function: Accounting
+      subfunctions:
+      - Accounting Entry Definition
+      - Journal Entries
+      - Valuation Accounting
+      - Distribution Commission
+      - Handoff to GL
+  - ProductLine: Securities
+    functions:
+    - Function: Custody
+      subfunctions:
+      - Customer Onboarding
+      - Trade Processing
+      - Settlement Processing
+      - Corporate Action Processing
+      - Billing
+      - Web Custody
+      - Auto Mailer
+      - Vault Management
+      - Cash Ledger & Global Custody
+    - Function: Brokerage
+      subfunctions:
+      - Order Management
+      - Broker Risk Management
+      - Investor Risk Management
+      - Real-Time Mark to Market (MTM)
+      - Trade Management
+      - Clearing & Settlement
+      - Cash & Stock Management
+      - Research & Analytics
+      - Corporate Action Processing
+    - Function: Fund Administration
+      subfunctions:
+      - Fund Creation
+      - Fund Portfolio Management
+      - Portfolio Rebalancing
+      - Requisition & Order Management
+      - Trade Management
+      - What-If Analysis
+      - Settlement Processing
+      - Risk Management
+      - Corporate Action Processing
+    - Function: Fund Accounting
+      subfunctions:
+      - General Accounting
+      - Investment Accounting
+      - Risk Management
+      - Security Valuation & MTM
+      - Accruals & Amortisation
+      - NAV Computation
+      - NAV Reconciliation
+      - Cash Recon
+      - Fees & Charges
+    - Function: Fund Distribution
+      subfunctions:
+      - Mutual Fund Scheme Listing
+      - Distributor & Advisor Setup
+      - Customer Onboarding
+      - MF Transaction Management
+      - Systematic Transactions
+      - Non-Commercial Transactions
+      - Scheduled Transactions
+      - Payments Processing
+      - Fees & Charges
+    - Function: Transfer Agency
+      subfunctions:
+      - MF Product Creation
+      - Investment Account Opening
+      - Document Tracking
+      - Transaction Management
+      - Non-Financial Transaction
+      - Special Products
+      - Corporate Action Processing
+      - Unit Allocation
+      - Fees & Commission
+    - Function: Corporate Action Management
+      subfunctions:
+      - Events Maintenance
+      - Entitlements Generation
+      - Benefits Processing
+      - Rights Processing
+      - Primary Market Processing
+      - On-Market Buy-Back
+      - E-Voting
+      - Auto Event Creation
+- name: risk_compliance_fraud
+  display_name: Risk, Compliance & Fraud
+  description: Enterprise and regulatory risk functions covering financial crime, regulatory compliance, risk measurement,
+    controls, and monitoring across banking operations.
+  spine:
+  - ProductLine: Financial Crime
+    functions:
+    - Function: AML Monitoring
+      subfunctions:
+      - Transaction Monitoring
+      - Alert Management
+      - Case Investigation
+    - Function: Sanctions Screening
+      subfunctions:
+      - Watchlist Screening
+      - PEP Screening
+      - Real-time Screening
+    - Function: Fraud Management
+      subfunctions:
+      - Fraud Detection
+      - Fraud Investigation
+      - Fraud Prevention
+  - ProductLine: Regulatory Risk
+    functions:
+    - Function: Capital Adequacy
+      subfunctions:
+      - Basel Reporting
+      - Stress Testing
+      - ICAAP
+    - Function: Regulatory Reporting
+      subfunctions:
+      - Central Bank Reports
+      - MIS Reports
+      - LCR NSFR
+  - ProductLine: Operational Risk
+    functions:
+    - Function: Controls Management
+      subfunctions:
+      - KRI Monitoring
+      - RCSA
+      - Incident Management
+    - Function: Audit
+      subfunctions:
+      - Audit Planning
+      - Audit Execution
+      - Findings Management
+  - name: enterprise_hr_audit_others
+    display_name: Enterprise Functions - HR, Audit etc
+    description: Enterprise functions including HR, audit, finance, and shared services. Catch-all for miscellaneous docs;
+      chunks stored in Weaviate only (no KG/Spine).
+    keywords:
+    - human resources
+    - HR operations
+    - internal audit
+    - shared services
+    - procurement
+    - policy management
+    capabilities: []
+block_categories:
+- name: Requirement
+  description: Functional or non-functional requirement statement. 'The system shall...', capability descriptions, constraints.
+  maps_to_node: Requirement
+- name: Process
+  description: Concrete, named business process or operational procedure with identifiable steps, actors, systems, or inputs/outputs.
+    BPMN activities, SOPs, transactional workflows. NOT abstract methodology descriptions, conceptual frameworks, lifecycle
+    phase names, or sales narratives about approaches.
+  maps_to_node: Process
+- name: Rule
+  description: Business rule with explicit conditional outcome — both condition AND consequence stated. If X then Y, unless
+    X apply Y, when X triggers Y. Threshold constraints without a stated consequence are Requirements not Rules.
+  maps_to_node: Rule
+- name: Control
+  description: Operational control, compliance gate, SOX control, audit checkpoint. Mechanisms that enforce rules or mitigate
+    risks.
+  maps_to_node: Control
+- name: Regulation
+  description: External regulatory mandate, standard, or guideline. Basel III, OFAC, GDPR, PCI-DSS, RBI circular.
+  maps_to_node: Regulation
+- name: TestCase
+  description: Individual test procedure including manual test scripts, UI navigation test steps, and automated test definitions.
+    Blocks with preconditions, numbered steps (Navigate To, Click, Enter, Select, Verify), and expected results. Xray, Zephyr,
+    and Excel-based test sheets. ANY block describing how to manually or automatically execute a test belongs here — NOT in
+    Process. Individual UI steps (Navigate To, Click, Enter) are test steps within the TestCase node, not separate Process
+    entities.
+  maps_to_node: TestCase
+- name: Defect
+  description: Bug report, defect description, issue record from a defect tracking system.
+  maps_to_node: Defect
+- name: Incident
+  description: Production incident record, outage report, operational issue.
+  maps_to_node: Incident
+- name: UserStory
+  description: User story, feature request, change request. 'As a [role], I want [goal]...' or change descriptions.
+  maps_to_node: UserStory
+- name: AcceptanceCriteria
+  description: Acceptance criterion tied to a requirement. Given/When/Then, verification conditions, definition of done.
+  maps_to_node: AcceptanceCriteria
+- name: TechnicalSystem
+  description: Named software application, platform, module, or service described from a business or integration perspective.
+    System overview pages, application capability descriptions, system-to-system interface narratives. The block is primarily
+    ABOUT a system — what it does, what processes it supports, how it integrates. Distinguished from TechnicalSpec which contains
+    machine-readable interface definitions.
+  maps_to_node: System
+- name: TechnicalSpec
+  description: Machine-readable interface definitions — API contracts, OpenAPI/Swagger/WSDL schemas, endpoint definitions,
+    message format specifications. The block IS the interface contract not a narrative about a system. Extract the named API
+    or owning service as a System node (e.g. Loan API from LOAN.API.3). Do not extract operationIds or HTTP methods as System.
+    System narrative descriptions go to TechnicalSystem.
+  maps_to_node: System
+- name: TechnicalOps
+  description: Batch job definitions, ETL schedules, cron jobs, automated event handlers, configuration parameters, feature
+    flags, deployment procedures, environment settings, operational runbooks. Also includes system lifecycle steps like approval
+    events, status transitions, and scheduled data refreshes that are NOT user-facing business processes.
+  maps_to_node: _SKIP_KG
+- name: Reference
+  description: Glossary terms, definitions, acronyms, configurable parameters, reference material.
+  maps_to_node: _SKIP_KG
+- name: Diagram
+  description: Visual content — flowchart, architecture, BPMN, form image. Vision IE extracts entities into KG.
+  maps_to_node: _SKIP_KG
+- name: FormCapture
+  description: Data capture forms, input screens, KYC forms, application forms, Figma screen mockups. Contains field-value
+    pairs and validation rules. ALSO includes system screen guides and field listing documents — Temenos screen descriptions
+    listing visible fields (Username, Password, Arrangement, Status, Balance), screen layout documentation, and any block
+    that describes what fields appear on a system screen. Field names listed within a screen description are form fields,
+    not System entities.
+  maps_to_node: FormCapture
+- name: Narrative
+  description: General prose with no classifiable structure. Last resort — use only when no other category fits.
+  maps_to_node: _SKIP_KG
+node_types:
+- name: DomainRoot
+  layer: domain_structure
+  description: Customer-scoped domain anchor beneath CustomerRoot. Industry is metadata and never a graph root.
+  name_pattern: Exact domain key (snake_case)
+  examples:
+  - corporate_commercial
+  - consumer_retail
+- name: ProductLine
+  layer: domain_structure
+  description: Major business line within a domain. Hub node for graph traversal.
+  name_pattern: Title Case, business name as known to the bank
+  examples:
+  - SME Lending
+  - Trade Finance
+  - Cash Management
+- name: Function
+  layer: domain_structure
+  description: Business function within a product line. Groups related processes and requirements.
+  name_pattern: Title Case, verb-noun phrase preferred
+  examples:
+  - Loan Origination
+  - Loan Servicing
+  - Letter of Credit
+- name: SubFunction
+  layer: domain_structure
+  description: Specific capability within a function. Leaf of the pre-seeded spine.
+  name_pattern: Title Case
+  examples:
+  - Credit Assessment
+  - Collateral Valuation
+  - Repayment Processing
+- name: Requirement
+  layer: context
+  description: Functional or non-functional requirement statement. Core node for coverage and compliance tracing.
+  name_pattern: ID when present in source (FR-xx, REQ-xxx). Else short descriptive phrase ≤80 chars.
+  ie_examples:
+  - block_text: 'FR-04: The system shall auto-generate a repayment schedule (EMI or bullet) upon loan booking, reflecting
+      selected interest type, tenor, and repayment frequency.'
+    block_category: Requirement
+    spine_node: Repayment Processing
+    entities:
+    - type: Requirement
+      value: FR-04
+      description: The system shall auto-generate a repayment schedule (EMI or bullet) upon loan booking, reflecting selected
+        interest type, tenor, and repayment frequency.
+      confidence: 0.95
+    - type: Process
+      value: Loan Booking
+      confidence: 0.9
+    - type: Process
+      value: EMI Schedule Generation
+      confidence: 0.85
+    relationships:
+    - from_type: Requirement
+      from_value: FR-04
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: Loan Booking
+    - from_type: Requirement
+      from_value: FR-04
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: EMI Schedule Generation
+  - block_text: The system must validate that collateral value exceeds 120% of loan amount before approval can proceed.
+    block_category: Requirement
+    spine_node: Collateral Valuation
+    entities:
+    - type: Requirement
+      value: Collateral Validation Threshold
+      description: The system must validate that collateral value exceeds 120% of loan amount before approval can proceed.
+      confidence: 0.95
+    - type: Process
+      value: Loan Approval
+      confidence: 0.9
+    relationships:
+    - from_type: Requirement
+      from_value: Collateral Validation Threshold
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: Loan Approval
+  anti_examples:
+  - Do NOT extract narrative prose or section introductions as Requirement
+  - Do NOT extract section headings like '3. Functional Requirements' as Requirement
+  - Do NOT discard the descriptive text when an entity has an ID. Preserve the ID as `value` and extract the human-readable
+    statement into `description`.
+  - 'Do NOT replace the canonical entity ID with `ID : description`; `value` must remain the stable identifier used for graph
+    linking (e.g. FR-04).'
+  - Do NOT invent a description. It must be grounded in the source block.
+  - Do NOT duplicate the identifier inside description.
+- name: Process
+  layer: context
+  description: Named, executable business process or workflow with concrete operational steps, system interactions, or defined
+    inputs/outputs. Must be a specific process that an organization performs — not an abstract concept, methodology phase,
+    lifecycle stage name, or sales description of an approach.
+  name_pattern: Title Case, descriptive verb-noun phrase ≤80 chars
+  evidence_gate:
+    enabled: true
+    min_evidence_score: 3
+    step_keywords:
+    - step
+    - then
+    - after
+    - before
+    - first
+    - next
+    - followed by
+    - sequence
+    - procedure
+    - workflow
+    - navigate
+    - click
+    - enter
+    - select
+    actor_keywords:
+    - manager
+    - officer
+    - agent
+    - user
+    - team
+    - analyst
+    - clerk
+    - applicant
+    - customer
+    - borrower
+    - maker
+    - checker
+    - approver
+    - administrator
+    system_keywords:
+    - system
+    - module
+    - screen
+    - portal
+    - application
+    - database
+    - API
+    - interface
+    - core banking
+    - T24
+    - LOS
+    - CRM
+    - ERP
+    - SWIFT
+    action_keywords:
+    - execute
+    - process
+    - submit
+    - validate
+    - create
+    - generate
+    - verify
+    - approve
+    - reject
+    - initiate
+    - configure
+    - disburse
+    - accrue
+    - settle
+    - book
+    - capture
+    - assess
+    - classify
+    - compute
+    - reconcile
+    outcome_keywords:
+    - produces
+    - results in
+    - generates
+    - completes
+    - approved
+    - booked
+    - disbursed
+    - settled
+    - report produced
+    - outcome
+    - output
+    exclusion_keywords:
+    - batch
+    - scheduled job
+    - nightly run
+    - daily run
+    - eod processing
+    - eom processing
+    - accrual run
+    - posting run
+    - background job
+    - automated sweep
+    - scheduled task
+    - navigate to
+    - click on
+    - enter the field
+    - pre-requisites
+    - pre-condition
+    - test step
+    - login and approve
+  ie_examples:
+  - block_text: 'Loan disbursement initiation: The maker enters the disbursement instruction in LOS_Core specifying account
+      number, amount, and value date. The system validates available limit against sanctioned amount. On success the maker
+      submits for checker review. The checker approves in LOS_Core. On dual approval the disbursement request is transmitted
+      to Core Banking for fund transfer execution.'
+    block_category: Process
+    spine_node: Loan Disbursement
+    entities:
+    - type: Process
+      value: Loan Disbursement Initiation
+      confidence: 0.95
+    - type: System
+      value: LOS_Core
+      confidence: 0.9
+    - type: System
+      value: Core Banking
+      confidence: 0.88
+    - type: Actor
+      value: Maker
+      confidence: 0.85
+    - type: Actor
+      value: Checker
+      confidence: 0.85
+    relationships:
+    - from_type: Process
+      from_value: Loan Disbursement Initiation
+      rel_type: USES
+      to_type: System
+      to_value: LOS_Core
+    - from_type: Actor
+      from_value: Maker
+      rel_type: PERFORMS
+      to_type: Process
+      to_value: Loan Disbursement Initiation
+  anti_examples:
+  - Do NOT extract flowchart box labels like 'Check band' as Process — these are diagram elements
+  - Do NOT extract state names like 'Rejected' or 'Approved' as Process — these are states
+  - Do NOT extract data values like 'AggressiveProfile' as Process
+  - Do NOT extract abstract methodology stages like 'Requirement Stage', 'Design Stage', 'Test Planning', 'Test Execution',
+    'Test Design' as Process — these are methodology phases, not executable workflows
+  - Do NOT extract sales or marketing descriptions of approaches, capabilities, or value propositions as Process
+  - Do NOT extract lifecycle phase names (e.g., 'Planning Phase', 'Execution Phase') unless they describe concrete operational
+    steps with actors and systems
+  - Do NOT extract single-word abstract capabilities like 'Automation', 'Integration', 'Validation', 'Customization', 'Scale',
+    or 'Governance' as Process — these are generic concepts
+  - Do NOT extract product or tool feature names like 'Pulse Intelligence', 'Pulse Automation', 'Gateway Integration' as Process
+    — these are software components, not business processes
+  - Do NOT extract benefit descriptions or outcome phrases like 'Clarity & Testability', 'Faster Certification', 'Governed
+    Coverage Creation', 'Risk-Based Validation' as Process
+  - Do NOT extract SDLC activity labels like 'Risk Identification', 'System Impact Discovery', 'Historical Defect Intelligence'
+    as Process unless the text describes a specific workflow with concrete steps, actors, and systems
+  - 'Do NOT extract scheduled batch jobs, cron tasks, or automated events as Process — classify as TechnicalOps instead. Examples:
+    ''Daily DPD Calculation Batch'', ''Monthly EMI Due Generation'', ''Benchmark Rate Refresh Job'', ''Interest Accrual Suspension
+    Job'', ''End-of-Day Reconciliation'''
+  - 'Do NOT extract system lifecycle events or state transitions as Process — classify as TechnicalOps. Examples: ''Approval
+    Event'', ''Status Change'', ''File Upload Trigger'', ''Notification Dispatch'''
+  - Do NOT extract SubFunction spine node names as Process entities — EMI Calculation, Eligibility Check, Disbursement, NAB
+    Classification, Repayment Processing are pre-seeded SubFunction nodes. Set spine_node to the matching SubFunction instead.
+  - Do NOT extract API method names or REST endpoint strings as Process — createConsumerLoan, cancelArrangement, LOAN.API.3
+    PUT, POST /loans are API operations. Classify the block as TechnicalSpec.
+- name: Rule
+  layer: context
+  description: Business rule with explicit conditional logic — if X then Y, unless X apply Y, when X triggers Y. BOTH condition
+    AND consequence must be stated. Threshold constraints without a stated consequence are Requirements not Rules. For operational
+    enforcement mechanisms use Control instead.
+  name_pattern: Title Case or RULE-ID if present, descriptive ≤80 chars
+  ie_examples:
+  - block_text: 'Interest accrual ceases when account reaches 90+ DPD and is classified as Non-Accrual of Business (NAB).
+      Repayment priority follows: Interest → Charges → Tax → Principal.'
+    block_category: Rule
+    spine_node: Interest Accrual
+    entities:
+    - type: Rule
+      value: NAB Classification at 90 DPD
+      confidence: 0.95
+    - type: Rule
+      value: Repayment Priority Order
+      confidence: 0.9
+    - type: Process
+      value: Interest Accrual
+      confidence: 0.85
+    relationships:
+    - from_type: Process
+      from_value: Interest Accrual
+      rel_type: GOVERNED_BY
+      to_type: Rule
+      to_value: NAB Classification at 90 DPD
+  - block_text: If a pricing override is submitted, the user must provide documented justification, and the system must log
+      user ID, timestamp, old rate, new rate, and reason for the override.
+    block_category: Rule
+    entities:
+    - type: Rule
+      value: Pricing Override Justification
+      confidence: 0.95
+    - type: Process
+      value: Pricing Override
+      confidence: 0.9
+    relationships:
+    - from_type: Process
+      from_value: Pricing Override
+      rel_type: GOVERNED_BY
+      to_type: Rule
+      to_value: Pricing Override Justification
+  anti_examples:
+  - Do NOT extract narrative descriptions of policy background as Rule
+  - Do NOT extract external regulations (Basel III, OFAC) as Rule — use Regulation
+  - Do NOT extract operational controls (sanctions screening gate) as Rule — use Control
+  - Do NOT extract threshold constraints as Rule when no consequence is stated — collateral must exceed 120% is a Requirement
+    not a Rule
+  - Do NOT extract process sequencing language as Rule — maker submits for checker approval is a Process step not a Rule
+- name: Control
+  layer: context
+  description: Operational enforcement mechanism that mitigates risk or enforces rules. SOX controls, compliance gates, screening
+    checks, audit checkpoints. Distinct from Rule (which states the logic) — Control is the mechanism that enforces it.
+  name_pattern: Title Case, descriptive ≤80 chars
+  ie_examples:
+  - block_text: Real-time sanctions screening must execute on all outbound payments above $5,000. The screening control checks
+      against OFAC SDN, UN, and EU sanctions lists. Flagged transactions are held pending compliance review.
+    block_category: Control
+    entities:
+    - type: Control
+      value: Real-Time Sanctions Screening
+      confidence: 0.95
+    - type: Process
+      value: Outbound Payment Processing
+      confidence: 0.9
+    - type: Regulation
+      value: OFAC SDN List
+      confidence: 0.85
+    relationships:
+    - from_type: Control
+      from_value: Real-Time Sanctions Screening
+      rel_type: MITIGATES
+      to_type: Process
+      to_value: Outbound Payment Processing
+    - from_type: Control
+      from_value: Real-Time Sanctions Screening
+      rel_type: ENFORCED_BY
+      to_type: Regulation
+      to_value: OFAC SDN List
+  - block_text: 'KYC completion gate: No account can be activated until KYC verification status = COMPLETE and risk rating
+      is assigned. This is a mandatory SOX control for new customer onboarding.'
+    block_category: Control
+    entities:
+    - type: Control
+      value: KYC Completion Gate
+      confidence: 0.95
+    - type: Process
+      value: New Customer Onboarding
+      confidence: 0.9
+    relationships:
+    - from_type: Control
+      from_value: KYC Completion Gate
+      rel_type: MITIGATES
+      to_type: Process
+      to_value: New Customer Onboarding
+  anti_examples:
+  - Do NOT extract business logic like 'if amount > $1M then escalate' as Control — that is a Rule
+  - Do NOT extract external regulations as Control — use Regulation
+- name: Regulation
+  layer: context
+  description: External regulatory mandate, industry standard, or compliance guideline. Basel III, OFAC, GDPR, PCI-DSS, RBI
+    Master Circular, SOX. These are external to the bank and enforce Controls.
+  name_pattern: 'Official name or abbreviation as commonly known: Basel III, OFAC, GDPR'
+  ie_examples:
+  - block_text: All capital adequacy calculations must comply with Basel III norms. The bank maintains a minimum CET1 ratio
+      of 8% with a 2.5% conservation buffer as mandated by the central bank.
+    block_category: Regulation
+    entities:
+    - type: Regulation
+      value: Basel III
+      confidence: 0.95
+    - type: Process
+      value: Capital Adequacy Calculation
+      confidence: 0.9
+    - type: Rule
+      value: CET1 Minimum 8% Plus Conservation Buffer
+      confidence: 0.85
+    relationships:
+    - from_type: Process
+      from_value: Capital Adequacy Calculation
+      rel_type: COMPLIANT_WITH
+      to_type: Regulation
+      to_value: Basel III
+    - from_type: Rule
+      from_value: CET1 Minimum 8% Plus Conservation Buffer
+      rel_type: ENFORCED_BY
+      to_type: Regulation
+      to_value: Basel III
+  - block_text: PCI-DSS compliance requires encryption of cardholder data at rest and in transit. Annual penetration testing
+      and quarterly vulnerability scans are mandatory.
+    block_category: Regulation
+    entities:
+    - type: Regulation
+      value: PCI-DSS
+      confidence: 0.95
+    - type: Control
+      value: Cardholder Data Encryption
+      confidence: 0.9
+    relationships:
+    - from_type: Control
+      from_value: Cardholder Data Encryption
+      rel_type: ENFORCED_BY
+      to_type: Regulation
+      to_value: PCI-DSS
+  anti_examples:
+  - Do NOT extract internal policies as Regulation — those are Rules
+  - Do NOT extract control mechanisms as Regulation — those are Controls
+- name: FormCapture
+  description: A data capture form, input screen, or UI mockup. Stores extracted fields as properties and links to governing
+    controls/rules.
+  layer: context
+  name_pattern: Form title or screen name
+  ie_examples:
+  - block_text: 'KYC Verification Form for SME Loan Applicants. Fields: Applicant Name, Date of Incorporation, ID Type, ID
+      Number, Registered Address, Risk Rating, KYC Status, Verified By. Must be completed before account activation per CTRL-KYC-001.'
+    block_category: FormCapture
+    entities:
+    - type: FormCapture
+      value: KYC Verification Form
+      confidence: 0.95
+    - type: Control
+      value: CTRL-KYC-001
+      description: Must be completed before account activation
+      confidence: 0.9
+    relationships: null
+  anti_examples:
+  - System architecture diagram
+  - Process flow chart
+- name: UserStory
+  layer: use_case
+  description: User story or feature request. Links to requirements via IMPLEMENTS.
+  name_pattern: JIRA/tool ID when present (JIRA-xxx, USR-xxx). Else short title ≤80 chars.
+  ie_examples:
+  - block_text: 'As a relationship manager, I want to configure bullet repayment schedules for SME loans, so that product
+      setup reflects the agreed terms. Sprint: Q1-2025, Priority: High'
+    block_category: UserStory
+    entities:
+    - type: UserStory
+      value: Bullet Repayment Configuration
+      description: As a relationship manager, I want to configure bullet repayment schedules for SME loans, so that product
+        setup reflects the agreed terms.
+      confidence: 0.95
+    - type: Requirement
+      value: Bullet Repayment Schedule
+      confidence: 0.9
+    - type: Process
+      value: SME Loan Product Setup
+      confidence: 0.85
+    relationships:
+    - from_type: UserStory
+      from_value: Bullet Repayment Configuration
+      rel_type: IMPLEMENTS
+      to_type: Requirement
+      to_value: Bullet Repayment Schedule
+    - from_type: UserStory
+      from_value: Bullet Repayment Configuration
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: SME Loan Product Setup
+  anti_examples:
+  - Do NOT extract sprint name or priority as entities — these go into extracted_fields
+  - Do NOT extract the actor role from 'As a [role]' as a separate entity
+  - Do NOT discard the story text when an ID or short title is used as `value`; put the story/title summary in `description`.
+  - 'Do NOT replace the canonical entity ID/title with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include sprint, priority, or status metadata in `description` when those belong in extracted_fields.
+  - Do NOT invent a description. It must be grounded in the source block.
+- name: AcceptanceCriteria
+  layer: use_case
+  description: Acceptance criterion tied to a requirement. Validates requirement completeness.
+  name_pattern: AC-{parent_req}-{seq} when parent known. Else descriptive ≤80 chars.
+  ie_examples:
+  - block_text: 'AC-FR04-01: Given a new loan is booked with bullet repayment, When the schedule is generated, Then the system
+      shall create a single principal payment at maturity with periodic interest-only payments.'
+    block_category: AcceptanceCriteria
+    entities:
+    - type: AcceptanceCriteria
+      value: AC-FR04-01
+      description: Given a new loan is booked with bullet repayment, When the schedule is generated, Then the system shall
+        create a single principal payment at maturity with periodic interest-only payments.
+      confidence: 0.95
+    - type: Requirement
+      value: FR-04
+      confidence: 0.9
+    relationships:
+    - from_type: AcceptanceCriteria
+      from_value: AC-FR04-01
+      rel_type: VALIDATES
+      to_type: Requirement
+      to_value: FR-04
+  anti_examples:
+  - Do NOT extract Given/When/Then keywords as entities
+  - Do NOT discard the Given/When/Then statement when an AC ID is used as `value`; put the criterion text in `description`.
+  - 'Do NOT replace the canonical AC ID with `ID : description`; keep `value` as AC-FR04-01 for graph linking.'
+  - Do NOT invent a Requirement description when only the ID (e.g. FR-04) is referenced — leave description empty on that
+    reference.
+  - Do NOT duplicate the identifier inside description.
+- name: TestCase
+  layer: use_case
+  description: Individual test procedure including manual test scripts, UI navigation test steps, and automated test definitions.
+    Blocks with preconditions, numbered steps (Navigate To, Click, Enter, Select, Verify), and expected results. Xray, Zephyr,
+    and Excel-based test sheets. ANY block describing how to manually or automatically execute a test belongs here — NOT in
+    Process. Individual UI steps (Navigate To, Click, Enter) are test steps within the TestCase node, not separate Process
+    entities. Test case with steps, preconditions, expected results. Links to requirements via COVERS.
+  name_pattern: TC-{source_short}-{row#} for spreadsheets. Source ID if available (e.g., CLOS_DEL_SCN_004_TC_001). ≤80 chars.
+  ie_examples:
+  - block_text: 'Test Case CLOS_DEL_SCN_004_TC_001 | Scenario: Delinquency processing for Long Term Loan | Priority: High
+      | Requirement: DEL_CL_RTM_001 | Step 1: Login to LOS_Core | Step 2: Navigate to Delinquency screen | Step 3: Enter mandatory
+      fields | Expected: Delinquency classification applied'
+    block_category: TestCase
+    entities:
+    - type: TestCase
+      value: CLOS_DEL_SCN_004_TC_001
+      description: Delinquency processing for Long Term Loan
+      confidence: 0.95
+    - type: Requirement
+      value: DEL_CL_RTM_001
+      confidence: 0.9
+    - type: Process
+      value: Delinquency Processing
+      confidence: 0.85
+    - type: System
+      value: LOS_Core
+      confidence: 0.85
+    relationships:
+    - from_type: TestCase
+      from_value: CLOS_DEL_SCN_004_TC_001
+      rel_type: COVERS
+      to_type: Requirement
+      to_value: DEL_CL_RTM_001
+  anti_examples:
+  - Do NOT extract individual test steps as separate entities
+  - Do NOT extract test data values as entities
+  - Do NOT discard the scenario/title when a test case ID is used as `value`; put the scenario/title in `description`.
+  - 'Do NOT replace the canonical test case ID with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include priority, status, or step lists in `description` when those belong in extracted_fields.
+  - Do NOT invent a description. It must be grounded in the source block.
+- name: Defect
+  layer: use_case
+  description: Bug report or defect. Links to requirements (VIOLATES), test cases (MISSED_BY), incidents (LINKED_TO).
+  name_pattern: DEF-{ID} or source ID (e.g., SYN-CL-3001). ≤80 chars.
+  ie_examples:
+  - block_text: 'SYN-CL-3015 | Interest Accrual not suspended after NAB classification | Detection: SIT | Root Cause: Business
+      Logic Error | Module: Loan Servicing - Interest Accrual | Severity: High | Linked: USR-365'
+    block_category: Defect
+    entities:
+    - type: Defect
+      value: SYN-CL-3015
+      description: Interest Accrual not suspended after NAB classification
+      confidence: 0.95
+    - type: Requirement
+      value: USR-365
+      confidence: 0.9
+    - type: Process
+      value: Interest Accrual
+      confidence: 0.85
+    relationships:
+    - from_type: Defect
+      from_value: SYN-CL-3015
+      rel_type: VIOLATES
+      to_type: Requirement
+      to_value: USR-365
+    - from_type: Defect
+      from_value: SYN-CL-3015
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: Interest Accrual
+  anti_examples:
+  - Do NOT extract severity level or detection phase as entities — these go into extracted_fields
+  - Do NOT discard the defect title when a defect ID is used as `value`; put the title/summary in `description`.
+  - 'Do NOT replace the canonical defect ID with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include severity, detection phase, root cause, or status in `description` when those belong in extracted_fields.
+  - Do NOT invent a description. It must be grounded in the source block.
+- name: Incident
+  layer: use_case
+  description: Production incident record. Links to defects for root cause analysis.
+  name_pattern: INC-{ID} from source. ≤80 chars.
+  ie_examples:
+  - block_text: 'INC-LOAN-089: Production incident — bullet repayment not applied to 12 new loans booked after config change.
+      Impact: High. Related defect: DEF-2024-0567.'
+    block_category: Incident
+    entities:
+    - type: Incident
+      value: INC-LOAN-089
+      description: Production incident — bullet repayment not applied to 12 new loans booked after config change.
+      confidence: 0.95
+    - type: Defect
+      value: DEF-2024-0567
+      confidence: 0.9
+    - type: Process
+      value: Loan Booking
+      confidence: 0.85
+    relationships:
+    - from_type: Defect
+      from_value: DEF-2024-0567
+      rel_type: LINKED_TO
+      to_type: Incident
+      to_value: INC-LOAN-089
+    - from_type: Incident
+      from_value: INC-LOAN-089
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: Loan Booking
+  - block_text: 'Incident INC-PAY-2024-041: RTGS payment gateway experienced intermittent timeouts between 14:00-16:30 UTC
+      on 2024-06-12. Approximately 340 outbound payments were delayed. Severity P1. Operations team performed manual failover
+      to backup gateway. Root cause under investigation. Impacts RTGS Payment Processing and downstream settlement.'
+    block_category: Incident
+    entities:
+    - type: Incident
+      value: INC-PAY-2024-041
+      description: RTGS payment gateway experienced intermittent timeouts between 14:00-16:30 UTC on 2024-06-12. Approximately
+        340 outbound payments were delayed.
+      confidence: 0.95
+    - type: System
+      value: RTGS Payment Gateway
+      confidence: 0.9
+    - type: Process
+      value: RTGS Payment Processing
+      confidence: 0.85
+    relationships:
+    - from_type: Incident
+      from_value: INC-PAY-2024-041
+      rel_type: IMPACTS
+      to_type: System
+      to_value: RTGS Payment Gateway
+    - from_type: Incident
+      from_value: INC-PAY-2024-041
+      rel_type: IMPACTS
+      to_type: Process
+      to_value: RTGS Payment Processing
+  anti_examples:
+  - Do NOT extract the impact level as an entity
+  - Do NOT discard the incident summary when an incident ID is used as `value`; put the summary in `description`.
+  - 'Do NOT replace the canonical incident ID with `ID : description`; `value` must remain the stable graph identifier.'
+  - Do NOT include severity, timestamps, or status alone in `description` when those belong in extracted_fields.
+  - Do NOT invent a description. It must be grounded in the source block.
+- name: System
+  layer: technical
+  description: 'A named, deployable banking software platform, application, integration system, or named API service — something
+    you can install, configure, or connect to. Valid examples: Temenos Transact, Murex, Finastra TI+, Kondour, Payment Hub,
+    Online Banking Portal, Mobile Banking App, SWIFT Gateway, SMS Gateway, Statement Generation System, Core Banking System,
+    LOS_Core, Actimize AML, Loan API. From TechnicalSpec API catalogs, extract the named API or service (Loan API from LOAN.API.3),
+    not the operation. NOT HTTP methods, NOT operationIds, NOT REST paths, NOT accounting transaction codes, NOT customer
+    types, NOT generic module references without a product name.'
+  name_pattern: Title Case, proper product name ≤80 chars
+  ie_examples:
+  - block_text: The payment hub integrates with Temenos Transact for account validation, SWIFT Gateway for cross-border message
+      transmission, and the SMS Gateway for customer notifications. Finastra TI+ handles treasury deal processing and feeds
+      position data to Murex for risk calculation.
+    block_category: TechnicalSystem
+    entities:
+    - type: System
+      value: Payment Hub
+      confidence: 0.97
+    - type: System
+      value: Temenos Transact
+      confidence: 0.97
+    - type: System
+      value: SWIFT Gateway
+      confidence: 0.95
+    - type: System
+      value: SMS Gateway
+      confidence: 0.92
+    - type: System
+      value: Finastra TI+
+      confidence: 0.95
+    - type: System
+      value: Murex
+      confidence: 0.95
+    relationships:
+    - from_type: System
+      from_value: Payment Hub
+      rel_type: INTEGRATES_WITH
+      to_type: System
+      to_value: Temenos Transact
+    - from_type: System
+      from_value: Payment Hub
+      rel_type: INTEGRATES_WITH
+      to_type: System
+      to_value: SWIFT Gateway
+    - from_type: System
+      from_value: Finastra TI+
+      rel_type: INTEGRATES_WITH
+      to_type: System
+      to_value: Murex
+  - block_text: I.NO Method Operation Id Operation Description. LOAN.API.3 PUT cancelArrangement Performs the loan cancellation
+      for buy now pay later service. LOAN.API.4 POST createConsumerLoan Creates the creation of consumer loan for the given
+      product.
+    block_category: TechnicalSpec
+    entities:
+    - type: System
+      value: Loan API
+      confidence: 0.92
+    relationships: []
+  anti_examples:
+  - Do NOT extract accounting entries as System — Dr Cash Arrangement, Cr Loan Account, Repayment To Me, Dr Customer Account
+    are transaction/accounting codes not systems.
+  - Do NOT extract customer types or customer states as System — Individual Customer, Corporate Customer, Unauthorised Customer,
+    Deceased Customer are Actor or DataEntity types not systems.
+  - Do NOT extract process or action names as System — Create Prospect, Activate Customer, Amend Customer, Authorise Customer,
+    Delete External User are Processes not systems.
+  - Do NOT extract abbreviations or transaction codes as System — Cm, Ft, Tt, Bom, Tab Arrangement Bom are codes not named
+    systems.
+  - Do NOT extract UI elements or menus as System — User Menu, Customer Relationship, Individual Customer Portal are UI elements
+    not systems.
+  - Do NOT extract generic words alone as System — System, Module, Engine, Service, Layer without a proper product name are
+    not valid System entities.
+  - Do NOT extract API operationIds, HTTP methods, or REST paths as System — cancelArrangement, createConsumerLoan, PUT, POST
+    /loans are operations on a system, not the system. From a TechnicalSpec API catalog, extract the named API or service
+    (Loan API from LOAN.API.3) as System.
+- name: DataEntity
+  layer: technical
+  description: Named data object, report, or master record. Connected to processes via PRODUCES.
+  name_pattern: Title Case, descriptive ≤80 chars
+  ie_examples:
+  - text: The Loan Disbursement Process produces the Loan Repayment Schedule containing principal, interest, due date, and
+      outstanding balance.
+    entities:
+    - type: DataEntity
+      value: Loan Repayment Schedule
+      confidence: 0.95
+    - type: Process
+      value: Loan Disbursement Process
+      confidence: 0.9
+    relationships:
+    - from_type: Process
+      from_value: Loan Disbursement Process
+      rel_type: PRODUCES
+      to_type: DataEntity
+      to_value: Loan Repayment Schedule
+  - text: The Customer Master Record stores customer identity, contact, risk classification, and KYC status used during customer
+      onboarding.
+    entities:
+    - type: DataEntity
+      value: Customer Master Record
+      confidence: 0.95
+    - type: Process
+      value: Customer Onboarding
+      confidence: 0.9
+    relationships: []
+  anti_examples:
+  - Do NOT extract field names like 'SSN' or 'Email' as DataEntity
+  - Do NOT extract PII types as DataEntity
+- name: Actor
+  layer: context
+  description: A role or persona that performs processes. Extracted from BPMN swimlanes, process docs. Enables role-based
+    testing traversal.
+  name_pattern: 'Title case role name: Relationship Manager, Credit Analyst, Back Office'
+  anti_examples:
+  - Do NOT extract system names as Actor — use System instead
+  - Do NOT extract department names as Actor unless they represent a specific role
+  ie_examples:
+  - text: The Relationship Manager initiates the loan application and submits it to Credit Underwriting.
+    entities:
+    - type: Actor
+      value: Relationship Manager
+      confidence: 0.95
+    - type: Process
+      value: Loan Application
+      confidence: 0.9
+    relationships:
+    - from_type: Actor
+      from_value: Relationship Manager
+      rel_type: PERFORMS
+      to_type: Process
+      to_value: Loan Application
+  - text: The Credit Analyst reviews the applicant's financial information and performs credit assessment before the loan
+      approval decision.
+    entities:
+    - type: Actor
+      value: Credit Analyst
+      confidence: 0.95
+    - type: Process
+      value: Credit Assessment
+      confidence: 0.9
+    relationships:
+    - from_type: Actor
+      from_value: Credit Analyst
+      rel_type: PERFORMS
+      to_type: Process
+      to_value: Credit Assessment
+relationship_types:
+- name: PART_OF
+  allowed_triples:
+  - from: SubFunction
+    to: Function
+  - from: Function
+    to: ProductLine
+  - from: ProductLine
+    to: DomainRoot
+  - from: Process
+    to: Function
+  description: Hierarchical membership. Child is part of parent.
+  verb: is part of
+  example:
+    from: Loan Origination
+    to: SME Lending
+    evidence: Loan Origination is a function within the SME Lending product line
+    from_type: Function
+    to_type: ProductLine
+  anti_example: Do NOT use PART_OF for non-hierarchical connections — use IMPACTS instead
+- name: IMPLEMENTS
+  from: UserStory
+  to: Requirement
+  description: User story implements or realizes a requirement.
+  verb: implements
+  example:
+    from: USR-365
+    to: FR-04
+    evidence: User story USR-365 implements the EMI schedule generation requirement FR-04
+  anti_example: Do NOT use IMPLEMENTS for TestCase→Requirement (use COVERS)
+- name: COVERS
+  from: TestCase
+  to: Requirement
+  description: Test case covers or tests a requirement.
+  verb: covers
+  example:
+    from: CLOS_DEL_SCN_004_TC_001
+    to: DEL_CL_RTM_001
+    evidence: Test case validates delinquency processing requirement
+  anti_example: Do NOT use COVERS for UserStory→Requirement (use IMPLEMENTS)
+- name: VALIDATES
+  from: AcceptanceCriteria
+  to: Requirement
+  description: Acceptance criterion validates a requirement's completeness.
+  verb: validates
+  example:
+    from: AC-FR04-01
+    to: FR-04
+    evidence: AC defines the expected bullet repayment schedule output for requirement FR-04
+  anti_example: Do NOT use VALIDATES for TestCase→Requirement (use COVERS)
+- name: IMPACTS
+  allowed_triples:
+  - from: UserStory
+    to: Process
+  - from: UserStory
+    to: System
+  - from: UserStory
+    to: DataEntity
+  - from: Requirement
+    to: Process
+  - from: Requirement
+    to: System
+  - from: Requirement
+    to: DataEntity
+  - from: Requirement
+    to: Control
+  - from: Defect
+    to: Process
+  - from: Defect
+    to: System
+  - from: Defect
+    to: DataEntity
+  - from: Incident
+    to: Process
+  - from: Incident
+    to: System
+  - from: Incident
+    to: DataEntity
+  - from: Process
+    to: Process
+  description: General impact relationship. Source impacts the target. Used for change analysis and blast radius.
+  verb: impacts
+  example:
+    from: FR-04
+    to: EMI Schedule Generation
+    evidence: Requirement FR-04 impacts the EMI schedule generation process
+    from_type: Requirement
+    to_type: Process
+  anti_example: Do NOT use IMPACTS for hierarchical relationships (use PART_OF)
+- name: GOVERNED_BY
+  allowed_triples:
+  - from: Process
+    to: Rule
+  - from: Process
+    to: Control
+  description: Process is governed by a rule or controlled by an operational control.
+  verb: is governed by
+  example:
+    from: Interest Accrual
+    to: NAB Classification at 90 DPD
+    evidence: Interest accrual ceases when NAB classification rule triggers at 90+ DPD
+    from_type: Process
+    to_type: Rule
+  anti_example: Do NOT use GOVERNED_BY for process-to-process connections (use IMPACTS)
+- name: USES
+  from: Process
+  to: System
+  description: Process executes on or uses a system.
+  verb: uses
+  example:
+    from: Delinquency Processing
+    to: LOS_Core
+    evidence: Delinquency processing runs on the LOS Core system
+  anti_example: Do NOT use USES for process-to-process connections (use IMPACTS)
+- name: VIOLATES
+  allowed_triples:
+  - from: Defect
+    to: Requirement
+  - from: Defect
+    to: AcceptanceCriteria
+  description: Defect violates or breaches a requirement or acceptance criterion.
+  verb: violates
+  example:
+    from: SYN-CL-3015
+    to: FR-04
+    evidence: Defect SYN-CL-3015 violates the interest accrual suspension requirement
+    from_type: Defect
+    to_type: Requirement
+  anti_example: Do NOT use VIOLATES for non-defect entities
+- name: MISSED_BY
+  from: Defect
+  to: TestCase
+  description: Defect was missed by (should have been caught by) a test case.
+  verb: was missed by
+  example:
+    from: SYN-CL-3015
+    to: CLOS_DEL_SCN_004_TC_001
+    evidence: Delinquency test case should have caught the NAB classification defect
+  anti_example: Do NOT use MISSED_BY for test cases that correctly found the defect
+- name: LINKED_TO
+  from: Defect
+  to: Incident
+  description: Bidirectional link between a defect and a production incident.
+  verb: is linked to
+  example:
+    from: DEF-2024-0567
+    to: INC-LOAN-089
+    evidence: Defect DEF-2024-0567 caused production incident INC-LOAN-089
+  anti_example: Do NOT use LINKED_TO for unrelated defect-incident pairs
+- name: PRODUCES
+  from: Process
+  to: DataEntity
+  description: Process produces or generates a data artifact.
+  verb: produces
+  example:
+    from: Regulatory Reporting Batch
+    to: Portfolio Outstanding Report
+    evidence: The batch job generates the portfolio outstanding report
+  anti_example: Do NOT use PRODUCES for process-to-process outputs (use IMPACTS)
+- name: CROSS_DOMAIN_IMPACTS
+  from: Process
+  to: Process
+  description: Process in one domain impacts a process in another domain. Cross-domain only.
+  verb: cross-domain impacts
+  example:
+    from: SME Loan Product Setup
+    to: Capital Adequacy Calculation
+    evidence: Changes to SME loan products affect capital adequacy calculations in the risk domain
+  anti_example: Do NOT use CROSS_DOMAIN_IMPACTS for same-domain process connections (use IMPACTS)
+- name: PERFORMS
+  from: Actor
+  to: Process
+  description: Actor/role performs or executes a process. Enables role-based testing queries.
+  verb: performs
+  example:
+    from: Relationship Manager
+    to: Loan Application
+    evidence: The RM initiates and manages the loan application process
+  anti_example: Do NOT use PERFORMS for Process-to-System — use USES instead. PERFORMS is Actor-to-Process only.
+- name: MITIGATES
+  allowed_triples:
+  - from: Control
+    to: Process
+  - from: Control
+    to: Rule
+  description: Control mitigates risk in a process or enforces a rule. Control → Process means the control governs/gates the
+    process.
+  verb: mitigates
+  example:
+    from: Real-Time Sanctions Screening
+    to: Outbound Payment Processing
+    evidence: Sanctions screening control gates all outbound payments before release
+    from_type: Control
+    to_type: Process
+  anti_example: Do NOT use MITIGATES for Process-to-Rule or Process-to-Control — use GOVERNED_BY instead. MITIGATES is Control-to-Process
+    or Control-to-Rule.
+- name: ENFORCED_BY
+  allowed_triples:
+  - from: Rule
+    to: Regulation
+  - from: Control
+    to: Regulation
+  description: Rule or control is enforced by an external regulation. Links internal governance to external mandates.
+  verb: is enforced by
+  example:
+    from: CET1 Minimum 8% Plus Conservation Buffer
+    to: Basel III
+    evidence: The CET1 ratio rule is mandated by Basel III capital adequacy norms
+    from_type: Rule
+    to_type: Regulation
+  anti_example: Do NOT use ENFORCED_BY between two internal rules — use GOVERNED_BY
+- name: COMPLIANT_WITH
+  from: Process
+  to: Regulation
+  description: Process must comply with an external regulation. Used for compliance tracing.
+  verb: complies with
+  example:
+    from: Capital Adequacy Calculation
+    to: Basel III
+    evidence: Capital adequacy calculations must meet Basel III requirements
+  anti_example: Do NOT use COMPLIANT_WITH for internal rules (use GOVERNED_BY)
+- name: INTEGRATES_WITH
+  from: System
+  to: System
+  description: System-to-system integration point. Captures interfaces, APIs, file feeds, and messaging between systems without
+    creating a separate Interface node.
+  verb: integrates with
+  example:
+    from: LOS_Core
+    to: Core Banking System
+    evidence: LOS sends approved loan records to Core Banking via real-time API for account creation
+  anti_example: Do NOT use INTEGRATES_WITH for process-to-system — use USES instead
+vision_ie_type_mapping:
+  entity_types:
+    Decision: Process
+    Component: System
+    Activity: Process
+    Actor: Actor
+    Control: Control
+    Form: FormCapture
+    Screen: FormCapture
+    InputForm: FormCapture
+  relationship_types:
+    NEXT_STEP: _EXTRACTED_KNOWLEDGE
+    GATEWAY_TO: _EXTRACTED_KNOWLEDGE
+    CONDITION_IF_YES: _EXTRACTED_KNOWLEDGE
+    CONDITION_IF_NO: _EXTRACTED_KNOWLEDGE
+    PERFORMED_BY: PERFORMS
+    ACTED_BY: PERFORMS
+    CONTROL_PROTECTS_PROCESS: MITIGATES
+path_format:
+  style: natural_with_metadata
+  include_evidence: true
+  include_provenance: true
+  template: "CHAIN_SYMBOLIC: {chain_symbolic}\nCHAIN_NATURAL: {chain_natural}\nRELATIONSHIP: {from_name} {rel_type_natural}\
+    \ {to_name}\n  TYPE: {from_type} -> {to_type} ({rel_type})\n  EVIDENCE: \"{source_evidence}\"\n  SOURCE: {source_file}\
+    \ [Page: {source_page}, Block: {source_block_id}]\n"
+  rel_type_to_natural:
+    PART_OF: is part of
+    IMPLEMENTS: implements
+    COVERS: covers
+    VALIDATES: validates
+    IMPACTS: impacts
+    GOVERNED_BY: is governed by
+    USES: uses
+    VIOLATES: violates
+    MISSED_BY: was missed by
+    LINKED_TO: is linked to
+    PRODUCES: produces
+    CROSS_DOMAIN_IMPACTS: cross-domain impacts
+    PERFORMS: performs
+    MITIGATES: mitigates
+    ENFORCED_BY: is enforced by
+    COMPLIANT_WITH: complies with
+    INTEGRATES_WITH: integrates with
+    NODE_IN_DOMAIN: is in domain

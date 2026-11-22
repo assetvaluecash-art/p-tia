@@ -1,0 +1,20 @@
+[
+  {
+    "from": "statement-service",
+    "to": "payments-api",
+    "path": "/accounts/{account_id}/payments",
+    "environment": "production"
+  },
+  {
+    "from": "mobile-bff",
+    "to": "payments-api",
+    "path": "/accounts/{account_id}/payments",
+    "environment": "production"
+  },
+  {
+    "from": "partner-portal",
+    "to": "payments-api",
+    "path": "/accounts/{account_id}/payments",
+    "environment": "production"
+  }
+]

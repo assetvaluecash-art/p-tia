@@ -1,0 +1,93 @@
+{
+  "scenarios": {
+    "feature/holds": {
+      "status": "complete_with_gaps",
+      "change_type": "implementation_change",
+      "selected": [
+        "NW-01",
+        "NW-02",
+        "NW-03",
+        "NW-07",
+        "NW-08"
+      ],
+      "entry_points": [
+        "GET /accounts/{account_id}/balance",
+        "POST /payments"
+      ],
+      "see": "Regression-test 5 of your 14. Configuration: balance_of now reads HOLDS_ENABLED, no file sets it (set it in Dev); held_amount already reads the same key."
+    },
+    "feature/min-balance": {
+      "status": "complete_with_gaps",
+      "change_type": "config_or_file_change",
+      "selected": [
+        "NW-01",
+        "NW-02",
+        "NW-03"
+      ],
+      "entry_points": [
+        "POST /payments"
+      ],
+      "see": "Regression-test 3 of your 14. Configuration: MIN_BALANCE changes value in config/app.env, read by can_pay. No value is shown."
+    },
+    "feature/fee-change": {
+      "status": "complete_with_gaps",
+      "change_type": "implementation_change",
+      "selected": [
+        "NW-01",
+        "NW-02",
+        "NW-03",
+        "NW-09"
+      ],
+      "entry_points": [
+        "POST /payments",
+        "POST /payments/{payment_id}/refund"
+      ],
+      "see": "Regression-test 4 of your 14: making a payment and refunding one (both charge the fee)."
+    },
+    "feature/remove-disputed": {
+      "status": "complete_with_gaps",
+      "change_type": "api_change",
+      "selected": [
+        "NW-06",
+        "NW-08",
+        "NW-11",
+        "NW-12"
+      ],
+      "entry_points": [
+        "GET /accounts/{account_id}/payments",
+        "GET /mobile/accounts/{account_id}/activity",
+        "GET /statements/{account_id}/pdf"
+      ],
+      "see": "BREAKING: PaymentRow.disputed removed. Critical finding on statement-service, high on mobile-bff. A rule gap (statement-service leaves out disputed payments, mobile-bff does not) and a consistency check. Regression-test 4 of your 14."
+    },
+    "feature/drop-reference": {
+      "status": "partial",
+      "change_type": "data_change",
+      "selected": [
+        "NW-04",
+        "NW-05",
+        "NW-06",
+        "NW-08",
+        "NW-09",
+        "NW-12"
+      ],
+      "entry_points": [
+        "GET /accounts/{account_id}/payments",
+        "GET /mobile/accounts/{account_id}/activity",
+        "GET /payments/{payment_id}",
+        "POST /payments/{payment_id}/refund"
+      ],
+      "see": "BREAKING data change: column payments.reference dropped while payments-api and mobile-bff (same database) still map it. Status PARTIAL on purpose: the walk reaches the depth limit (8), stated under Unknowns; raise max_depth in section 6 to follow it further. Regression-test 6 of your 14."
+    },
+    "docs/clarify": {
+      "status": "complete_with_gaps",
+      "change_type": "no_functional_change",
+      "selected": [],
+      "entry_points": [],
+      "see": "Documentation only: nothing to retest (Regression-test 0 of your 14)."
+    }
+  },
+  "always_unmapped": [
+    "NW-14"
+  ]
+}

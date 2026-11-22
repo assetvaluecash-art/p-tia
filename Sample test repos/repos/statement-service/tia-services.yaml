@@ -1,0 +1,7 @@
+service: statement-service
+owner: team-statements
+criticality: critical
+config_keys:
+  PAYMENTS_BASE_URL: payments-api
+entry_points:
+  GET /statements/{account_id}/pdf: Monthly statement PDF

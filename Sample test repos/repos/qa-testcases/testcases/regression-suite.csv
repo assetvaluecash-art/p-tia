@@ -1,0 +1,15 @@
+ID,Title,Entry point,Steps,Expected Result,Priority
+NW-01,Create a payment,POST /payments,"Pay 50 EUR from account ACC1001 with reference INV1",The payment is created with status PENDING,High
+NW-02,Payment refused below the minimum balance,POST /payments,Pay 450 EUR from ACC1001 (balance 500),Refused: 409 insufficient balance,High
+NW-03,Pay screen rejects an amount above the limit,/pay,"Open the Pay screen, enter 20000 and press Pay",The amount field shows an error,Medium
+NW-04,View a payment,GET /payments/{payment_id},Open payment PINV1,The payment details are shown,Medium
+NW-05,Unknown payment,GET /payments/{payment_id},Open payment NOPE,404 unknown payment,Low
+NW-06,Payment history,GET /accounts/{account_id}/payments,Open the payments of ACC1001,Every payment is listed with its status,High
+NW-07,Account balance,GET /accounts/{account_id}/balance,Open the balance of ACC1001,The balance and currency are shown,High
+NW-08,Accounts screen shows the balance,/accounts,Sign in and open Accounts,The balance of the chosen account is shown,Medium
+NW-09,Refund a payment,POST /payments/{payment_id}/refund,Refund payment PINV1,The payment is REFUNDED; the fee is kept,High
+NW-10,Exchange rates,GET /fx/rates,Open the exchange rates,EUR USD and GBP are listed,Low
+NW-11,Statement leaves out disputed payments,GET /statements/{account_id}/pdf,Dispute a payment then download the statement,The disputed payment is not in the PDF,High
+NW-12,Mobile activity shows every payment,GET /mobile/accounts/{account_id}/activity,Open the activity of ACC1001 in the app,Every payment is listed newest first,Medium
+NW-13,Sign in,/login,Enter user name and password and press Sign in,The Accounts screen opens,Medium
+NW-14,Archive export reaches the archive,,Export last month's statements,The archive receives the file,Low

@@ -1,0 +1,7 @@
+service: mobile-bff
+owner: team-mobile
+database: payments-db
+config_keys:
+  PAYMENTS_BASE_URL: payments-api
+entry_points:
+  GET /mobile/accounts/{account_id}/activity: Mobile activity

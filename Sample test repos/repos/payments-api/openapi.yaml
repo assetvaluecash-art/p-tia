@@ -1,0 +1,19 @@
+openapi: 3.0.3
+info: {title: Northwind payments API, version: "1.0"}
+paths:
+  /payments/{payment_id}:
+    get:
+      operationId: getPayment
+      parameters:
+        - {name: payment_id, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: the payment
+          content:
+            application/json:
+              example: {payment_id: PINV1, account_id: ACC1001, amount: 50.0, currency: EUR, status: PENDING}
+        "404":
+          description: unknown payment
+          content:
+            application/json:
+              example: {detail: unknown payment}

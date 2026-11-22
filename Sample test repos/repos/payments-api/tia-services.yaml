@@ -1,0 +1,9 @@
+service: payments-api
+owner: team-payments
+criticality: critical
+database: payments-db
+entry_points:
+  POST /payments: Make a payment
+  GET /accounts/{account_id}/balance: Account balance
+  GET /accounts/{account_id}/payments: Payment history
+  POST /payments/{payment_id}/refund: Refund a payment

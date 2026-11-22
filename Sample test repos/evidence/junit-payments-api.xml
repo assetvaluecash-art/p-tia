@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<testsuites><testsuite name="pytest" tests="3">
+  <testcase classname="tests.test_api" name="test_create_payment" file="tests/test_api.py" time="0.11"/>
+  <testcase classname="tests.test_api" name="test_balance" file="tests/test_api.py" time="0.04">
+    <failure message="assert 'USD' == 'EUR'">the balance came back in the wrong currency</failure></testcase>
+  <testcase classname="tests.test_api" name="test_unknown_payment" file="tests/test_api.py" time="0.03"/>
+</testsuite></testsuites>

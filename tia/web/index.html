@@ -323,6 +323,16 @@
   </div>
   <div id="trout"></div><div id="calout"></div>
 </section>
+<section id="kfsec">
+  <h2>5c. Knowledge Fabric: business rules to review</h2>
+  <p class="mut">Rules found in code (conditions such as <code>not p['disputed']</code>) and Knowledge Fabric business rules (sentences) are never linked by name. TIA proposes pairs that share field names or words; confirm the right ones and they become links, so a change to that code shows the business rule and its test cases. Rejected pairs are not proposed again.</p>
+  <div class="ctl">
+    <div><button class="sec" id="kfrgo" type="button">Show pairs to review</button></div>
+    <div><label for="kfrstatus">Show</label><select id="kfrstatus"><option value="pending">to review</option><option value="confirmed">confirmed</option><option value="">all</option></select></div>
+    <span id="kfrmsg" class="mut" aria-live="polite"></span>
+  </div>
+  <div id="kfrout"></div>
+</section>
 <section id="cfgsec">
   <h2>6. Configuration <span id="cfgid" class="pill"></span></h2>
   <p class="mut" id="cfgmeta">Per-tenant limits, severity rules, criticality and path prefixes. Every save is a new immutable version.</p>
@@ -435,6 +445,32 @@ $("cfgsave").onclick = async () => {
   else { const d = r.j.detail; cfgProblems(d && d.problems ? d.problems : [typeof d === "string" ? d : "Save failed"]); msg("cfgmsg", "Not saved", "err"); }
 };
 $("cfgreload").onclick = cfgLoad;
+// ---- Knowledge Fabric rule review (docs/KF-BRIDGE.md section 10)
+async function kfRules() {
+  const st = $("kfrstatus").value;
+  $("kfrmsg").textContent = "Loading...";
+  try {
+    const j = await api("/api/v1/kf/rule-proposals" + (st ? "?status=" + encodeURIComponent(st) : ""));
+    $("kfrmsg").textContent = `${j.summary.pending} pair(s) to review, ${j.summary.confirmed_links} confirmed link(s); from the bridge run of ${j.at}.`;
+    $("kfrout").innerHTML = j.proposals.length ? `<table id="kfrtable"><thead><tr><th>Rule in code</th><th>Knowledge Fabric rule</th><th style="width:12%">Why proposed</th><th style="width:16%"></th></tr></thead><tbody>` +
+      j.proposals.map(p => `<tr><td><code>${esc(p.expr)}</code><br><span class="mut">${esc(p.service)} &middot; ${esc((p.function || "").split("::").pop())}</span></td>
+        <td><b>${esc(p.kf_rule)}</b> <span class="mut">(${esc(p.domain)})</span>${p.kf_description ? `<br><span class="mut">${esc(p.kf_description)}</span>` : ""}</td>
+        <td>score ${esc(p.score)}${p.shared_fields.length ? `<br><span class="mut">fields: ${p.shared_fields.map(esc).join(", ")}</span>` : ""}</td>
+        <td>${p.status === "pending" ? `<button class="sec" data-kfr="${esc(p.id)}" data-d="confirm">Confirm</button> <button class="sec" data-kfr="${esc(p.id)}" data-d="reject">Reject</button>` : `<span class="pill">${esc(p.status)}</span> <span class="mut">${esc(p.decided_by || "")}</span>`}</td></tr>`).join("") +
+      `</tbody></table>` : `<p class="mut">Nothing to show.</p>`;
+  } catch (e) { $("kfrmsg").textContent = String(e.message || e); $("kfrout").innerHTML = ""; }
+}
+$("kfrgo").onclick = kfRules;
+$("kfrout").addEventListener("click", async ev => {
+  const b = ev.target.closest("button[data-kfr]");
+  if (!b) return;
+  busy(b, true);
+  try {
+    await api("/api/v1/kf/rule-proposals/" + encodeURIComponent(b.dataset.kfr), {method: "POST", body: {decision: b.dataset.d}});
+    $("kfrmsg").textContent = b.dataset.d === "confirm" ? "Confirmed: the link is written on the next bridge run." : "Rejected.";
+    b.closest("td").innerHTML = `<span class="pill">${b.dataset.d === "confirm" ? "confirmed" : "rejected"}</span>`;
+  } catch (e) { $("kfrmsg").textContent = String(e.message || e); busy(b, false); }
+});
 
 function msg(id, text, cls) { $(id).className = cls || "mut"; $(id).textContent = text; }
 
@@ -958,9 +994,13 @@ function businessHtml(bi) {
   const sys = bi.systems.map(s => `<li><code>${esc(s.service)}</code> realises <b>${esc(s.system)}</b> <span class="mut">(${esc(s.domain)}, ${esc(s.link.status)})</span>` +
     [["requirements", "Requirements"], ["processes", "Processes"], ["defects", "Defects"], ["incidents", "Incidents"]]
       .filter(([k]) => s[k].length).map(([k, l]) => `<br><span class="mut">${l}: ${s[k].slice(0, 8).map(x => esc(x.name || "")).join(", ")}</span>`).join("") + `</li>`).join("");
+  const what = {FormCapture: "form", DataEntity: "data entity", Rule: "business rule"};
+  const reqLine = xs => (xs || []).length ? `<br><span class="mut">Requirements: ${xs.slice(0, 8).map(x => esc(x.name || "")).join(", ")}</span>` : "";
+  const its = (bi.items || []).map(i => `<li>${esc(i.kind)} <code>${esc(i.tia_name)}</code> <span class="mut">(${esc(i.service)})</span> ${esc(i.rel.toLowerCase())} ${what[i.kf_label] || esc(i.kf_label)} <b>${esc(i.kf_name)}</b> <span class="mut">(${esc(i.domain)}, ${esc(i.link.status)})</span>${reqLine(i.requirements)}</li>`).join("") +
+    (bi.user_stories || []).map(s => `<li>implements user story <b>${esc(s.key)}</b> ${s.story !== s.key ? esc(s.story) : ""} <span class="mut">(commit ${s.commits.slice(0, 3).map(c => esc(c.slice(0, 7))).join(", ")})</span>${reqLine(s.requirements)}</li>`).join("");
   return `<h2 style="margin-top:16px">${esc(bi.summary.headline)}</h2>` +
     (tc ? `<table id="bizTable"><thead><tr><th style="width:24%">Business test case</th><th>Reached through</th><th style="width:16%">Evidence</th></tr></thead><tbody>${tc}</tbody></table>` : "") +
-    (sys ? `<ul>${sys}</ul>` : "") + bi.limits.map(l => `<p class="mut">${esc(l)}</p>`).join("") +
+    (sys || its ? `<ul>${sys}${its}</ul>` : "") + bi.limits.map(l => `<p class="mut">${esc(l)}</p>`).join("") +
     (bi.withheld ? `<p class="mut">${esc(bi.withheld.note)}</p>` : "");
 }
 // the regression answer (docs/MEETING-PAWAN.md): which written test cases to run again because of this change

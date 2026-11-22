@@ -218,13 +218,17 @@ def main(argv=None) -> int:
             drv.close()
         if args.format == "json":
             sys.stdout.buffer.write((to_json({k: v for k, v in out.items() if k != "planned"} | {"links": out["planned"]["links"],
-                                                                                                "gaps": out["planned"]["gaps"]}) + "\n").encode("utf-8"))
+                                                                                                "gaps": out["planned"]["gaps"],
+                                                                                                "rule_proposals": out["planned"]["proposals"]})
+                                     + "\n").encode("utf-8"))
             return 0
+        sm = out["summary"]
         lines = [f"Knowledge Fabric customer {out['customer_id']} (tenant {out['kf_tenant_id']}), domains {', '.join(out['domains']) or '-'} "
-                 f"({out['domain_mode']}); graph {gid}.", f"Links: {out['summary']['realizes']} service -> System, {out['summary']['same_as']} "
-                 f"test case -> TestCase ({out['written']['added']} added, {out['written']['removed']} removed).", ""]
+                 f"({out['domain_mode']}); graph {gid}.", f"Links: {sm['realizes']} service -> System, {sm['same_as']} test case -> TestCase, "
+                 f"{sm['screens']} screen -> FormCapture, {sm['data']} entity/table -> DataEntity, {sm['rules']} rule -> Rule "
+                 f"({out['written']['added']} added, {out['written']['removed']} removed).", ""]
         for ln in out["planned"]["links"]:
-            src = ln.get("service") or ln.get("test_case")
+            src = ln.get("tia_name") or ln.get("service") or ln.get("test_case")
             lines.append(f"  {ln['rel']:<9} {src} -> {ln['to_label']} '{ln['to_name']}' ({ln['domain']})  {ln['status']}"
                          + (f" [{ln['rule']}]" if ln.get("rule") else "") + f"  via {ln['source']}, id {ln['id_check']}")
         gaps = {k: v for k, v in out["planned"]["gaps"].items() if v}
@@ -233,6 +237,12 @@ def main(argv=None) -> int:
             for k, v in gaps.items():
                 lines.append(f"  {k} ({len(v)}): " + "; ".join(str(x.get("service") or x.get("system") or x.get("id") or x.get("name") or x.get("domain"))
                                                               for x in v[:12]) + (" ..." if len(v) > 12 else ""))
+        props = out["planned"]["proposals"]
+        if props:
+            lines += ["", f"Rule pairs to review ({len(props)}; confirm or reject them in TIA: GET /api/v1/kf/rule-proposals):"]
+            for p in props[:30]:
+                lines.append(f"  {p['expr']} ({p['service']}) ~ Rule '{p['kf_rule']}' ({p['domain']})  score {p['score']}"
+                             + (f", shared fields {', '.join(p['shared_fields'])}" if p["shared_fields"] else ""))
         for w in out["warnings"]:
             lines.append(f"WARNING {w}")
         sys.stdout.buffer.write(("\n".join(lines) + "\n").encode("utf-8"))

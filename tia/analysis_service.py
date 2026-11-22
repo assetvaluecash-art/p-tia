@@ -549,7 +549,31 @@ def kf_settings(store: Store) -> dict:
     return canonical(store.effective_config().knowledge_fabric)
 
 
-def kf_link(driver, database: Optional[str], tenant: str, ex: dict, g, gid: str, s: dict) -> dict:
+def kf_items(tenant: str, ex: dict, g) -> tuple[dict, list]:
+    """TIA's side of the phase 7 links, from the graph: screens, ORM entities and tables (with the business names their repositories declare
+    in tia-services.yaml under business_screens / business_data), and the rules found in code."""
+    service_of_repo = {repo: e.service for repo, e in ex.items()}
+
+    def declared(repo, key):
+        d = (ex[repo].service_map or {}).get(key) if repo in ex else None
+        if not isinstance(d, dict):
+            return {}
+        return {str(k): [str(x) for x in (v if isinstance(v, list) else [v]) if isinstance(x, (str, int))] for k, v in d.items()}
+    items: dict = {"screen": [], "entity": [], "table": []}
+    rules = []
+    for nid, a in g.nodes.items():
+        t, repo = a.get("type"), a.get("repo")
+        base = {"key": f"{tenant}|{nid}", "id": nid, "name": a.get("name"), "repo": repo, "service": a.get("service") or service_of_repo.get(repo)}
+        if t == "screen":
+            items["screen"].append({**base, "route": a.get("route"), "component": a.get("component"), "declared": declared(repo, "business_screens")})
+        elif t in ("entity", "table"):
+            items[t].append({**base, **({"table": a.get("table")} if t == "entity" else {}), "declared": declared(repo, "business_data")})
+        elif t == "rule":
+            rules.append({**base, "expr": a.get("expr") or a.get("name"), "fields": list(a.get("fields") or []), "function": a.get("function")})
+    return items, rules
+
+
+def kf_link(driver, database: Optional[str], tenant: str, ex: dict, g, gid: str, s: dict, decisions: Optional[dict] = None) -> dict:
     """The bridge without TIA's database (also used by the command line): make sure the tenant's mirror is current (re-sync it when it is
     missing, e.g. after Knowledge Fabric's reset script), resolve the customer and domains, plan and write the links, capture the business
     context. s: the canonical knowledge_fabric setting."""
@@ -572,7 +596,8 @@ def kf_link(driver, database: Optional[str], tenant: str, ex: dict, g, gid: str,
         warnings.append(f"knowledge_fabric.kf_tenant_id {s['kf_tenant_id']!r} differs from the customer's CustomerRoot tenant {cust['tenant_id']!r}")
     available = neo4jgraph.kf_domains(driver, s["customer_id"], kf_tenant, database)
     domains, unknown = kfbridge.resolve_domains(s["domains"], available)
-    index = neo4jgraph.kf_index(driver, s["customer_id"], kf_tenant, domains, database=database)
+    index = neo4jgraph.kf_index(driver, s["customer_id"], kf_tenant, domains, labels=("System", "TestCase", "FormCapture", "DataEntity", "Rule"),
+                                database=database)
 
     def declared(e):
         b = (e.service_map or {}).get("business_systems")
@@ -580,16 +605,22 @@ def kf_link(driver, database: Optional[str], tenant: str, ex: dict, g, gid: str,
     services = [{"key": f"{tenant}|svc:{e.service}", "service": e.service, "repo": repo, "declared": declared(e)} for repo, e in sorted(ex.items())]
     cases = [{"key": f"{tenant}|testcase:{repo}:{tc['id']}", "id": tc["id"], "repo": repo}
              for repo, e in sorted(ex.items()) for tc in e.manual_tests if tc.get("id")]
-    planned = kfbridge.plan(services, cases, index, s, kf_tenant, domains)
+    items, rules = kf_items(tenant, ex, g)
+    planned = kfbridge.plan(services, cases, index, s, kf_tenant, domains, items=items, rules=rules, decisions=decisions or {})
     planned["gaps"]["unknown_domains"] = [{"domain": d} for d in unknown]
     fp = neo4jgraph.kf_fingerprint(driver, s["customer_id"], kf_tenant, database)
     written = neo4jgraph.write_bridge(driver, tenant, s["customer_id"], kf_tenant, planned["links"], {"tia_graph_version": gid, "kf_fingerprint": fp},
                                       database)
     ctx = neo4jgraph.read_context(driver, tenant, s["customer_id"], s["max_context_items"], database)
+    item_ctx = neo4jgraph.read_item_context(driver, tenant, s["customer_id"], {repo: e.service for repo, e in ex.items()}, s["max_context_items"],
+                                            database)
+    stories = {}
+    if s["link_issue_keys"]:
+        stories = neo4jgraph.read_stories(driver, tenant, s["customer_id"], kf_tenant, domains, s["max_context_items"], database=database)
     return {"customer_id": s["customer_id"], "kf_tenant_id": kf_tenant, "domains": domains, "available_domains": available,
             "domain_mode": "auto" if s["domains"] == "auto" else "restricted", "graph_version": gid, "kf_fingerprint": fp,
             "mirror_restored": restored, "mirror_synced": mirrored != gid, "planned": planned, "summary": kfbridge.summary(planned),
-            "written": written, "context": ctx, "warnings": warnings}
+            "written": written, "context": ctx, "items": item_ctx, "stories": stories, "warnings": warnings}
 
 
 def kf_bridge_run(store: Store, svc: RepoService, driver, database: Optional[str] = None, reason: str = "manual",
@@ -607,25 +638,48 @@ def kf_bridge_run(store: Store, svc: RepoService, driver, database: Optional[str
     if not ex:
         raise KfBridgeError("no repositories are registered: there is nothing to link")
     g, gid, _ = get_or_build(store, ex, tuple(cfg.strip_prefixes), cfg.test_naming)
-    out = kf_link(driver, database, store.tenant_id, ex, g, gid, s)
+    es = EvidenceStore(store.db, store.tenant_id)
+    out = kf_link(driver, database, store.tenant_id, ex, g, gid, s, kf_decisions(store))
     if out["mirror_synced"]:
         store.audit("kf_mirror_restored" if out["mirror_restored"] else "neo4j_synced", graph=gid, reason="kf_bridge")
     now = datetime.now(timezone.utc)
-    es = EvidenceStore(store.db, store.tenant_id)
     ctx_rec = es.put("kf_context", KF_SOURCE, {"customer_id": out["customer_id"], "tenant_id": out["kf_tenant_id"], "fingerprint": out["kf_fingerprint"],
                                                "pulled_at": now.isoformat(timespec="seconds"), "bridge_version": BRIDGE_VERSION,
-                                               "graph_version": gid, "domains": out["domains"], "services": out["context"]}, observed_to=now)
+                                               "graph_version": gid, "domains": out["domains"], "services": out["context"],
+                                               "items": out["items"], "stories": out["stories"]}, observed_to=now)
     planned, written = out["planned"], out["written"]
     run = {"reason": reason, "at": now.isoformat(timespec="seconds"), "customer_id": out["customer_id"], "kf_tenant_id": out["kf_tenant_id"],
            "domains": out["domains"], "domain_mode": out["domain_mode"], "available_domains": out["available_domains"],
            "graph_version": gid, "kf_fingerprint": out["kf_fingerprint"], "bridge_version": BRIDGE_VERSION, "mirror_restored": out["mirror_restored"],
            "summary": out["summary"], "written": {k: v for k, v in written.items() if k != "not_written"}, "not_written": written["not_written"][:200],
            "links": planned["links"][:5000], "links_total": len(planned["links"]), "gaps": {k: v[:500] for k, v in planned["gaps"].items()},
+           "rule_proposals": planned["proposals"][:2000],
            "context_evidence_id": ctx_rec["id"], "warnings": out["warnings"], "duration_s": round(time.monotonic() - t0, 3)}
     rec = es.put("kf_bridge_run", KF_SOURCE, run, observed_to=now)
     store.audit("kf_bridge_completed", reason=reason, links=len(planned["links"]), added=written["added"], removed=written["removed"],
                 customer=out["customer_id"], graph=gid, fingerprint=out["kf_fingerprint"])
     return {**run, "run_evidence_id": rec["id"]}
+
+
+def kf_decisions(store: Store) -> dict:
+    """The review decisions on (code rule, Knowledge Fabric Rule) pairs: the newest per pair wins."""
+    from .kfbridge import latest_decisions
+    return latest_decisions(EvidenceStore(store.db, store.tenant_id).list("kf_link_decision", limit=20000))
+
+
+def kf_decide(store: Store, proposal: dict, decision: str, actor: Optional[str], comment: Optional[str] = None) -> dict:
+    """Record a person's decision on a proposed rule pair as evidence (kind kf_link_decision); a confirmed pair becomes an ENFORCES link on
+    the next bridge run, a rejected one is not proposed again. proposal: an entry of the latest run's rule_proposals."""
+    if decision not in ("confirm", "reject"):
+        raise ValueError("decision must be confirm or reject")
+    now = datetime.now(timezone.utc)
+    data = {"proposal": proposal["id"], "tia_rule": proposal["tia_rule"], "expr": proposal.get("expr"), "service": proposal.get("service"),
+            "kf_entity_id": proposal["kf_entity_id"], "kf_rule": proposal.get("kf_rule"), "domain": proposal.get("domain"),
+            "decision": decision, "actor": actor, "comment": (comment or "")[:1000] or None, "at": now.isoformat(timespec="seconds")}
+    rec = EvidenceStore(store.db, store.tenant_id).put("kf_link_decision", KF_SOURCE, data, repo=proposal.get("repo"), observed_to=now)
+    store.audit("kf_rule_link_decided", proposal=proposal["id"], decision=decision, tia_rule=proposal["tia_rule"], kf_rule=proposal.get("kf_rule"),
+                actor=actor)
+    return {**data, "evidence_id": rec["id"]}
 
 
 def kf_last_run(store: Store) -> Optional[dict]:

@@ -125,6 +125,18 @@ def read_tree(repo_path: str, rev: str) -> dict[str, str]:
     return files
 
 
+def commit_messages(repo_path: str, base: str, head: str, limit: int = 500) -> list[tuple[str, str]]:
+    """The commits in base..head (newest first) with their full messages: [(sha, message)]. Read-only; the merge commits are included."""
+    out = _git(repo_path, "log", f"--max-count={int(limit)}", "--format=%H%x00%B%x1e", f"{base}..{head}")
+    res = []
+    for rec in out.split("\x1e"):
+        rec = rec.strip("\r\n")
+        if "\x00" in rec:
+            sha, msg = rec.split("\x00", 1)
+            res.append((sha.strip(), msg.strip()))
+    return res
+
+
 def changed_files(repo_path: str, base: str, head: str) -> list[tuple[str, str]]:
     out = _git(repo_path, "diff", "--name-status", "--no-renames", base, head)
     res = []

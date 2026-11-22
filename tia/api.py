@@ -18,7 +18,7 @@ import re
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 from urllib.parse import quote as _url_quote
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request, Response
@@ -31,7 +31,7 @@ from . import authapi, kfadapter, kflinks, kfontology, neo4jgraph
 from .airgap import AirGapError
 from .identity import current_principal
 from .graphview import LEVELS, build_view, impact_overlay, landscape_stats, restrict
-from .analysis_service import (KfBridgeError, kf_bridge_run, kf_enqueue, kf_last_run, kf_next_poll, kf_settings,
+from .analysis_service import (KfBridgeError, kf_bridge_run, kf_decide, kf_enqueue, kf_last_run, kf_next_poll, kf_settings,
                                coordination_status, execute, notify_owners, group_key, job_key, landscape_extracts, pr_event_group_key, pr_event_job_key,
                                refresh_landscape, reproduce, rescan_landscape, resolve)
 from .graphstore import LANDSCAPE, get_or_build
@@ -187,6 +187,12 @@ class Neo4jRegistryIn(BaseModel):
 
 
 KF_LABELS = {"System", "TestCase", "Requirement", "Rule", "FormCapture", "DataEntity", "Process", "UserStory"}
+
+
+class KfDecisionIn(BaseModel):
+    """POST /api/v1/kf/rule-proposals/{id}: a person's decision on a proposed (code rule, Knowledge Fabric Rule) pair."""
+    decision: Literal["confirm", "reject"]
+    comment: Optional[str] = Field(None, max_length=1000)
 
 
 class KfLinksIn(BaseModel):
@@ -1055,6 +1061,37 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
             raise HTTPException(404, "the Knowledge Fabric bridge has not run for this tenant")
         return {"at": last["at"], "customer_id": last["customer_id"], "domains": last["domains"], "gaps": last["gaps"],
                 "warnings": last.get("warnings", [])}
+
+    @app.get("/api/v1/kf/rule-proposals")
+    def kf_rule_proposals(status: Optional[str] = None):
+        """Pairs of a rule found in code and a Knowledge Fabric Rule that the latest bridge run proposes (shared field names, word overlap),
+        with any decision already made. A person confirms or rejects each one: a confirmed pair becomes an ENFORCES link on the next run.
+        status: pending | confirmed (default: all)."""
+        require_all_repos("The Knowledge Fabric bridge")
+        last = kf_last_run(store)
+        if not last:
+            raise HTTPException(404, "the Knowledge Fabric bridge has not run for this tenant")
+        props = last.get("rule_proposals") or []
+        if status:
+            if status not in ("pending", "confirmed"):
+                raise HTTPException(400, "status must be pending or confirmed")
+            props = [p for p in props if p["status"] == status]
+        return {"at": last["at"], "customer_id": last["customer_id"], "proposals": props,
+                "summary": {"pending": sum(1 for p in last.get("rule_proposals") or [] if p["status"] == "pending"),
+                            "confirmed_links": (last.get("summary") or {}).get("rules", 0)}}
+
+    @app.post("/api/v1/kf/rule-proposals/{proposal_id}")
+    def kf_rule_decide(proposal_id: str, body: KfDecisionIn, x_tia_actor: Optional[str] = Header(None)):
+        """Confirm or reject one proposed pair. Recorded as evidence (kf_link_decision) and audited; the bridge relinks when it is set to
+        (auto_relink), so a confirmed pair appears as an ENFORCES link and in the business impact of later analyses."""
+        require_all_repos("The Knowledge Fabric bridge")
+        last = kf_last_run(store)
+        prop = next((p for p in (last or {}).get("rule_proposals") or [] if p["id"] == proposal_id), None)
+        if prop is None:
+            raise HTTPException(404, "no such proposal in the latest bridge run (run POST /api/v1/kf/relink to refresh the proposals)")
+        out = kf_decide(store, prop, body.decision, actor_of(x_tia_actor), body.comment)
+        kf_trigger("rule decision")
+        return out
 
     @app.post("/api/v1/graph/neo4j-sync")
     def graph_neo4j_sync():

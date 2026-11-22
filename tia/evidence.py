@@ -19,7 +19,7 @@ from .models import normalize_path
 from .scrub import scrub_json
 
 KINDS = ("test_run", "coverage", "runtime_edge", "deployment", "incident", "verdict", "approval", "acknowledgement", "notification",
-         "itsm_attachment", "release", "incident_link", "build", "kf_context", "kf_bridge_run")
+         "itsm_attachment", "release", "incident_link", "build", "kf_context", "kf_bridge_run", "kf_link_decision")
 BUILD_STATUSES = ("succeeded", "failed", "cancelled", "running")
 MAX_BYTES = 25 * 1024 * 1024
 MAX_TESTS = 200_000

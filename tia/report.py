@@ -365,13 +365,16 @@ def _test_scope_md(ts: dict | None, max_rows: int, report: dict) -> list:
     return L
 
 
+ITEM_LABEL = {"FormCapture": "form", "DataEntity": "data entity", "Rule": "business rule"}
+
+
 def _business_md(bi: dict | None, max_rows: int) -> list:
     """Knowledge Fabric: the business requirements, processes and test cases on the systems this change affects (docs/KF-BRIDGE-PLAN.md)."""
     if not bi:
         return []
     s = bi["summary"]
     L = [f"**{_md(s['headline'])}**", ""]
-    if not bi["systems"]:
+    if not (bi["systems"] or bi.get("items") or bi.get("user_stories")):
         return L
     L += ["<details><summary>Business impact (Knowledge Fabric)</summary>", ""]
     if bi["test_cases"]:
@@ -391,6 +394,16 @@ def _business_md(bi: dict | None, max_rows: int) -> list:
         if sy["incidents"]:
             bits.append("incidents: " + ", ".join(_md(i["name"]) for i in sy["incidents"][:5]))
         L.append(f"- `{_md(sy['service'])}` realises **{_md(sy['system'])}** ({_md(sy['domain'])}, {sy['link']['status']}): " + "; ".join(bits))
+    for it in (bi.get("items") or [])[:max_rows]:
+        bits = [f"{len(it.get('requirements', []))} requirement(s)"] + (["processes: " + ", ".join(_md(p["name"]) for p in it["processes"][:5])]
+                                                                       if it.get("processes") else [])
+        L.append(f"- {it['kind']} `{_md(it['tia_name'])}` ({_md(it['service'])}) {it['rel'].lower()} {ITEM_LABEL.get(it['kf_label'], it['kf_label'])} "
+                 f"**{_md(it['kf_name'])}** ({_md(it['domain'])}, {it['link']['status']}): " + "; ".join(bits))
+    for st in bi.get("user_stories") or []:
+        commits = ", ".join("`" + c[:7] + "`" for c in st["commits"][:3])
+        title = _md(st["story"]) if st["story"] != st["key"] else ""
+        L.append(f"- user story **{_md(st['key'])}** {title} (commit {commits}): {len(st.get('requirements', []))} requirement(s), "
+                 f"{len(st.get('test_cases', []))} test case(s)")
     L += ["", f"_{_md(bi['limits'][0])}_", "", "</details>", ""]
     return L
 

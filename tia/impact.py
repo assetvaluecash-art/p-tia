@@ -41,7 +41,7 @@ from . import communities as communities_mod
 from . import diagram as diagram_mod
 from . import structure as structure_mod
 from .findings_catalog import enrich_all
-from .kfbridge import business_impact as kf_business_impact
+from .kfbridge import business_impact as kf_business_impact, issue_keys as kf_issue_keys
 from .kfsettings import canonical as kf_canonical
 
 
@@ -975,7 +975,30 @@ def _analyze(req: AnalysisRequest, store: Optional[Store] = None, persist: bool 
         repo_of = {e.service: r for r, e in extracts.items()}
         suite = {tc["id"] for e in extracts.values() for tc in e.manual_tests if tc.get("id")}
         ctx = (ev.get("kf_context") or [None])[0]
-        section, kf_unknowns = kf_business_impact(ctx["data"] if ctx else None, affected, repo_of, suite, kf)
+        # what the change touches (phase 7: screens, entities, tables and rules are shown only when touched): the changed components,
+        # every finding's node and the nodes on its path
+        touched = {c.get("name") for c in report["change"].get("changed_components", []) if c.get("name")}
+        for c in report["change"].get("changed_components", []):                 # a changed column or table: its table, and the
+            if c.get("type") in ("db_column", "db_table") and c.get("database") and c.get("name"):   # entities that map it
+                touched |= {f"col:{c['database']}:{c['name']}", f"table:{c['database']}:{c['name'].split('.')[0]}"}
+                touched |= {m.get("entity") for m in c.get("mapped_by") or [] if isinstance(m, dict)}
+        for f in report["findings"]:
+            touched.add(f.get("node"))
+            touched |= {p.get("id") for p in f.get("path") or [] if isinstance(p, dict)}
+        gap_rules = {(x.get("repo"), x.get("expr")) for gp in (report["test_scope"].get("rule_gaps") or [])     # the rule a consumer misses
+                     for x in gp.get("applied_by", []) if isinstance(x, dict)}
+        if gap_rules:
+            touched |= {n for n, a in g.nodes.items() if a.get("type") == "rule" and (a.get("repo"), a.get("expr") or a.get("name")) in gap_rules}
+        touched.discard(None)
+        refs = []
+        if kf["link_issue_keys"] and base_sha != head_sha:
+            try:
+                for sha, msg in gitutil.commit_messages(tpath, base_sha, head_sha):
+                    refs += [{"key": k, "commit": sha, "subject": msg.splitlines()[0][:200] if msg else ""} for k in kf_issue_keys(msg)]
+            except gitutil.GitError:
+                pass
+        section, kf_unknowns = kf_business_impact(ctx["data"] if ctx else None, affected, repo_of, suite, kf, touched=touched,
+                                                  issue_refs=refs, target_repo=req.target)
         if section:
             report["business_impact"] = section
             reg = report["test_scope"].get("regression")

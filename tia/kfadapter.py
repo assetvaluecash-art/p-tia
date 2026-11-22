@@ -340,11 +340,12 @@ def empty(req: QueryRequest, errors: list[str], t0: float) -> QueryResponse:
                                                     chunks_considered=0, paths_considered=0, errors=errors))
 
 
-BUSINESS_RANK = {"business_summary": 0, "business_test_case": 1, "business_system": 2}
+BUSINESS_RANK = {"business_summary": 0, "business_user_story": 1, "business_test_case": 2, "business_system": 3, "business_item": 4}
 # the request's intent (Knowledge Fabric's traversal pattern names) puts the categories that answer it first; the rest keep their order
 INTENT_FIRST = {"regression_scope": ("regression_summary", "regression_test", "business_summary", "business_test_case"),
                 "test_coverage": ("coverage_gate", "coverage_gap", "regression_summary"),
-                "change_impact": ("contract", "transitive", "direct", "data", "event", "business_summary", "business_system")}
+                "change_impact": ("contract", "transitive", "direct", "data", "event", "business_summary", "business_user_story", "business_system",
+                                  "business_item")}
 
 
 def business_chunks(rep: dict, domain: str) -> tuple[list, list]:
@@ -367,10 +368,19 @@ def business_chunks(rep: dict, domain: str) -> tuple[list, list]:
         chunks.append(_chunk(aid, f"business-test-{k}", "business_test_case", "tia_business_test_case", "TestCase", text,
                              (0.6 if c["also_in_repository_suite"] else 0.85) * weak, c.get("source_file") or "", domain,
                              {"test_case": c["id"], "evidence_status": c["evidence_status"]}, {"via": c["via"], "domain": c["domain"]}))
-        chain = (f'(TiaService:"{v["service"]}")-[:REALIZES]->(System:"{v["system"]}")'
-                 + (f'<-[:IMPACTS]-(Requirement:"{req}")<-[:COVERS]-(TestCase:"{c["id"]}")' if req else ""))
+        label, rel = v.get("label", "System"), v.get("rel", "REALIZES")
+        if label == "UserStory":
+            story = v["system"].replace("user story ", "")
+            chain = (f'(TiaChange:"{v.get("through", "")}")-[:IMPLEMENTS_CHANGE]->(UserStory:"{story}")'
+                     + (f'-[:IMPLEMENTS]->(Requirement:"{req}")<-[:COVERS]-(TestCase:"{c["id"]}")' if req else ""))
+        elif label == "System":
+            chain = (f'(TiaService:"{v["service"]}")-[:REALIZES]->(System:"{v["system"]}")'
+                     + (f'<-[:IMPACTS]-(Requirement:"{req}")<-[:COVERS]-(TestCase:"{c["id"]}")' if req else ""))
+        else:
+            chain = (f'(Tia:"{v.get("through") or v["service"]}")-[:{rel}]->({label}:"{v["system"]}")'
+                     + (f'<-[:IMPACTS]-(Requirement:"{req}")<-[:COVERS]-(TestCase:"{c["id"]}")' if req else ""))
         paths.append(PathItem(path_text=chain, score=round(0.85 * weak, 4), from_entity=EntityRef(name=v["service"], type="TiaService"),
-                              relationship_type="REALIZES", to_entity=EntityRef(name=c["id"], type="TestCase"),
+                              relationship_type=rel, to_entity=EntityRef(name=c["id"], type="TestCase"),
                               source_block_id=f"{aid}#business-test-{k}", source_file=c.get("source_file") or "", source_page=None,
                               source_evidence=f"bridge link {c['evidence_status']}; Knowledge Fabric relationships from its documents"))
     for k, sy in enumerate(bi["systems"]):
@@ -381,6 +391,21 @@ def business_chunks(rep: dict, domain: str) -> tuple[list, list]:
                              0.7 * WEAK_EVIDENCE.get(sy["link"]["status"], 1.0), "", domain,
                              {"service": sy["service"], "system": sy["system"], "link": sy["link"]},
                              {k2: sy[k2] for k2 in ("requirements", "user_stories", "processes", "defects", "incidents", "integrations")}))
+    for k, it in enumerate(bi.get("items") or []):
+        procs = f", processes {', '.join(p['name'] for p in it['processes'][:5])}" if it.get("processes") else ""
+        text = (f"AFFECTED {it['kf_label'].upper()} {it['kf_name']} ({it['domain']}): the change touches {it['kind']} {it['tia_name']} in "
+                f"{it['service']}, which {it['rel'].lower()} it; {len(it.get('requirements', []))} requirement(s){procs}." + _caveat(it["link"]["status"]))
+        chunks.append(_chunk(aid, f"business-item-{k}", "business_item", "tia_business_item", it["kf_label"], text,
+                             0.7 * WEAK_EVIDENCE.get(it["link"]["status"], 1.0), "", domain,
+                             {"service": it["service"], "tia": it["tia_name"], "kf": it["kf_name"], "link": it["link"]},
+                             {k2: it.get(k2, []) for k2 in ("requirements", "processes", "defects", "incidents", "test_cases")}))
+    for k, st in enumerate(bi.get("user_stories") or []):
+        title = f" ({st['story']})" if st["story"] != st["key"] else ""
+        text = (f"USER STORY {st['key']}{title}: named in commit(s) {', '.join(c[:7] for c in st['commits'][:3])} of this change; implements "
+                f"{len(st.get('requirements', []))} requirement(s), covered by {len(st.get('test_cases', []))} test case(s).")
+        chunks.append(_chunk(aid, f"business-story-{k}", "business_user_story", "tia_business_user_story", "UserStory", text, 0.9, "", domain,
+                             {"issue_key": st["key"], "commits": st["commits"]},
+                             {k2: st.get(k2, []) for k2 in ("requirements", "systems", "test_cases")}))
     return chunks, paths
 
 

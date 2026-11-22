@@ -323,6 +323,19 @@ def _business(report: dict) -> str:
                         for key, label in (("requirements", "Requirements"), ("processes", "Processes"), ("defects", "Defects"),
                                            ("incidents", "Incidents")) if sy[key])
         items.append(f"<li><code>{_e(sy['service'])}</code> realises <b>{_e(sy['system'])}</b> ({_e(sy['domain'])}, {_e(sy['link']['status'])}){extra}</li>")
+    what_of = {"FormCapture": "form", "DataEntity": "data entity", "Rule": "business rule"}
+    for it in bi.get("items") or []:
+        extra = "".join('<br><span class="mut">' + label + ": " + ", ".join(_e(x["name"] or "") for x in it.get(key, [])[:8]) + "</span>"
+                        for key, label in (("requirements", "Requirements"), ("processes", "Processes"), ("defects", "Defects")) if it.get(key))
+        what = what_of.get(it["kf_label"], it["kf_label"])
+        items.append(f"<li>{_e(it['kind'])} <code>{_e(it['tia_name'])}</code> ({_e(it['service'])}) {_e(it['rel'].lower())} {what} "
+                     f"<b>{_e(it['kf_name'])}</b> ({_e(it['domain'])}, {_e(it['link']['status'])}){extra}</li>")
+    for st in bi.get("user_stories") or []:
+        reqs = ", ".join(_e(r["name"] or "") for r in st.get("requirements", [])[:8])
+        title = _e(st["story"]) if st["story"] != st["key"] else ""
+        commits = ", ".join(_e(c[:7]) for c in st["commits"][:3])
+        items.append(f"<li>implements user story <b>{_e(st['key'])}</b> {title} <span class='mut'>(commit {commits})</span>"
+                     + (f"<br><span class='mut'>Requirements: {reqs}</span>" if reqs else "") + "</li>")
     if items:
         out += "<ul>" + "".join(items) + "</ul>"
     out += "".join(f'<p class="mut">{_e(x)}</p>' for x in bi["limits"])

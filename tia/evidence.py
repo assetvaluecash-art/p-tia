@@ -19,7 +19,7 @@ from .models import normalize_path
 from .scrub import scrub_json
 
 KINDS = ("test_run", "coverage", "runtime_edge", "deployment", "incident", "verdict", "approval", "acknowledgement", "notification",
-         "itsm_attachment", "release", "incident_link", "build")
+         "itsm_attachment", "release", "incident_link", "build", "kf_context", "kf_bridge_run")
 BUILD_STATUSES = ("succeeded", "failed", "cancelled", "running")
 MAX_BYTES = 25 * 1024 * 1024
 MAX_TESTS = 200_000
@@ -421,7 +421,9 @@ class EvidenceStore:
                 "deployment": self._rows("kind = 'deployment'", (), 5000),
                 "build": self._rows("kind = 'build' and (repo = any(%s) or repo is null)", (names,), 50 * max(len(names), 1)),
                 "incident": self._rows("kind = 'incident'", (), 500),
-                "approval": self._rows("kind = 'approval' and repo = %s and revision = %s", (target, head), 500) if target and head else []}
+                "approval": self._rows("kind = 'approval' and repo = %s and revision = %s", (target, head), 500) if target and head else [],
+                # the business context the Knowledge Fabric bridge captured last (tia.kfbridge): pinned like any evidence
+                "kf_context": self._rows("kind = 'kf_context'", (), 1)}
 
     def approvals(self, repo: str, revision: str) -> list:
         """Owner approvals recorded for one proposed revision of a repository (FR-033 owner approval)."""

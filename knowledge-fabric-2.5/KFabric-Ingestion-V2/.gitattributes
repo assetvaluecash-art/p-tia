@@ -1,5 +1,0 @@
-# Shell scripts and Python scripts must use LF for WSL/Linux
-*.sh text eol=lf
-scripts/*.py text eol=lf
-# Dockerignore must use LF (CRLF can cause Docker to ignore it on Windows)
-.dockerignore text eol=lf

@@ -111,6 +111,21 @@ def main(argv=None) -> int:
     n4.add_argument("--testcase-key", help="property of those nodes that holds the test case id")
     _registry_args(n4)
 
+    kc = sub.add_parser("kf-customers", help="Knowledge Fabric's customers (its CustomerRoot nodes) with tenant id, industry and domains; "
+                                              "connection from NEO4J_URI / NEO4J_USER / NEO4J_PASSWORD")
+    kc.add_argument("--format", choices=["text", "json"], default="text")
+
+    kl = sub.add_parser("kf-link", help="link these repositories' graph to a Knowledge Fabric customer (service -> System, test case -> TestCase), "
+                                        "print the links and gaps (docs/KF-BRIDGE-PLAN.md)")
+    kl.add_argument("--repo", action="append", default=[], metavar="NAME=PATH", help="repeatable; include all repos in scope")
+    kl.add_argument("--tenant-id", default=os.environ.get("TIA_TENANT_ID") or "local", help="TIA tenant the mirror belongs to (default: local)")
+    kl.add_argument("--customer", required=True, help="Knowledge Fabric customer_id (see tia kf-customers)")
+    kl.add_argument("--kf-tenant", help="Knowledge Fabric tenant id (default: read from the customer's CustomerRoot node)")
+    kl.add_argument("--domain", action="append", default=[], help="restrict to these Knowledge Fabric domains (repeatable; default: all of the customer's)")
+    kl.add_argument("--alias", action="append", default=[], metavar="SERVICE=SYSTEM", help="declare the Knowledge Fabric System a service realises (repeatable)")
+    kl.add_argument("--no-name-matches", action="store_true", help="only declared and id links, no inferred exact-name links")
+    kl.add_argument("--format", choices=["text", "json"], default="text")
+
     kr = sub.add_parser("kf-registry", help="match an API registry (CSV or XLSX) to the endpoints in the code, without writing anything: "
                                             "confirmed / inferred / ambiguous / no match per row, and the endpoints no row names")
     kr.add_argument("--repo", action="append", default=[], metavar="NAME=PATH", help="repeatable; include all repos in scope")
@@ -158,6 +173,69 @@ def main(argv=None) -> int:
             sys.stdout.buffer.write((out["script"] + "\n").encode("utf-8"))
         for u in out["unknowns"]:
             print(f"TODO {u['screen']}: {u['what']} - {u['detail']}", file=sys.stderr)
+        return 0
+    if args.cmd in ("kf-customers", "kf-link"):
+        from . import neo4jgraph
+        try:
+            cfg4j = neo4jgraph.config_from_env()
+            if cfg4j is None:
+                raise neo4jgraph.Neo4jUnavailable("set NEO4J_URI, NEO4J_USER and NEO4J_PASSWORD (Knowledge Fabric's Neo4j)")
+            drv = neo4jgraph.connect(cfg4j)
+        except neo4jgraph.Neo4jUnavailable as e:
+            raise SystemExit(f"Neo4j: {e}")
+        try:
+            if args.cmd == "kf-customers":
+                rows = neo4jgraph.kf_customers(drv, cfg4j["database"])
+                text = to_json({"customers": rows}) if args.format == "json" else "\n".join(
+                    f"{r['customer_id']}  tenant {r['tenant_id']}  industry {r['industry_id']}  domains {', '.join(r['domains']) or '-'}" for r in rows) \
+                    or "Knowledge Fabric has no customers (no CustomerRoot node)."
+                sys.stdout.buffer.write((text + "\n").encode("utf-8"))
+                return 0
+            from .analysis_service import KfBridgeError, kf_link
+            from .graph import build_graph
+            from .graphstore import graph_id, graph_inputs
+            from .impact import _extract
+            from .kfsettings import validate as kf_validate
+            aliases = {}
+            for a in args.alias:
+                if "=" not in a:
+                    raise SystemExit(f"--alias expects SERVICE=SYSTEM, got '{a}'")
+                k, v = a.split("=", 1)
+                aliases.setdefault(k.strip(), []).append(v.strip())
+            problems = []
+            setting = kf_validate({"enabled": True, "customer_id": args.customer, **({"kf_tenant_id": args.kf_tenant} if args.kf_tenant else {}),
+                                   "domains": args.domain or "auto", "system_aliases": aliases, "link_name_matches": not args.no_name_matches},
+                                  problems)
+            if problems:
+                raise SystemExit("; ".join(problems))
+            ex = {n: _extract(n, p, "HEAD", None, ()) for n, p in sorted(_repos(args.repo).items())}
+            g, gid = build_graph(ex), graph_id(graph_inputs(ex))
+            try:
+                out = kf_link(drv, cfg4j["database"], args.tenant_id, ex, g, gid, setting)
+            except KfBridgeError as e:
+                raise SystemExit(f"Knowledge Fabric bridge: {e}")
+        finally:
+            drv.close()
+        if args.format == "json":
+            sys.stdout.buffer.write((to_json({k: v for k, v in out.items() if k != "planned"} | {"links": out["planned"]["links"],
+                                                                                                "gaps": out["planned"]["gaps"]}) + "\n").encode("utf-8"))
+            return 0
+        lines = [f"Knowledge Fabric customer {out['customer_id']} (tenant {out['kf_tenant_id']}), domains {', '.join(out['domains']) or '-'} "
+                 f"({out['domain_mode']}); graph {gid}.", f"Links: {out['summary']['realizes']} service -> System, {out['summary']['same_as']} "
+                 f"test case -> TestCase ({out['written']['added']} added, {out['written']['removed']} removed).", ""]
+        for ln in out["planned"]["links"]:
+            src = ln.get("service") or ln.get("test_case")
+            lines.append(f"  {ln['rel']:<9} {src} -> {ln['to_label']} '{ln['to_name']}' ({ln['domain']})  {ln['status']}"
+                         + (f" [{ln['rule']}]" if ln.get("rule") else "") + f"  via {ln['source']}, id {ln['id_check']}")
+        gaps = {k: v for k, v in out["planned"]["gaps"].items() if v}
+        if gaps:
+            lines += ["", "Gaps:"]
+            for k, v in gaps.items():
+                lines.append(f"  {k} ({len(v)}): " + "; ".join(str(x.get("service") or x.get("system") or x.get("id") or x.get("name") or x.get("domain"))
+                                                              for x in v[:12]) + (" ..." if len(v) > 12 else ""))
+        for w in out["warnings"]:
+            lines.append(f"WARNING {w}")
+        sys.stdout.buffer.write(("\n".join(lines) + "\n").encode("utf-8"))
         return 0
     if args.cmd == "kf-registry":
         from .impact import _extract

@@ -340,6 +340,50 @@ def empty(req: QueryRequest, errors: list[str], t0: float) -> QueryResponse:
                                                     chunks_considered=0, paths_considered=0, errors=errors))
 
 
+BUSINESS_RANK = {"business_summary": 0, "business_test_case": 1, "business_system": 2}
+# the request's intent (Knowledge Fabric's traversal pattern names) puts the categories that answer it first; the rest keep their order
+INTENT_FIRST = {"regression_scope": ("regression_summary", "regression_test", "business_summary", "business_test_case"),
+                "test_coverage": ("coverage_gate", "coverage_gap", "regression_summary"),
+                "change_impact": ("contract", "transitive", "direct", "data", "event", "business_summary", "business_system")}
+
+
+def business_chunks(rep: dict, domain: str) -> tuple[list, list]:
+    """Knowledge Fabric's business impact of the change (docs/KF-BRIDGE-PLAN.md section 10) as chunks and paths: one summary, one chunk
+    per business test case (with the chain from the changed code), one per affected system. The evidence status is the TIA side's link from
+    code to the system; Knowledge Fabric's own relationships are its document extraction, not verified by TIA."""
+    bi = rep.get("business_impact")
+    if not bi:
+        return [], []
+    aid, chunks, paths = rep["analysis_id"], [], []
+    chunks.append(_chunk(aid, "business", "business_summary", "tia_business_summary", "System", f"BUSINESS IMPACT: {bi['summary']['headline']}",
+                         0.9, "", domain, {"kf_customer_id": bi.get("kf_customer_id"), "fingerprint": bi.get("fingerprint")},
+                         {"summary": bi["summary"], "limits": bi["limits"]}))
+    for k, c in enumerate(bi["test_cases"]):
+        v = c["via"][0]
+        weak = WEAK_EVIDENCE.get(c["evidence_status"], 1.0)
+        req = v["requirements"][0] if v["requirements"] else None
+        text = (f"BUSINESS TEST CASE {c['id']}: covers {req or 'a requirement'} on system {v['system']} ({c['domain']}), which "
+                f"{v['service']} realises" + (" (also in the repository suite)" if c["also_in_repository_suite"] else "") + "." + _caveat(c["evidence_status"]))
+        chunks.append(_chunk(aid, f"business-test-{k}", "business_test_case", "tia_business_test_case", "TestCase", text,
+                             (0.6 if c["also_in_repository_suite"] else 0.85) * weak, c.get("source_file") or "", domain,
+                             {"test_case": c["id"], "evidence_status": c["evidence_status"]}, {"via": c["via"], "domain": c["domain"]}))
+        chain = (f'(TiaService:"{v["service"]}")-[:REALIZES]->(System:"{v["system"]}")'
+                 + (f'<-[:IMPACTS]-(Requirement:"{req}")<-[:COVERS]-(TestCase:"{c["id"]}")' if req else ""))
+        paths.append(PathItem(path_text=chain, score=round(0.85 * weak, 4), from_entity=EntityRef(name=v["service"], type="TiaService"),
+                              relationship_type="REALIZES", to_entity=EntityRef(name=c["id"], type="TestCase"),
+                              source_block_id=f"{aid}#business-test-{k}", source_file=c.get("source_file") or "", source_page=None,
+                              source_evidence=f"bridge link {c['evidence_status']}; Knowledge Fabric relationships from its documents"))
+    for k, sy in enumerate(bi["systems"]):
+        text = (f"AFFECTED SYSTEM {sy['system']} ({sy['domain']}), realised by {sy['service']}: {len(sy['requirements'])} requirement(s), "
+                f"{len(sy['processes'])} process(es)" + (f", defects {', '.join(d['name'] for d in sy['defects'][:5])}" if sy["defects"] else "")
+                + (f", incidents {', '.join(i['name'] for i in sy['incidents'][:5])}" if sy["incidents"] else "") + ".")
+        chunks.append(_chunk(aid, f"business-system-{k}", "business_system", "tia_business_system", "System", text,
+                             0.7 * WEAK_EVIDENCE.get(sy["link"]["status"], 1.0), "", domain,
+                             {"service": sy["service"], "system": sy["system"], "link": sy["link"]},
+                             {k2: sy[k2] for k2 in ("requirements", "user_stories", "processes", "defects", "incidents", "integrations")}))
+    return chunks, paths
+
+
 def to_query_response(rep: dict, req: QueryRequest, t0: Optional[float] = None, pack: Optional[dict] = None) -> QueryResponse:
     """Project one (already redacted) report, and its tester pack when given. Material findings rank first in reranked_*; unknowns are
     always included."""
@@ -368,7 +412,13 @@ def to_query_response(rep: dict, req: QueryRequest, t0: Optional[float] = None, 
     pchunks = pack_chunks(pack, req.domain)
     for cat in PACK_RANK:
         reranked_chunks = reranked_chunks + [c for c in pchunks if c.category == cat][: req.top_k_semantic]
-    chunks, paths = chunks + tchunks + rchunks + pchunks, paths + tpaths
+    bchunks, bpaths = business_chunks(rep, req.domain)
+    reranked_chunks = reranked_chunks + sorted(bchunks, key=lambda c: (BUSINESS_RANK[c.category], -c.score, c.block_id))[: req.top_k_semantic + 1]
+    reranked_paths = (reranked_paths + sorted(bpaths, key=lambda p: (-p.score, p.source_block_id)))[: req.top_k_graph]
+    first = INTENT_FIRST.get(req.intent)
+    if first:
+        reranked_chunks = sorted(reranked_chunks, key=lambda c: first.index(c.category) if c.category in first else len(first))
+    chunks, paths = chunks + tchunks + rchunks + pchunks + bchunks, paths + tpaths + bpaths
     # unknowns are never ranked away: they ride along after the findings, whatever top_k says
     reranked_chunks = reranked_chunks + unknown_chunks
     errors = []

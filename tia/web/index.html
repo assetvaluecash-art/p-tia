@@ -883,7 +883,7 @@ function show(rep, comment, opts) {
   $("unknowns").innerHTML = (rep.unknowns||[]).map(u => `<li>${esc(u.reason)}${u.items ? "<ul>" + u.items.slice(0,15).map(i=>`<li class="mut">${i.rule ? esc(i.rule) + " x" + esc(i.count) : `${esc(i.repo||"")} ${esc(i.file||"")}${i.line?":"+i.line:""}${i.service ? " " + esc(i.service) : ""}${i.count && !i.reason ? " x" + esc(i.count) : ""} - ${esc(i.reason||i.error||"")}`}</li>`).join("") + (u.items.length>15?`<li class="mut">... ${u.items.length-15} more in JSON</li>`:"") + "</ul>" : ""}</li>`).join("");
   renderStructure(rep);
   loadPack(rep.analysis_id, rep.status === "failed");
-  $("scope").innerHTML = scopeHtml(rep.test_scope);
+  $("scope").innerHTML = scopeHtml(rep.test_scope) + businessHtml(rep.business_impact);
   $("evid").innerHTML = evidHtml(rep);
   COMMENT_MD = comment || ""; setCommentView("plain"); $("raw").textContent = JSON.stringify(rep, null, 2);
   $("permalink").textContent = rep.analysis_id; $("permalink").href = `/analyses/${encodeURIComponent(rep.analysis_id)}`; $("permalink").target = "_blank";
@@ -947,6 +947,21 @@ function scopeHtml(ts) {
   if (!ts) return "";
   return regressionHtml(ts.regression) + scopeCore(ts) +
     (ts.config_checks || []).map(c => `<div class="banner"><b>Configuration</b>: ${esc(c.check)}${c.entry_points.length ? `<br>Entry points: ${c.entry_points.map(e => `<code>${esc(e.entry_point)}</code>`).join(", ")}` : ""}</div>`).join("");
+}
+// Knowledge Fabric: the business side of the change (docs/KF-BRIDGE-PLAN.md section 10)
+function businessHtml(bi) {
+  if (!bi) return "";
+  const tc = bi.test_cases.map(c => { const v = c.via[0];
+    return `<tr><td><code>${esc(c.id)}</code>${c.also_in_repository_suite ? ' <span class="mut">(also in your repository suite)</span>' : ""}</td>
+      <td>${esc(v.service)} &rarr; ${esc(v.system)} <span class="mut">(${esc(c.domain)})</span>${v.requirements.length ? ` &rarr; ${esc(v.requirements[0])}` : ""}</td>
+      <td>${esc(c.evidence_status)}</td></tr>`; }).join("");
+  const sys = bi.systems.map(s => `<li><code>${esc(s.service)}</code> realises <b>${esc(s.system)}</b> <span class="mut">(${esc(s.domain)}, ${esc(s.link.status)})</span>` +
+    [["requirements", "Requirements"], ["processes", "Processes"], ["defects", "Defects"], ["incidents", "Incidents"]]
+      .filter(([k]) => s[k].length).map(([k, l]) => `<br><span class="mut">${l}: ${s[k].slice(0, 8).map(x => esc(x.name || "")).join(", ")}</span>`).join("") + `</li>`).join("");
+  return `<h2 style="margin-top:16px">${esc(bi.summary.headline)}</h2>` +
+    (tc ? `<table id="bizTable"><thead><tr><th style="width:24%">Business test case</th><th>Reached through</th><th style="width:16%">Evidence</th></tr></thead><tbody>${tc}</tbody></table>` : "") +
+    (sys ? `<ul>${sys}</ul>` : "") + bi.limits.map(l => `<p class="mut">${esc(l)}</p>`).join("") +
+    (bi.withheld ? `<p class="mut">${esc(bi.withheld.note)}</p>` : "");
 }
 // the regression answer (docs/MEETING-PAWAN.md): which written test cases to run again because of this change
 function regressionHtml(reg) {

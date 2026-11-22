@@ -303,6 +303,34 @@ def _regression(reg: dict) -> str:
     return out + f'<p class="mut">{_e(reg["basis"])}</p>'
 
 
+def _business(report: dict) -> str:
+    """Knowledge Fabric: the business side of the change (docs/KF-BRIDGE-PLAN.md section 10)."""
+    bi = report.get("business_impact")
+    if not bi:
+        return ""
+    out = f"<h2>Business impact (Knowledge Fabric)</h2><p><b>{_e(bi['summary']['headline'])}</b></p>"
+    if bi["test_cases"]:
+        rows = []
+        for c in bi["test_cases"]:
+            chain = " &rarr; ".join(_e(x) for x in [c["via"][0]["service"], f"{c['via'][0]['system']} ({c['domain']})"] + c["via"][0]["requirements"][:1])
+            mark = ' <span class="mut">(also in your repository suite)</span>' if c["also_in_repository_suite"] else ""
+            rows.append(f"<tr><td><code>{_e(c['id'])}</code>{mark}</td><td>{chain}</td><td>{_e(c['evidence_status'])}</td></tr>")
+        out += ("<table><thead><tr><th>Business test case</th><th>Reached through</th><th>Evidence</th></tr></thead><tbody>"
+                + "".join(rows) + "</tbody></table>")
+    items = []
+    for sy in bi["systems"]:
+        extra = "".join('<br><span class="mut">' + label + ": " + ", ".join(_e(x["name"] or "") for x in sy[key][:8]) + "</span>"
+                        for key, label in (("requirements", "Requirements"), ("processes", "Processes"), ("defects", "Defects"),
+                                           ("incidents", "Incidents")) if sy[key])
+        items.append(f"<li><code>{_e(sy['service'])}</code> realises <b>{_e(sy['system'])}</b> ({_e(sy['domain'])}, {_e(sy['link']['status'])}){extra}</li>")
+    if items:
+        out += "<ul>" + "".join(items) + "</ul>"
+    out += "".join(f'<p class="mut">{_e(x)}</p>' for x in bi["limits"])
+    if (bi.get("withheld") or {}).get("note"):
+        out += f'<p class="mut">{_e(bi["withheld"]["note"])}</p>'
+    return out
+
+
 def _components(report: dict) -> str:
     rows = []
     for c in report.get("change", {}).get("changed_components", []):
@@ -396,6 +424,7 @@ def render_page(report: dict, analysis_url: str = "") -> str:
 &middot; analysis <code>{_e(report['analysis_id'])}</code></p>
 {note}{cards}{links}
 <h2>What to test</h2>{_test_scope(report) if st != "failed" else '<p class="mut">The analysis failed.</p>'}
+{_business(report) if st != "failed" else ""}
 {_evidence_sections(report) if st != "failed" else ""}
 <h2>Findings</h2>{table}
 <h2>Changes analysed</h2>{_components(report)}

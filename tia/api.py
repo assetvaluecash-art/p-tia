@@ -27,11 +27,12 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTex
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import authapi, kfadapter, kflinks, neo4jgraph
+from . import authapi, kfadapter, kflinks, kfontology, neo4jgraph
 from .airgap import AirGapError
 from .identity import current_principal
 from .graphview import LEVELS, build_view, impact_overlay, landscape_stats, restrict
-from .analysis_service import (coordination_status, execute, notify_owners, group_key, job_key, landscape_extracts, pr_event_group_key, pr_event_job_key,
+from .analysis_service import (KfBridgeError, kf_bridge_run, kf_enqueue, kf_last_run, kf_next_poll, kf_settings,
+                               coordination_status, execute, notify_owners, group_key, job_key, landscape_extracts, pr_event_group_key, pr_event_job_key,
                                refresh_landscape, reproduce, rescan_landscape, resolve)
 from .graphstore import LANDSCAPE, get_or_build
 from .testscope import labels_of, rule_gaps, shared_components
@@ -185,6 +186,9 @@ class Neo4jRegistryIn(BaseModel):
     service: Optional[str] = None
 
 
+KF_LABELS = {"System", "TestCase", "Requirement", "Rule", "FormCapture", "DataEntity", "Process", "UserStory"}
+
+
 class KfLinksIn(BaseModel):
     """POST /api/v1/graph/kf-links: link the mirrored graph to Knowledge Fabric's registry and test-case nodes (docs/NEO4J.md)."""
     registry: Optional[RegistryIn] = None
@@ -195,6 +199,8 @@ class KfLinksIn(BaseModel):
     confirmed_only: bool = False
     testcase_label: Optional[str] = Field(None, description="label of Knowledge Fabric's test-case nodes")
     testcase_key: Optional[str] = Field(None, description="property holding the test case id")
+    kf_customer_id: Optional[str] = Field(None, description="Knowledge Fabric customer to link within (required for its real labels: "
+                                                             "its graph holds several customers)")
 
 
 class AnalysisIn(BaseModel):
@@ -442,6 +448,7 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
                 store.audit("graph_version_advanced", graph=gid, repos={r: e.commit for r, e in sorted(ex.items())})
                 if os.environ.get("TIA_NEO4J_AUTO_SYNC", "").strip().lower() in ("1", "true", "yes"):
                     mirror_to_neo4j(g, gid, ex)                  # the Neo4j mirror follows the landscape; a failure is audited, never raised
+                kf_trigger("TIA graph changed")
         return g, gid
 
     def mirror_to_neo4j(g, gid: str, ex: dict, raise_errors: bool = False) -> dict:
@@ -528,6 +535,8 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
         if r["created"]:
             store.audit("tenant_config_changed", version=r["version"], id=r["id"], actor=actor_of(x_tia_actor), comment=body.comment,
                         changes=[c["path"] for c in r["changes"]])
+            if any(c["path"].startswith("knowledge_fabric") for c in r["changes"]):
+                kf_trigger("Knowledge Fabric setting changed")
         return r
 
     @app.get(CFG + "/versions")
@@ -959,6 +968,94 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
             out = {**out, "repositories": [x for x in out["repositories"] if x["repo"] in allowed]}
         return out
 
+    def kf_trigger(reason: str) -> None:
+        """Queue a bridge run when the setting asks for it (enabled and auto_relink). A queue problem is audited, never raised: the request
+        that moved the graph or saved the setting must not fail because of the bridge."""
+        try:
+            s = kf_settings(store)
+            if s["enabled"] and s["auto_relink"]:
+                kf_enqueue(jobs, store.tenant_id, "kf_bridge", reason)
+        except Exception as e:                                   # noqa: BLE001
+            store.audit("kf_bridge_failed", reason=f"could not queue: {type(e).__name__}: {str(e)[:200]}")
+
+    def kf_driver():
+        cfg4j = neo4jgraph.config_from_env()
+        if cfg4j is None:
+            raise HTTPException(503, "Neo4j is not configured (set NEO4J_URI, NEO4J_USER and NEO4J_PASSWORD; it must be Knowledge Fabric's database)")
+        try:
+            return neo4jgraph.connect(cfg4j), cfg4j["database"]
+        except (neo4jgraph.Neo4jUnavailable, AirGapError) as e:
+            raise HTTPException(503, str(e))
+
+    def require_all_repos(what: str):
+        allowed = readable(current_principal.get())
+        if allowed is not None and not {r.name for r in svc.list()} <= set(allowed):
+            raise HTTPException(403, f"{what} uses every repository of the tenant: only a principal who may read all of them can do it")
+
+    @app.get("/api/v1/graph/ontology")
+    def graph_ontology(format: str = "json"):
+        """TIA's software ontology and the TIA <-> Knowledge Fabric bridge ontology, in Knowledge Fabric's canonical shape
+        (node_types with a layer, relationship_types with allowed_triples). format=yaml returns YAML text."""
+        docs = kfontology.ontologies()
+        if format == "yaml":
+            return PlainTextResponse(kfontology.to_yaml(docs["software"]) + "---\n" + kfontology.to_yaml(docs["bridge"]),
+                                     media_type="application/yaml")
+        if format != "json":
+            raise HTTPException(400, "format must be json or yaml")
+        return docs
+
+    @app.get("/api/v1/kf/customers")
+    def kf_customers():
+        """Knowledge Fabric's customers (its CustomerRoot nodes) with their tenant id, industry and domains: pick the one this TIA tenant maps to
+        and save it as knowledge_fabric.customer_id."""
+        drv, database = kf_driver()
+        try:
+            return {"customers": neo4jgraph.kf_customers(drv, database)}
+        finally:
+            drv.close()
+
+    @app.post("/api/v1/kf/relink")
+    def kf_relink(async_: bool = Query(False, alias="async")):
+        """Link the software graph to the Knowledge Fabric customer now (or queue it with ?async=true): mirror check, links, gaps and the
+        business context reports use. The result is also kept as the latest bridge run."""
+        require_all_repos("The Knowledge Fabric bridge")
+        s = kf_settings(store)
+        if not s["enabled"]:
+            raise HTTPException(409, "the Knowledge Fabric bridge is disabled: set knowledge_fabric.enabled and knowledge_fabric.customer_id")
+        if async_:
+            return {"queued": kf_enqueue(jobs, store.tenant_id, "kf_bridge", "manual")}
+        drv, database = kf_driver()
+        try:
+            out = kf_bridge_run(store, svc, drv, database, reason="manual")
+        except KfBridgeError as e:
+            store.audit("kf_bridge_failed", reason=str(e)[:300])
+            raise HTTPException(409, str(e))
+        finally:
+            drv.close()
+        kf_next_poll(jobs, store)
+        return {k: v for k, v in out.items() if k != "links"} | {"links": out["links"][:500]}
+
+    @app.get("/api/v1/kf/links")
+    def kf_links_now(limit: int = 500):
+        """The links of the latest bridge run (service -> System, test case -> TestCase), with their evidence."""
+        require_all_repos("The Knowledge Fabric bridge")
+        last = kf_last_run(store)
+        if not last:
+            raise HTTPException(404, "the Knowledge Fabric bridge has not run for this tenant")
+        return {"at": last["at"], "customer_id": last["customer_id"], "domains": last["domains"], "summary": last["summary"],
+                "links_total": last["links_total"], "links": last["links"][: min(max(limit, 1), 5000)]}
+
+    @app.get("/api/v1/kf/gaps")
+    def kf_gaps():
+        """What the latest bridge run could not link: services without a System, Systems without code, declared names not found, ambiguous
+        names, test cases on one side only, domains the customer does not have."""
+        require_all_repos("The Knowledge Fabric bridge")
+        last = kf_last_run(store)
+        if not last:
+            raise HTTPException(404, "the Knowledge Fabric bridge has not run for this tenant")
+        return {"at": last["at"], "customer_id": last["customer_id"], "domains": last["domains"], "gaps": last["gaps"],
+                "warnings": last.get("warnings", [])}
+
     @app.post("/api/v1/graph/neo4j-sync")
     def graph_neo4j_sync():
         """Mirror the current landscape graph (and the written test cases with the endpoints they test) into Neo4j for Knowledge Fabric
@@ -1004,6 +1101,9 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
             raise HTTPException(422, "registry links need registry_label and registry_key: TIA does not guess the Knowledge Fabric schema")
         if bool(body.testcase_label) != bool(body.testcase_key):
             raise HTTPException(422, "testcase_label and testcase_key go together")
+        if not body.kf_customer_id and ({body.registry_label, body.testcase_label} & KF_LABELS):
+            raise HTTPException(422, "Knowledge Fabric's graph holds several customers: give kf_customer_id to link within one "
+                                     "(the bridge, POST /api/v1/kf/relink, does this for you)")
         ex = landscape()
         if not ex:
             raise HTTPException(409, "no repositories are registered: nothing to link")
@@ -1023,10 +1123,10 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
                     matched = registry_match(reg, ex, rows)
                     out["registry"] = {"summary": matched["summary"], "rows": matched["rows"], "unregistered": matched["unregistered"],
                                        "links": neo4jgraph.link_registry(drv, store.tenant_id, matched, body.registry_label, body.registry_key,
-                                                                         body.rel, not body.confirmed_only, cfg4j["database"])}
+                                                                         body.rel, not body.confirmed_only, cfg4j["database"], body.kf_customer_id)}
                 if body.testcase_label:
                     out["test_case_links"] = neo4jgraph.link_test_cases(drv, store.tenant_id, body.testcase_label, body.testcase_key,
-                                                                        database=cfg4j["database"])
+                                                                        database=cfg4j["database"], customer_id=body.kf_customer_id)
             finally:
                 drv.close()
         except ValueError as e:
@@ -1751,7 +1851,10 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
                  "get_ui_inventory": lambda a: via(automation_ui, a.get("repositories")),
                  "check_test_case": lambda a: via(coverage_test_case, TestCaseIn(**{k: v for k, v in a.items() if k != "repositories"}), a.get("repositories")),
                  "get_shared_components": lambda a: via(graph_shared_components, 2, int(a.get("limit") or 100)),
-                 "query_graph": lambda a: via(graph_query, a["question"], a["component"], a.get("repository"), int(a.get("limit") or 200))}
+                 "query_graph": lambda a: via(graph_query, a["question"], a["component"], a.get("repository"), int(a.get("limit") or 200)),
+                 "get_business_impact": lambda a: (lambda rep: {"analysis_id": rep["analysis_id"], "status": rep["status"],
+                                                                 "business_impact": rep.get("business_impact"),
+                                                                 "unknowns": [u for u in rep.get("unknowns", []) if u["area"].startswith("kf_")]})(tool_report(a))}
         msgs = msg if isinstance(msg, list) else [msg]
         out = [r for r in (await run_in_threadpool(lambda: [mcp.handle(m, tools) for m in msgs])) if r is not None]
         if not out:

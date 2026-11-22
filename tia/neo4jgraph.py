@@ -39,7 +39,7 @@ import re
 from datetime import datetime, timezone
 from typing import Optional
 
-from . import airgap
+from . import airgap, kfontology
 from .graphschema import TRAVERSED_DST_TO_SRC, TRAVERSED_SRC_TO_DST
 from .regression import _endpoints, _pages, targets_of
 
@@ -73,7 +73,10 @@ def connect(cfg: dict):
     except ImportError:
         raise Neo4jUnavailable("the neo4j driver is not installed: pip install 'tia[neo4j]'")
     airgap.guard(cfg["uri"], "Neo4j")
-    drv = GraphDatabase.driver(cfg["uri"], auth=(cfg["user"], cfg["password"]))
+    try:                                                       # the server's notices (unknown property keys, ...) are not for TIA's logs
+        drv = GraphDatabase.driver(cfg["uri"], auth=(cfg["user"], cfg["password"]), notifications_min_severity="OFF")
+    except TypeError:                                          # drivers older than 5.7 have no such option
+        drv = GraphDatabase.driver(cfg["uri"], auth=(cfg["user"], cfg["password"]))
     try:
         drv.verify_connectivity()
     except (ServiceUnavailable, AuthError, OSError) as e:
@@ -83,10 +86,7 @@ def connect(cfg: dict):
 
 
 # ---- projection (pure: no server needed) -----------------------------------------------------------------------------------------------
-def label_of(node_type: str) -> str:
-    """TIA node type -> Neo4j label: endpoint -> TiaEndpoint, event_schema -> TiaEventSchema."""
-    lab = "Tia" + "".join(p[:1].upper() + p[1:] for p in re.split(r"[^A-Za-z0-9]+", str(node_type or "unknown")) if p)
-    return lab if NAME.match(lab) else "TiaUnknown"
+label_of = kfontology.label_of          # TIA node type -> Neo4j label (TiaEndpoint, TiaEventSchema, ...)
 
 
 def _scalar(v):
@@ -263,7 +263,7 @@ def registry_from_neo4j(driver, label: str, key: str, path: str, method: Optiona
 
 
 def link_registry(driver, tenant: str, matched: dict, kf_label: str, kf_key: str, rel: str = "IMPLEMENTS",
-                  include_inferred: bool = True, database: Optional[str] = None) -> dict:
+                  include_inferred: bool = True, database: Optional[str] = None, customer_id: Optional[str] = None) -> dict:
     """Write the registry links of tia.kflinks.match_registry: (:TiaEndpoint)-[:<rel> {kf_link, source: 'api_registry', status, strategy,
     registry_row}]->(:<kf_label> {<kf_key>: key}). The tenant's earlier registry links that this result no longer has are removed, so the
     links always reflect the latest registry. -> {"linked", "removed", "not_linked"}."""
@@ -272,6 +272,7 @@ def link_registry(driver, tenant: str, matched: dict, kf_label: str, kf_key: str
     rows = [{"tkey": f"{tenant}|{r['endpoint']}", "kf": r["key"], "status": r["status"], "strategy": r["strategy"], "row": r["row"]}
             for r in matched["rows"] if r["status"] in want]
     q = (f"UNWIND $rows AS r OPTIONAL MATCH (t:TiaEndpoint {{key: r.tkey}}) OPTIONAL MATCH (k:{kf_label} {{{kf_key}: r.kf}}) "
+         "WHERE $cust IS NULL OR k.customer_id = $cust "
          f"WITH r, t, collect(k) AS ks "
          f"FOREACH (k IN CASE WHEN t IS NULL OR size(ks) <> 1 THEN [] ELSE ks END | "
          f"  MERGE (t)-[x:{rel}]->(k) SET x.kf_link = true, x.tenant = $t, x.source = 'api_registry', x.status = r.status, "
@@ -280,7 +281,7 @@ def link_registry(driver, tenant: str, matched: dict, kf_label: str, kf_key: str
     q_clean = (f"MATCH (t:TiaEndpoint {{tenant: $t}})-[x:{rel} {{source: 'api_registry'}}]->(k:{kf_label}) "
                f"WHERE NOT [t.key, toString(k.{kf_key})] IN $keep DELETE x RETURN count(x) AS n")
     with driver.session(database=database) as s:
-        res = s.execute_write(lambda tx: [r.data() for r in tx.run(q, rows=rows, t=tenant)])
+        res = s.execute_write(lambda tx: [r.data() for r in tx.run(q, rows=rows, t=tenant, cust=customer_id)])
         ok = [r for r in res if r["tia"] and r["kf_nodes"] == 1]
         keep = [[x["tkey"], str(x["kf"])] for x in rows if any(o["row"] == x["row"] for o in ok)]
         removed = s.execute_write(lambda tx: tx.run(q_clean, t=tenant, keep=keep).single()["n"])
@@ -291,29 +292,30 @@ def link_registry(driver, tenant: str, matched: dict, kf_label: str, kf_key: str
     return {"linked": len(ok), "removed": removed, "not_linked": not_linked}
 
 
-def link_test_cases(driver, tenant: str, kf_label: str, kf_key: str, rel: str = "SAME_AS", database: Optional[str] = None) -> dict:
+def link_test_cases(driver, tenant: str, kf_label: str, kf_key: str, rel: str = "SAME_AS", database: Optional[str] = None,
+                    customer_id: Optional[str] = None) -> dict:
     """Join TIA's written test cases to Knowledge Fabric's test-case nodes on the test case id: (:TiaTestCase {case_id})-[:<rel>
     {kf_link, source: 'test_case_id', status: 'source_confirmed'}]->(:<kf_label> {<kf_key>: case_id}). Ids are compared exactly (after
     trimming). -> {"linked", "tia_without_kf", "kf_without_tia", "duplicate_kf_ids"}."""
     _check_names(kf_label, kf_key, rel)
     q_link = (f"MATCH (tc:TiaTestCase {{tenant: $t}}) WHERE tc.case_id IS NOT NULL "
-              f"MATCH (k:{kf_label}) WHERE trim(toString(k.{kf_key})) = trim(tc.case_id) "
+              f"MATCH (k:{kf_label}) WHERE trim(toString(k.{kf_key})) = trim(tc.case_id) AND ($cust IS NULL OR k.customer_id = $cust) "
               f"MERGE (tc)-[x:{rel}]->(k) SET x.kf_link = true, x.tenant = $t, x.source = 'test_case_id', x.status = 'source_confirmed' "
               f"RETURN count(x) AS n")
     q_clean = (f"MATCH (tc:TiaTestCase {{tenant: $t}})-[x:{rel} {{source: 'test_case_id'}}]->(k:{kf_label}) "
                f"WHERE trim(toString(k.{kf_key})) <> trim(tc.case_id) DELETE x")
     q_tia = (f"MATCH (tc:TiaTestCase {{tenant: $t}}) WHERE NOT (tc)-[:{rel} {{source: 'test_case_id'}}]->(:{kf_label}) "
              f"RETURN tc.case_id AS id, tc.repo AS repo ORDER BY id")
-    q_kf = (f"MATCH (k:{kf_label}) WHERE k.{kf_key} IS NOT NULL AND NOT (:TiaTestCase {{tenant: $t}})-[:{rel} {{source: 'test_case_id'}}]->(k) "
+    q_kf = (f"MATCH (k:{kf_label}) WHERE k.{kf_key} IS NOT NULL AND ($cust IS NULL OR k.customer_id = $cust) AND NOT (:TiaTestCase {{tenant: $t}})-[:{rel} {{source: 'test_case_id'}}]->(k) "
             f"RETURN toString(k.{kf_key}) AS id ORDER BY id LIMIT 1000")
-    q_dup = (f"MATCH (k:{kf_label}) WHERE k.{kf_key} IS NOT NULL WITH trim(toString(k.{kf_key})) AS id, count(*) AS n WHERE n > 1 "
+    q_dup = (f"MATCH (k:{kf_label}) WHERE k.{kf_key} IS NOT NULL AND ($cust IS NULL OR k.customer_id = $cust) WITH trim(toString(k.{kf_key})) AS id, count(*) AS n WHERE n > 1 "
              f"RETURN id, n ORDER BY id")
     with driver.session(database=database) as s:
         s.execute_write(lambda tx: tx.run(q_clean, t=tenant).consume())
-        n = s.execute_write(lambda tx: tx.run(q_link, t=tenant).single()["n"])
+        n = s.execute_write(lambda tx: tx.run(q_link, t=tenant, cust=customer_id).single()["n"])
         tia_only = s.execute_read(lambda tx: [r.data() for r in tx.run(q_tia, t=tenant)])
-        kf_only = s.execute_read(lambda tx: [r["id"] for r in tx.run(q_kf, t=tenant)])
-        dups = s.execute_read(lambda tx: [r.data() for r in tx.run(q_dup)])
+        kf_only = s.execute_read(lambda tx: [r["id"] for r in tx.run(q_kf, t=tenant, cust=customer_id)])
+        dups = s.execute_read(lambda tx: [r.data() for r in tx.run(q_dup, cust=customer_id)])
     return {"linked": n, "tia_without_kf": tia_only, "kf_without_tia": kf_only, "duplicate_kf_ids": dups}
 
 
@@ -336,3 +338,229 @@ def regression_tests(driver, tenant: str, changed: list, max_depth: int = 8, dat
     q = REGRESSION_CYPHER % max(0, min(int(max_depth), 20))
     with driver.session(database=database) as s:
         return s.execute_read(lambda tx: [r.data() for r in tx.run(q, tenant=tenant, changed=list(changed))])
+
+
+# ---- the Knowledge Fabric bridge (docs/KF-BRIDGE-PLAN.md; planning is in tia.kfbridge) --------------------------------------------------
+# Knowledge Fabric's graph is multi-customer: every read below is confined to one customer (and its tenant), and every bridge edge records
+# both sides' scope. TIA never creates, edits or deletes a Knowledge Fabric node; it writes only edges from its own nodes (bridge=true,
+# owner='tia') and prunes only those.
+KF_CONTEXT_LABELS = ("System", "TestCase", "Requirement", "UserStory", "Process", "Defect", "Incident", "AcceptanceCriteria")
+KF_CONTEXT_RELS = ("COVERS", "IMPACTS", "USES", "IMPLEMENTS", "VALIDATES", "INTEGRATES_WITH", "MISSED_BY")
+
+
+def kf_customers(driver, database: Optional[str] = None) -> list:
+    """Knowledge Fabric's customers, from its CustomerRoot nodes: [{customer_id, tenant_id, industry_id, domains}]."""
+    q = ("MATCH (c:CustomerRoot) OPTIONAL MATCH (d:DomainRoot {customer_id: c.customer_id}) "
+         "RETURN c.customer_id AS customer_id, c.tenant_id AS tenant_id, c.industry_id AS industry_id, "
+         "[x IN collect(DISTINCT d.domain) WHERE x IS NOT NULL] AS domains ORDER BY customer_id, tenant_id")
+    with driver.session(database=database) as s:
+        return s.execute_read(lambda tx: [{**r.data(), "domains": sorted(r["domains"])} for r in tx.run(q)])
+
+
+def kf_customer(driver, customer_id: str, database: Optional[str] = None) -> Optional[dict]:
+    """The customer's CustomerRoot (its tenant id is part of Knowledge Fabric's identity scope); None if Knowledge Fabric has no such customer."""
+    rows = [c for c in kf_customers(driver, database) if c["customer_id"] == customer_id]
+    if not rows:
+        return None
+    if len({r["tenant_id"] for r in rows}) > 1:
+        return {**rows[0], "tenant_ids": sorted({r["tenant_id"] for r in rows if r["tenant_id"]}), "ambiguous_tenant": True}
+    return rows[0]
+
+
+def kf_domains(driver, customer_id: str, tenant_id: Optional[str], database: Optional[str] = None) -> list:
+    """The domains the customer has in Knowledge Fabric: its DomainRoot nodes, and any domain its Systems and TestCases carry."""
+    q1 = "MATCH (d:DomainRoot) WHERE d.customer_id = $c AND ($t IS NULL OR d.tenant_id IS NULL OR d.tenant_id = $t) RETURN DISTINCT d.domain AS domain"
+    q2 = "MATCH (n) WHERE (n:System OR n:TestCase) AND n.customer_id = $c AND ($t IS NULL OR n.tenant_id = $t) RETURN DISTINCT n.domain AS domain"
+    with driver.session(database=database) as s:
+        found = {r["domain"] for q in (q1, q2) for r in s.execute_read(lambda tx, q=q: list(tx.run(q, c=customer_id, t=tenant_id)))}
+    return sorted(d for d in found if d)
+
+
+def kf_index(driver, customer_id: str, tenant_id: Optional[str], domains: list, labels: tuple = ("System", "TestCase"),
+             database: Optional[str] = None) -> dict:
+    """The customer's nodes of each label in the given domains: {label: [{entity_id, name, aliases, domain}]}."""
+    out = {}
+    with driver.session(database=database) as s:
+        for label in labels:
+            assert NAME.match(label)
+            q = (f"MATCH (n:{label}) WHERE n.customer_id = $c AND ($t IS NULL OR n.tenant_id = $t) AND n.domain IN $domains "
+                 "AND n.entity_id IS NOT NULL RETURN n.entity_id AS entity_id, n.name AS name, coalesce(n.aliases, []) AS aliases, n.domain AS domain "
+                 "ORDER BY domain, entity_id")
+            out[label] = s.execute_read(lambda tx, q=q: [r.data() for r in tx.run(q, c=customer_id, t=tenant_id, domains=list(domains))])
+    return out
+
+
+def kf_fingerprint(driver, customer_id: str, tenant_id: Optional[str], database: Optional[str] = None) -> str:
+    """A cheap fingerprint of the customer's business graph: per label the node count and the latest update, plus the number of
+    relationships among those nodes. It changes when an ingestion or a review writes anything the bridge or the business context uses."""
+    import hashlib
+    parts = []
+    with driver.session(database=database) as s:
+        for label in KF_CONTEXT_LABELS:
+            r = s.execute_read(lambda tx, label=label: tx.run(
+                f"MATCH (n:{label}) WHERE n.customer_id = $c AND ($t IS NULL OR n.tenant_id = $t) "
+                "RETURN count(n) AS n, toString(max(n.updated_at)) AS u, toString(max(n.created_at)) AS cr", c=customer_id, t=tenant_id).single())
+            parts.append(f"{label}:{r['n']}:{r['u']}:{r['cr']}")
+        rels = s.execute_read(lambda tx: tx.run(
+            "MATCH (a)-[r]->(b) WHERE a.customer_id = $c AND b.customer_id = $c AND type(r) IN $rels AND ($t IS NULL OR a.tenant_id = $t) "
+            "RETURN count(r) AS n", c=customer_id, t=tenant_id, rels=list(KF_CONTEXT_RELS)).single()["n"])
+        parts.append(f"rels:{rels}")
+    return "kf-" + hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
+
+
+def mirror_version(driver, tenant: str, database: Optional[str] = None) -> Optional[str]:
+    """The graph version mirrored for this tenant, or None when the mirror is missing (for example after Knowledge Fabric's reset script,
+    which deletes every node in the database)."""
+    with driver.session(database=database) as s:
+        r = s.execute_read(lambda tx: tx.run("MATCH (v:TiaGraphVersion {key: $t}) OPTIONAL MATCH (n:TiaNode {tenant: $t}) "
+                                             "RETURN v.graph_version AS v, count(n) AS n", t=tenant).single())
+    return r["v"] if r and r["v"] and r["n"] else None
+
+
+def write_bridge(driver, tenant: str, customer_id: str, kf_tenant_id: Optional[str], links: list, meta: dict,
+                 database: Optional[str] = None) -> dict:
+    """Write the planned bridge links (tia.kfbridge.plan) and delete this tenant's bridge edges to this customer that the plan no longer
+    has. meta: {tia_graph_version, kf_fingerprint}. -> {"added", "kept", "removed", "not_written"}."""
+    from datetime import datetime as _dt, timezone as _tz
+    from .kfontology import BRIDGE_VERSION, allowed
+    rows, not_written = [], []
+    for ln in links:
+        src_label = "TiaService" if ln["rel"] == "REALIZES" else "TiaTestCase"
+        if not allowed(src_label, ln["rel"], ln["to_label"]) or not NAME.match(ln["rel"]) or not NAME.match(ln["to_label"]):
+            raise ValueError(f"not a bridge relationship: ({src_label})-[:{ln['rel']}]->({ln['to_label']})")
+        rows.append({"src": ln["from"], "dst": ln["to"], "label": ln["to_label"], "rel": ln["rel"],
+                     "bkey": f"{tenant}|{ln['from']}|{ln['rel']}|{ln['to']}",
+                     "props": {"status": ln["status"], "strategy": ln["strategy"], "rule": ln.get("rule"), "source": ln["source"],
+                               "id_check": ln["id_check"], "domain": ln["domain"]}})
+    now = _dt.now(_tz.utc).isoformat()
+    common = {"tenant": tenant, "customer": customer_id, "kft": kf_tenant_id, "gv": meta.get("tia_graph_version"),
+              "fp": meta.get("kf_fingerprint"), "bv": BRIDGE_VERSION, "at": now}
+    with driver.session(database=database) as s:
+        before = set(s.execute_read(lambda tx: [r["k"] for r in tx.run(
+            "MATCH (:TiaNode {tenant: $tenant})-[x]->() WHERE x.bridge = true AND x.kf_customer_id = $customer RETURN x.bkey AS k",
+            tenant=tenant, customer=customer_id)]))
+        written = set()
+        for (rel, label) in sorted({(r["rel"], r["label"]) for r in rows}):
+            batch = [r for r in rows if r["rel"] == rel and r["label"] == label]
+            q = (f"UNWIND $rows AS r MATCH (a:TiaNode {{key: r.src}}) "
+                 f"MATCH (b:{label} {{entity_id: r.dst}}) WHERE b.customer_id = $customer "
+                 f"MERGE (a)-[x:{rel} {{bkey: r.bkey}}]->(b) "
+                 "SET x += r.props, x.bridge = true, x.owner = 'tia', x.tenant = $tenant, x.kf_customer_id = $customer, x.kf_tenant_id = $kft, "
+                 "x.tia_graph_version = $gv, x.kf_fingerprint = $fp, x.bridge_version = $bv, x.linked_at = coalesce(x.linked_at, $at) "
+                 "RETURN r.bkey AS k")
+            for b in _batches(batch):
+                written |= set(s.execute_write(lambda tx, b=b: [r["k"] for r in tx.run(q, rows=b, **common)]))
+        not_written = [r["bkey"] for r in rows if r["bkey"] not in written]
+        removed = s.execute_write(lambda tx: tx.run(
+            "MATCH (:TiaNode {tenant: $tenant})-[x]->() WHERE x.bridge = true AND x.kf_customer_id = $customer AND NOT x.bkey IN $keep "
+            "DELETE x RETURN count(x) AS n", tenant=tenant, customer=customer_id, keep=sorted(written)).single()["n"])
+    return {"added": len(written - before), "kept": len(written & before), "removed": removed, "not_written": not_written}
+
+
+_CONTEXT_Q = """
+MATCH (s:TiaService {tenant: $tenant})-[b:REALIZES]->(sys:System) WHERE b.bridge = true AND b.kf_customer_id = $customer
+WITH s, b, sys ORDER BY s.service, sys.domain, sys.name
+OPTIONAL MATCH (r:Requirement)-[:IMPACTS]->(sys) WHERE r.customer_id = $customer
+WITH s, b, sys, collect(DISTINCT r)[..$cap] AS reqs
+OPTIONAL MATCH (u:UserStory)-[:IMPACTS]->(sys) WHERE u.customer_id = $customer
+WITH s, b, sys, reqs, collect(DISTINCT u)[..$cap] AS stories
+OPTIONAL MATCH (p:Process)-[:USES]->(sys) WHERE p.customer_id = $customer
+WITH s, b, sys, reqs, stories, collect(DISTINCT p)[..$cap] AS procs
+OPTIONAL MATCH (d:Defect)-[:IMPACTS]->(sys) WHERE d.customer_id = $customer
+WITH s, b, sys, reqs, stories, procs, collect(DISTINCT d)[..$cap] AS defects
+OPTIONAL MATCH (i:Incident)-[:IMPACTS]->(sys) WHERE i.customer_id = $customer
+WITH s, b, sys, reqs, stories, procs, defects, collect(DISTINCT i)[..$cap] AS incidents
+OPTIONAL MATCH (sys)-[:INTEGRATES_WITH]-(o:System) WHERE o.customer_id = $customer
+WITH s, b, sys, reqs, stories, procs, defects, incidents, collect(DISTINCT o)[..$cap] AS others
+UNWIND (CASE WHEN size(reqs) = 0 THEN [null] ELSE reqs END) AS req
+OPTIONAL MATCH (tc:TestCase)-[:COVERS]->(req) WHERE tc.customer_id = $customer
+OPTIONAL MATCH (tc)<-[sa:SAME_AS]-(t:TiaTestCase {tenant: $tenant}) WHERE sa.bridge = true
+WITH s, b, sys, reqs, stories, procs, defects, incidents, others, req, tc, collect(DISTINCT t.case_id) AS tia_ids
+WITH s, b, sys, reqs, stories, procs, defects, incidents, others,
+     collect(CASE WHEN tc IS NULL THEN null ELSE {tc: tc, req: req.name, tia_ids: tia_ids} END)[..$cap2] AS cover_rows
+RETURN s.service AS service, sys.entity_id AS entity_id, sys.name AS system, sys.domain AS domain,
+       {status: b.status, strategy: b.strategy, source: b.source, rule: b.rule} AS link,
+       reqs, stories, procs, defects, incidents, others, cover_rows
+"""
+
+
+def _item(n) -> dict:
+    p = dict(n)
+    out = {"entity_id": p.get("entity_id"), "name": p.get("name_display") or p.get("name")}
+    if p.get("description"):
+        out["description"] = str(p["description"])[:300]
+    src = p.get("source_document_ids") or []
+    if src:
+        out["source_documents"] = list(src)[:5]
+    blocks = p.get("source_blocks") or []
+    if blocks:
+        out["source_blocks"] = list(blocks)[:5]
+    return out
+
+
+def read_context(driver, tenant: str, customer_id: str, max_items: int = 100, database: Optional[str] = None) -> dict:
+    """The business context of every linked service: per (service, System, domain) the requirements and user stories that impact the
+    system, the processes that use it, the test cases covering those requirements (with the TIA test case ids they are SAME_AS), defects,
+    incidents and integrated systems. Bounded by max_items per kind; a kind cut short is listed under `truncated`. -> {service: [entry]}."""
+    with driver.session(database=database) as s:
+        rows = s.execute_read(lambda tx: [r for r in tx.run(_CONTEXT_Q, tenant=tenant, customer=customer_id, cap=max_items + 1,
+                                                            cap2=(max_items + 1) * 4)])
+    out: dict = {}
+    for r in rows:
+        trunc = {}
+
+        def cut(kind, items):
+            if len(items) > max_items:
+                trunc[kind] = True
+                items = items[:max_items]
+            return items
+        cases: dict = {}
+        for cr in r["cover_rows"]:
+            if cr is None:
+                continue
+            node = _item(cr["tc"])
+            c = cases.setdefault(node["entity_id"], {**node, "covers": [], "tia_case_ids": []})
+            if cr["req"] and cr["req"] not in c["covers"]:
+                c["covers"].append(cr["req"])
+            c["tia_case_ids"] = sorted(set(c["tia_case_ids"]) | {x for x in cr["tia_ids"] if x})
+        entry = {"system": r["system"], "entity_id": r["entity_id"], "domain": r["domain"], "link": r["link"],
+                 "requirements": cut("requirements", [_item(x) for x in r["reqs"]]),
+                 "user_stories": cut("user_stories", [_item(x) for x in r["stories"]]),
+                 "processes": cut("processes", [_item(x) for x in r["procs"]]),
+                 "defects": cut("defects", [_item(x) for x in r["defects"]]),
+                 "incidents": cut("incidents", [_item(x) for x in r["incidents"]]),
+                 "integrations": cut("integrations", [{"name": dict(x).get("name"), "domain": dict(x).get("domain"),
+                                                       "entity_id": dict(x).get("entity_id")} for x in r["others"]]),
+                 "test_cases": cut("test_cases", sorted(cases.values(), key=lambda c: c["name"] or ""))}
+        for k in ("requirements", "user_stories", "processes", "defects", "incidents", "integrations", "test_cases"):
+            entry[k] = sorted(entry[k], key=lambda x: (x.get("name") or "", x.get("entity_id") or ""))
+        if trunc:
+            entry["truncated"] = trunc
+        out.setdefault(r["service"], []).append(entry)
+    return out
+
+
+BUSINESS_CYPHER = """
+MATCH (c:TiaNode {tenant: $tenant}) WHERE c.id IN $changed
+OPTIONAL MATCH p = (c)-[:IMPACTS*0..%d]->(e:TiaEndpoint)
+WHERE all(n IN nodes(p) WHERE NOT n:TiaTest)
+WITH collect(DISTINCT e.service) + collect(DISTINCT c.service) AS svcs
+UNWIND svcs AS svc
+WITH DISTINCT svc WHERE svc IS NOT NULL
+MATCH (s:TiaService {tenant: $tenant, service: svc})-[b:REALIZES]->(sys:System)
+WHERE b.bridge = true AND b.kf_customer_id = $customer AND sys.customer_id = $customer
+OPTIONAL MATCH (r:Requirement)-[:IMPACTS]->(sys) WHERE r.customer_id = $customer
+OPTIONAL MATCH (tc:TestCase)-[:COVERS]->(r) WHERE tc.customer_id = $customer
+RETURN s.service AS service, sys.name AS system, sys.domain AS domain, b.status AS link,
+       [x IN collect(DISTINCT r.name) WHERE x IS NOT NULL] AS requirements,
+       [x IN collect(DISTINCT tc.name) WHERE x IS NOT NULL] AS business_test_cases
+ORDER BY service, domain, system
+"""
+
+
+def business_regression(driver, tenant: str, customer_id: str, changed: list, max_depth: int = 8, database: Optional[str] = None) -> list:
+    """Code change -> Knowledge Fabric test cases, in one Cypher query: the services the changed TIA nodes reach (through the impact walk to
+    endpoints, and their own service), the Systems they realise, the requirements impacting those Systems and the test cases covering them."""
+    q = BUSINESS_CYPHER % max(0, min(int(max_depth), 20))
+    with driver.session(database=database) as s:
+        return s.execute_read(lambda tx: [r.data() for r in tx.run(q, tenant=tenant, customer=customer_id, changed=list(changed))])

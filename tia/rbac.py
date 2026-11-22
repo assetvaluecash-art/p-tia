@@ -77,7 +77,7 @@ ROUTES = {
     ("POST", "/api/v1/impact-analyses/{aid}/change-record"): "analyze",
     ("POST", "/mcp"): "read",                                              # MCP tools are read-only (FR-037)
     ("GET", "/api/v1/usage"): "admin",
-    ("GET", "/api/v1/evidence"): "read", ("DELETE", "/api/v1/evidence/{rid}"): "evidence_write", ("GET", "/api/v1/environments"): "read", ("POST", "/api/v1/graph/rescan"): "repo_write", ("POST", "/api/v1/graph/neo4j-sync"): "repo_write", ("POST", "/api/v1/graph/kf-links"): "repo_write", ("POST", "/api/v1/graph/registry-match"): "read", ("GET", "/api/v1/graph/flows"): "read", ("POST", "/api/v1/automation/script"): "read",
+    ("GET", "/api/v1/evidence"): "read", ("DELETE", "/api/v1/evidence/{rid}"): "evidence_write", ("GET", "/api/v1/environments"): "read", ("POST", "/api/v1/graph/rescan"): "repo_write", ("POST", "/api/v1/graph/neo4j-sync"): "repo_write", ("POST", "/api/v1/graph/kf-links"): "repo_write", ("GET", "/api/v1/graph/ontology"): "read", ("GET", "/api/v1/kf/customers"): "config_write", ("POST", "/api/v1/kf/relink"): "repo_write", ("GET", "/api/v1/kf/links"): "read", ("GET", "/api/v1/kf/gaps"): "read", ("POST", "/api/v1/graph/registry-match"): "read", ("GET", "/api/v1/graph/flows"): "read", ("POST", "/api/v1/automation/script"): "read",
     # analyses
     ("POST", "/api/v1/impact-analyses"): "analyze", ("GET", "/api/v1/jobs/{job_id}"): "read", ("DELETE", "/api/v1/jobs/{job_id}"): "analyze",
     ("GET", "/api/v1/impact-analyses/{aid}"): "read", ("GET", "/analyses/{aid}"): "read",

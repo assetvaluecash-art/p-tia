@@ -475,5 +475,175 @@ def make_handlers(db, allow_local: bool = False, allowed_hosts: Optional[list] =
         audit_publication(store, provider=p["provider"], full_name=p["host"]["full_name"], pr=p["pr"], analysis_id=rep["analysis_id"], result=res)
         return {"analysis_id": rep["analysis_id"], "status": rep["status"], "comment": res["comment"], "commit_status": res["status"]}
 
+    def _kf_driver():
+        from . import neo4jgraph
+        cfg4j = neo4jgraph.config_from_env()
+        if cfg4j is None:
+            raise PermanentError("Neo4j is not configured on the worker (NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD): the Knowledge Fabric bridge cannot run")
+        try:
+            return neo4jgraph.connect(cfg4j), cfg4j["database"]
+        except neo4jgraph.Neo4jUnavailable as e:
+            raise RuntimeError(str(e))                            # unreachable: retried with backoff
+
+    def kf_bridge(job):
+        """Link the tenant's software graph to its Knowledge Fabric customer and capture the business context (docs/KF-BRIDGE-PLAN.md)."""
+        if cancelled(job):
+            return {"skipped": "superseded by a newer run"}
+        store = Store(db, job.tenant_id, audit_key)
+        svc = RepoService(store, workspace, allow_local=allow_local, allowed_hosts=allowed_hosts)
+        drv, database = _kf_driver()
+        try:
+            out = kf_bridge_run(store, svc, drv, database, reason=(job.payload or {}).get("reason", "job"))
+        except KfBridgeError as e:
+            store.audit("kf_bridge_failed", reason=str(e)[:300])
+            raise PermanentError(str(e))
+        finally:
+            drv.close()
+        kf_next_poll(queue, store)
+        return {"links": out["links_total"], "added": out["written"]["added"], "removed": out["written"]["removed"], "gaps": out["summary"]["gaps"]}
+
+    def kf_poll(job):
+        """Run the bridge when either graph moved: Knowledge Fabric's customer graph (fingerprint), TIA's landscape (graph head), or a
+        mirror wiped by Knowledge Fabric's reset script. Then schedule the next poll (the chain ends when the setting is turned off)."""
+        from . import neo4jgraph
+        store = Store(db, job.tenant_id, audit_key)
+        s = kf_settings(store)
+        if not s["enabled"]:
+            return {"skipped": "the Knowledge Fabric bridge is disabled"}
+        last = kf_last_run(store) or {}
+        drv, database = _kf_driver()
+        try:
+            head = (store.get_head(LANDSCAPE) or {}).get("graph_id")
+            mirrored = neo4jgraph.mirror_version(drv, store.tenant_id, database)
+            cust = neo4jgraph.kf_customer(drv, s["customer_id"], database) if s["customer_id"] else None
+            fp = neo4jgraph.kf_fingerprint(drv, s["customer_id"], s["kf_tenant_id"] or (cust or {}).get("tenant_id"), database) if cust else None
+            why = ("mirror missing" if mirrored is None else "TIA graph changed" if head and head != last.get("graph_version")
+                   else "Knowledge Fabric changed" if fp and fp != last.get("kf_fingerprint") else None)
+            if why:
+                svc = RepoService(store, workspace, allow_local=allow_local, allowed_hosts=allowed_hosts)
+                try:
+                    out = kf_bridge_run(store, svc, drv, database, reason=f"poll: {why}")
+                except KfBridgeError as e:
+                    store.audit("kf_bridge_failed", reason=str(e)[:300])
+                    out = {"error": str(e)}
+        finally:
+            drv.close()
+        kf_next_poll(queue, store)
+        return {"ran": bool(why), "why": why, **({"links": out.get("links_total"), "error": out.get("error")} if why else {})}
+
     return {"impact_analysis": impact_analysis, "github_pull_request": github_pull_request, "ado_pull_request": ado_pull_request,
+            "kf_bridge": kf_bridge, "kf_poll": kf_poll,
             "scm_pull_request": scm_pull_request}
+
+
+# ---- the Knowledge Fabric bridge (docs/KF-BRIDGE-PLAN.md sections 8-10) -----------------------------------------------------------------
+class KfBridgeError(Exception):
+    """The bridge cannot run: disabled, misconfigured, or Knowledge Fabric has no such customer. Not retried."""
+
+
+KF_SOURCE = "tia-kf-bridge"
+
+
+def kf_settings(store: Store) -> dict:
+    from .kfsettings import canonical
+    return canonical(store.effective_config().knowledge_fabric)
+
+
+def kf_link(driver, database: Optional[str], tenant: str, ex: dict, g, gid: str, s: dict) -> dict:
+    """The bridge without TIA's database (also used by the command line): make sure the tenant's mirror is current (re-sync it when it is
+    missing, e.g. after Knowledge Fabric's reset script), resolve the customer and domains, plan and write the links, capture the business
+    context. s: the canonical knowledge_fabric setting."""
+    from . import kfbridge, neo4jgraph
+    if not s["customer_id"]:
+        raise KfBridgeError("knowledge_fabric.customer_id is not set (pick it from GET /api/v1/kf/customers)")
+    mirrored = neo4jgraph.mirror_version(driver, tenant, database)
+    restored = mirrored is None
+    if mirrored != gid:
+        neo4jgraph.sync(driver, neo4jgraph.project(g, tenant, gid, ex), tenant, gid, database)
+    cust = neo4jgraph.kf_customer(driver, s["customer_id"], database)
+    if cust is None:
+        raise KfBridgeError(f"Knowledge Fabric has no customer {s['customer_id']!r} (no CustomerRoot node): choose one from GET /api/v1/kf/customers")
+    if cust.get("ambiguous_tenant") and not s["kf_tenant_id"]:
+        raise KfBridgeError(f"customer {s['customer_id']!r} has several tenant ids in Knowledge Fabric ({', '.join(cust['tenant_ids'])}): set "
+                            "knowledge_fabric.kf_tenant_id")
+    kf_tenant = s["kf_tenant_id"] or cust.get("tenant_id")
+    warnings = []
+    if s["kf_tenant_id"] and cust.get("tenant_id") and s["kf_tenant_id"] != cust["tenant_id"] and not cust.get("ambiguous_tenant"):
+        warnings.append(f"knowledge_fabric.kf_tenant_id {s['kf_tenant_id']!r} differs from the customer's CustomerRoot tenant {cust['tenant_id']!r}")
+    available = neo4jgraph.kf_domains(driver, s["customer_id"], kf_tenant, database)
+    domains, unknown = kfbridge.resolve_domains(s["domains"], available)
+    index = neo4jgraph.kf_index(driver, s["customer_id"], kf_tenant, domains, database=database)
+
+    def declared(e):
+        b = (e.service_map or {}).get("business_systems")
+        return [str(x) for x in b if isinstance(x, (str, int))] if isinstance(b, list) else [b] if isinstance(b, str) else []
+    services = [{"key": f"{tenant}|svc:{e.service}", "service": e.service, "repo": repo, "declared": declared(e)} for repo, e in sorted(ex.items())]
+    cases = [{"key": f"{tenant}|testcase:{repo}:{tc['id']}", "id": tc["id"], "repo": repo}
+             for repo, e in sorted(ex.items()) for tc in e.manual_tests if tc.get("id")]
+    planned = kfbridge.plan(services, cases, index, s, kf_tenant, domains)
+    planned["gaps"]["unknown_domains"] = [{"domain": d} for d in unknown]
+    fp = neo4jgraph.kf_fingerprint(driver, s["customer_id"], kf_tenant, database)
+    written = neo4jgraph.write_bridge(driver, tenant, s["customer_id"], kf_tenant, planned["links"], {"tia_graph_version": gid, "kf_fingerprint": fp},
+                                      database)
+    ctx = neo4jgraph.read_context(driver, tenant, s["customer_id"], s["max_context_items"], database)
+    return {"customer_id": s["customer_id"], "kf_tenant_id": kf_tenant, "domains": domains, "available_domains": available,
+            "domain_mode": "auto" if s["domains"] == "auto" else "restricted", "graph_version": gid, "kf_fingerprint": fp,
+            "mirror_restored": restored, "mirror_synced": mirrored != gid, "planned": planned, "summary": kfbridge.summary(planned),
+            "written": written, "context": ctx, "warnings": warnings}
+
+
+def kf_bridge_run(store: Store, svc: RepoService, driver, database: Optional[str] = None, reason: str = "manual",
+                  ex: Optional[dict] = None) -> dict:
+    """One bridge run for a tenant (kf_link), recorded as evidence: the run (links, gaps, fingerprints) and the business context that
+    analyses pin (docs/KF-BRIDGE-PLAN.md sections 8-10)."""
+    import time
+    from .kfontology import BRIDGE_VERSION
+    t0 = time.monotonic()
+    s = kf_settings(store)
+    if not s["enabled"]:
+        raise KfBridgeError("the Knowledge Fabric bridge is disabled for this tenant (knowledge_fabric.enabled)")
+    cfg = store.effective_config()
+    ex = ex if ex is not None else landscape_extracts(svc, store)
+    if not ex:
+        raise KfBridgeError("no repositories are registered: there is nothing to link")
+    g, gid, _ = get_or_build(store, ex, tuple(cfg.strip_prefixes), cfg.test_naming)
+    out = kf_link(driver, database, store.tenant_id, ex, g, gid, s)
+    if out["mirror_synced"]:
+        store.audit("kf_mirror_restored" if out["mirror_restored"] else "neo4j_synced", graph=gid, reason="kf_bridge")
+    now = datetime.now(timezone.utc)
+    es = EvidenceStore(store.db, store.tenant_id)
+    ctx_rec = es.put("kf_context", KF_SOURCE, {"customer_id": out["customer_id"], "tenant_id": out["kf_tenant_id"], "fingerprint": out["kf_fingerprint"],
+                                               "pulled_at": now.isoformat(timespec="seconds"), "bridge_version": BRIDGE_VERSION,
+                                               "graph_version": gid, "domains": out["domains"], "services": out["context"]}, observed_to=now)
+    planned, written = out["planned"], out["written"]
+    run = {"reason": reason, "at": now.isoformat(timespec="seconds"), "customer_id": out["customer_id"], "kf_tenant_id": out["kf_tenant_id"],
+           "domains": out["domains"], "domain_mode": out["domain_mode"], "available_domains": out["available_domains"],
+           "graph_version": gid, "kf_fingerprint": out["kf_fingerprint"], "bridge_version": BRIDGE_VERSION, "mirror_restored": out["mirror_restored"],
+           "summary": out["summary"], "written": {k: v for k, v in written.items() if k != "not_written"}, "not_written": written["not_written"][:200],
+           "links": planned["links"][:5000], "links_total": len(planned["links"]), "gaps": {k: v[:500] for k, v in planned["gaps"].items()},
+           "context_evidence_id": ctx_rec["id"], "warnings": out["warnings"], "duration_s": round(time.monotonic() - t0, 3)}
+    rec = es.put("kf_bridge_run", KF_SOURCE, run, observed_to=now)
+    store.audit("kf_bridge_completed", reason=reason, links=len(planned["links"]), added=written["added"], removed=written["removed"],
+                customer=out["customer_id"], graph=gid, fingerprint=out["kf_fingerprint"])
+    return {**run, "run_evidence_id": rec["id"]}
+
+
+def kf_last_run(store: Store) -> Optional[dict]:
+    rows = EvidenceStore(store.db, store.tenant_id).list("kf_bridge_run", limit=1)
+    return {**rows[0]["data"], "run_evidence_id": rows[0]["id"]} if rows else None
+
+
+def kf_enqueue(queue, tenant: str, kind: str, reason: str, delay_s: float = 0, bucket: Optional[str] = None) -> dict:
+    """Queue a bridge job. kf_bridge: newest wins per tenant; kf_poll: one per time bucket, so several workers keep one chain."""
+    key = f"{kind}:{tenant}:{bucket or datetime.now(timezone.utc).isoformat(timespec='microseconds')}"
+    return queue.enqueue(tenant, kind, {"reason": reason}, hashlib.sha256(key.encode()).hexdigest(),
+                         group_key=f"{kind}:{tenant}", delay_s=delay_s)
+
+
+def kf_next_poll(queue, store: Store) -> Optional[dict]:
+    s = kf_settings(store)
+    if not (s["enabled"] and s["auto_relink"]):
+        return None
+    period = s["poll_minutes"] * 60
+    bucket = str(int(datetime.now(timezone.utc).timestamp() // period) + 1)
+    return kf_enqueue(queue, store.tenant_id, "kf_poll", "poll", delay_s=period, bucket=bucket)

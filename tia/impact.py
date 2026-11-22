@@ -41,6 +41,8 @@ from . import communities as communities_mod
 from . import diagram as diagram_mod
 from . import structure as structure_mod
 from .findings_catalog import enrich_all
+from .kfbridge import business_impact as kf_business_impact
+from .kfsettings import canonical as kf_canonical
 
 
 @dataclass
@@ -965,6 +967,23 @@ def _analyze(req: AnalysisRequest, store: Optional[Store] = None, persist: bool 
         fs = failure_signatures(ev["test_run"], ev.get("incident", []), req.target, base_sha, head_sha)
         if fs["signatures"]:
             report["failure_signatures"] = fs
+    # Knowledge Fabric: the business side of the change (docs/KF-BRIDGE-PLAN.md section 10), from the context the bridge captured and this
+    # analysis pinned as evidence; never a live call. The changed service first, then every service with a material finding.
+    kf = kf_canonical(cfg.knowledge_fabric)
+    if kf["enabled"]:
+        affected = list(dict.fromkeys([target_service] + [f["component"] for f in report["findings"] if f.get("material")]))
+        repo_of = {e.service: r for r, e in extracts.items()}
+        suite = {tc["id"] for e in extracts.values() for tc in e.manual_tests if tc.get("id")}
+        ctx = (ev.get("kf_context") or [None])[0]
+        section, kf_unknowns = kf_business_impact(ctx["data"] if ctx else None, affected, repo_of, suite, kf)
+        if section:
+            report["business_impact"] = section
+            reg = report["test_scope"].get("regression")
+            if reg is not None:
+                reg["knowledge_fabric"] = {"business_test_cases": section["summary"]["test_cases"],
+                                           "not_in_repository_suite": section["summary"]["test_cases_not_in_repository_suite"],
+                                           "headline": section["summary"]["headline"]}
+        report["unknowns"] += kf_unknowns
     # FR-033/034/036: the tenant's release policy, evaluated on this report (owners: the tenant registry wins over tia-services.yaml)
     owners = {**{e.service: str(e.service_map["owner"]) for e in extracts.values() if (e.service_map or {}).get("owner")}, **cfg.ownership}
     report["owners"] = {s: owners[s] for s in sorted({f["component"] for f in report["findings"]} | {target_service}) if s in owners}

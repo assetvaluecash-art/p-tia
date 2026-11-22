@@ -27,6 +27,7 @@ from typing import Optional
 
 from .models import SEVERITY_ORDER
 from .severity import RULE_IDS
+from .kfsettings import canonical as kf_canonical, validate as validate_kf
 
 SEVERITIES = tuple(SEVERITY_ORDER)                                  # unknown, low, medium, high, critical
 CAPS = ("none",) + SEVERITIES[1:]                                   # none removes the cap
@@ -41,7 +42,7 @@ SECTIONS = {
     "materiality": ("severities", "breaking_on_path"), "comments": ("audience",), "compatibility": ("rules",),
     "itsm": ("provider", "instance_url", "auto_attach"),
     "retention": ("graph_days", "analysis_days", "runtime_days", "incident_days", "audit_days"), "incidents": ("window_hours",)}
-TOP_LEVEL = tuple(SECTIONS) + ("criticality", "ownership", "policies", "coordination")
+TOP_LEVEL = tuple(SECTIONS) + ("criticality", "ownership", "policies", "coordination", "knowledge_fabric")
 
 
 class ConfigError(Exception):
@@ -75,6 +76,7 @@ class TenantConfig:
     retention: dict = field(default_factory=dict)          # *_days -> days kept (absent = forever; PRD 11.4, tia.retention)
     incident_window_hours: float = 72                      # how far before an incident a deployment counts as time-correlated (FR-031)
     coordination: dict = field(default_factory=lambda: {"auto_notify": False, "channels": {}, "default": None})   # FR-045
+    knowledge_fabric: dict = field(default_factory=dict)   # the Knowledge Fabric bridge (tia.kfbridge; docs/KF-BRIDGE-PLAN.md section 7)
     version: int = 0                                      # 0 = nothing stored: the built-in defaults
     digest: str = "default"
 
@@ -111,7 +113,8 @@ class TenantConfig:
                 "retention": {k: self.retention.get(k) for k in SECTIONS["retention"]},
                 "incidents": {"window_hours": self.incident_window_hours},
                 "coordination": {"auto_notify": bool(self.coordination.get("auto_notify")), "channels": dict(sorted((self.coordination.get("channels") or {}).items())),
-                                 "default": self.coordination.get("default")}}
+                                 "default": self.coordination.get("default")},
+                "knowledge_fabric": kf_canonical(self.knowledge_fabric)}
 
     def settings_digest(self) -> str:
         return hashlib.sha256(json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
@@ -339,6 +342,10 @@ def parse(raw) -> TenantConfig:
                 else:
                     out[rule] = level
             kw["compatibility"] = out
+    if raw.get("knowledge_fabric") is not None:
+        kf = validate_kf(raw["knowledge_fabric"], problems)
+        if kf is not None and kf_canonical(kf) != kf_canonical({}):     # the defaults are stored as {}, so a round trip is a fixed point
+            kw["knowledge_fabric"] = kf_canonical(kf)
     if problems:
         raise ConfigError(problems)
     return TenantConfig(**kw)

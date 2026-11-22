@@ -7,6 +7,7 @@ import json
 from .diagram import mermaid_markdown, redact_diagram
 from .configkeys import redact_checks
 from .regression import redact as regression_redact
+from .kfbridge import redact as kf_redact
 from .testscope import redact_scope
 
 MARKER = "<!-- tia-analysis -->"
@@ -32,6 +33,14 @@ def redact(report: dict, readable_repos) -> dict:
         f["tests"] = [t for t in f["tests"] if t["repo"] in readable]
         kept.append(f)
     r["findings"] = kept
+    if r.get("business_impact"):                                  # Knowledge Fabric context of services in unreadable repositories is withheld
+        n = kf_redact(r["business_impact"], readable)
+        if n:
+            r["business_impact"]["withheld"] = {"items": n, "note": f"{n} system(s) or test case(s) reached through repositories you cannot "
+                                                                    "access are not shown."}
+        bi = r["business_impact"]
+        bi["summary"].update(systems=len(bi["systems"]), test_cases=len(bi["test_cases"]),
+                             test_cases_not_in_repository_suite=sum(1 for c in bi["test_cases"] if not c["also_in_repository_suite"]))
     if r.get("test_scope"):
         ts = redact_scope(r["test_scope"], readable)
         more = 0
@@ -206,6 +215,7 @@ def render_comment(report: dict, max_rows: int = 12, link: str | None = None) ->
         L += [f"**{withheld} finding(s) in other repositories are withheld from this comment** (visibility policy). "
               "This is not a clean result: open the TIA report for the full impact.", ""]
     L += _test_scope_md(report.get("test_scope"), max_rows, report)
+    L += _business_md(report.get("business_impact"), max_rows)
     L += mermaid_markdown(report.get("architecture_diagram"))
     mat = [f for f in report["findings"] if f["material"]]
     if mat:
@@ -352,6 +362,36 @@ def _test_scope_md(ts: dict | None, max_rows: int, report: dict) -> list:
     L += _evidence_md(report)
     if (ts.get("redacted") or {}).get("items"):
         L += [f"_{ts['redacted']['note']}_", ""]
+    return L
+
+
+def _business_md(bi: dict | None, max_rows: int) -> list:
+    """Knowledge Fabric: the business requirements, processes and test cases on the systems this change affects (docs/KF-BRIDGE-PLAN.md)."""
+    if not bi:
+        return []
+    s = bi["summary"]
+    L = [f"**{_md(s['headline'])}**", ""]
+    if not bi["systems"]:
+        return L
+    L += ["<details><summary>Business impact (Knowledge Fabric)</summary>", ""]
+    if bi["test_cases"]:
+        L += ["| Business test case | Reached through | Evidence |", "|---|---|---|"]
+        for c in bi["test_cases"][:max_rows]:
+            v = c["via"][0]
+            chain = f"{_md(v['service'])} -> {_md(v['system'])} ({_md(c['domain'])})" + (f" -> {_md(v['requirements'][0])}" if v["requirements"] else "")
+            mark = " (also in your repository suite)" if c["also_in_repository_suite"] else ""
+            L.append(f"| `{_md(c['id'])}`{mark} | {chain} | {c['evidence_status']} |")
+        if len(bi["test_cases"]) > max_rows:
+            L.append(f"| _+{len(bi['test_cases']) - max_rows} more in the full report_ | | |")
+        L.append("")
+    for sy in bi["systems"][:max_rows]:
+        bits = [f"{len(sy['requirements'])} requirement(s)", f"{len(sy['processes'])} process(es)"]
+        if sy["defects"]:
+            bits.append("defects: " + ", ".join(_md(d["name"]) for d in sy["defects"][:5]))
+        if sy["incidents"]:
+            bits.append("incidents: " + ", ".join(_md(i["name"]) for i in sy["incidents"][:5]))
+        L.append(f"- `{_md(sy['service'])}` realises **{_md(sy['system'])}** ({_md(sy['domain'])}, {sy['link']['status']}): " + "; ".join(bits))
+    L += ["", f"_{_md(bi['limits'][0])}_", "", "</details>", ""]
     return L
 
 

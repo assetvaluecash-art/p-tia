@@ -7,6 +7,8 @@ Cross-repository change-impact analysis for a pull request, producing an evidenc
 This folder is what is built and deployed: the `tia` package, `pyproject.toml` and `deploy/` (Dockerfile, Compose, Helm, Terraform).
 Documentation, tests, fixtures, tools and the client SDK are in [`../development/`](../development/).
 
+Sample repositories to ingest and try TIA on are in [`Sample test repos/`](Sample%20test%20repos/README.md): five Northwind Pay services as folders and zip uploads, six change scenarios, CI evidence files and the expected results (`expected.json`). Run `python "Sample test repos/make_git_repos.py"` to turn them into git repositories.
+
 ## Quick start
 
 ```bash
@@ -67,7 +69,7 @@ packages: {payments_client: payments-service}        # generated client package 
 | Phase 2+ (CI, coverage, events, runtime, policy, ITSM, MCP) | Not started |
 | GitHub App connector | Implemented: App JWT, installation tokens (comments, **real check runs**, clone/fetch), webhooks routed to the tenant owning the installation, linking by the operator or by an administrator who proves access through GitHub, repository discovery. Verified against a GitHub platform stand-in (live through the real processes); **no real GitHub App has been registered or used** |
 | Azure DevOps | Service hooks, one PR comment thread updated in place, advisory PR status, manual publish; tested against a stand-in only; no permission mirroring from Azure DevOps |
-| Knowledge Fabric V2.5 | `POST /query/tia` returns finished reports in KF's QueryResponse shape (`development/docs/KF-ADAPTER.md`); built from the integration document's field list, not KF's source |
+| Knowledge Fabric V2.5 | `POST /query/tia` returns finished reports in KF's QueryResponse shape, checked field for field against KF 2.5's `retriever_api.py` (`development/docs/KF-ADAPTER.md`). The bridge (`development/docs/KF-BRIDGE.md`) links services to KF `System` nodes and test cases to KF `TestCase` nodes with KF's own entity ids and adds the business test cases of a change to every report; tested against a simulated KF graph in a real Neo4j, **not yet against a real KF instance** |
 | Containers | `deploy/` Dockerfile, Compose file and Helm chart; statically checked; **never built or installed** (no Docker here) |
 | Sign-in and permissions | Implemented: OIDC (browser and bearer tokens), SAML 2.0, scoped service tokens, five roles on a deny-by-default route table, per-repository access mirrored from GitHub (unreadable repositories answer 404; reports redacted per reader; a PR comment names another repository only if all its readers may read it); the credential names the tenant. Verified against our own OIDC/SAML provider and a fake GitHub API (live in a real browser); **no real identity provider has been used**, Azure DevOps permission mirroring is not built, rate limiting is left to a reverse proxy |
 | Accuracy (PRD 15.3) | Measured with `development/tools/accuracy.py` against curated truth: two **independent** real-code Java landscapes (spring-petclinic-microservices, piggymetrics) and a synthetic Python one; every measured target met. Small samples; no independent Python reference yet; the assessment-time target is not measured; context paths from external config must be set by hand |

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Change Impact Platform — Architecture at a glance</title>
+<style>
+  :root{--bg:#f6f7fb;--card:#fff;--fg:#1c2333;--mut:#5b6478;--line:#d9dee8;--chip:#f1f4f9;--shadow:0 1px 2px rgba(16,24,40,.06),0 4px 14px rgba(16,24,40,.06)}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0f141c;--card:#171e29;--fg:#e8ecf3;--mut:#9aa5b8;--line:#2b3546;--chip:#202a39;--shadow:none}}
+  :root[data-theme="dark"]{--bg:#0f141c;--card:#171e29;--fg:#e8ecf3;--mut:#9aa5b8;--line:#2b3546;--chip:#202a39;--shadow:none}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  header{padding:22px 28px 10px;max-width:1400px;margin:0 auto}
+  header h1{margin:0;font-size:26px;letter-spacing:-.01em}
+  header p{margin:4px 0 0;color:var(--mut)}
+  nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+  nav .in{max-width:1400px;margin:0 auto;padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap}
+  nav button{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  nav button i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  nav button[aria-selected="true"]{border-color:var(--fg);font-weight:600}
+  main{max-width:1400px;margin:0 auto;padding:18px 20px 40px}
+  section.page{display:none}
+  section.page.on{display:block}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px}
+  .lead{font-size:17px;margin:0 0 12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-top:14px}
+  h2{margin:0 0 4px;font-size:22px}
+  h3{margin:0 0 8px;font-size:15px}
+  .mut{color:var(--mut)}
+  svg{width:100%;height:auto;display:block}
+  svg text{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  .qa p{margin:0 0 10px}.qa b{display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .legend span{background:var(--chip);border-radius:8px;padding:4px 10px;font-size:13px}
+  .journey{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+  .step{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+  .step .n{width:30px;height:30px;border-radius:50%;background:var(--fg);color:var(--bg);display:grid;place-items:center;font-weight:700;margin-bottom:8px}
+  .hint{font-size:13px;color:var(--mut);margin:8px 0 0}
+  .toolbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px}
+  .toolbar button{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:4px 10px;font:inherit;font-size:13px;cursor:pointer}
+  @media print{nav,.toolbar,.hint{display:none}section.page{display:block!important;page-break-after:always}body{background:#fff}.card{box-shadow:none}}
+  @media (max-width:700px){header{padding:16px}main{padding:12px 16px 30px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Change Impact Platform — Architecture at a glance</h1>
+  <p>What the platform does, how it is built, and how each part works. Start with the overview, then open any part.</p>
+</header>
+<nav><div class="in" id="nav" role="tablist" aria-label="Sections"></div></nav>
+<main id="main"></main>
+<script>
+const BRAND = "Change Impact Platform";
+const ARCH = [{"id":"connect","title":"Connect your code","color":"#2563eb","tagline":"Bring in every repository and the evidence your delivery pipeline already produces.","plain":"The platform reads your code where it already lives. It connects to your source-control system and is notified of every pull request, or you can register repositories by address, discover a whole organisation at once, or simply upload a zip file. It can also take in the evidence your teams already produce: test results from your build pipeline, code coverage, calls observed in production, deployments, builds, incidents and change records. All of it is stored inside the platform first, so an analysis never has to reach out to another system while it runs.","groups":[{"title":"Source control","items":[{"t":"GitHub","d":"As an installed app: every pull request triggers an analysis; results come back as a comment and a check."},{"t":"GitLab and Bitbucket","d":"Webhooks for merge and pull requests, comments posted back, permissions mirrored."},{"t":"Azure DevOps","d":"Service hooks for pull requests, one comment thread kept up to date, an advisory status."}]},{"title":"Other ways in","items":[{"t":"Repository address","d":"Register one repository by its URL, with an access token for private code."},{"t":"Whole organisation","d":"Discover and register every repository of an organisation or project in one step."},{"t":"Zip or folder upload","d":"No source-control access needed: upload the code, compare with the previous upload."},{"t":"Command line","d":"Run an analysis from a terminal or a build pipeline."}]},{"title":"Delivery evidence","items":[{"t":"Test results","d":"Results from your build pipeline (JUnit format) show which tests ran and passed."},{"t":"Code coverage","d":"Which code your tests actually execute."},{"t":"Production calls","d":"Calls between services observed at runtime confirm or add dependencies."},{"t":"Deployments and builds","d":"Which version runs in which environment, and what each build produced."},{"t":"Incidents and change records","d":"Past incidents linked to services; change records in your service-management tool."}]},{"title":"Business knowledge (optional)","items":[{"t":"Requirements and user stories","d":"From your business knowledge graph: what the business expects each system to do."},{"t":"Business test cases","d":"The test cases your business testers keep, linked to the requirements they cover."}]}],"qa":[{"q":"Do we have to change how our teams work?","a":"No. The platform reads the repositories and the evidence your pipeline already produces. Teams keep their tools; results appear in the pull request they already use."},{"q":"Can it work without access to our source-control system?","a":"Yes. Code can be uploaded as a zip or folder, and changes compared with the previous upload."},{"q":"Does it need all the evidence sources to be useful?","a":"No. Code alone gives a full impact report. Each extra source makes the answer more certain, and the report says which sources were missing."}]},{"id":"understand","title":"Understand the code","color":"#7c3aed","tagline":"Read every repository and recognise what matters for impact: APIs, calls, data, events, screens and tests.","plain":"The platform reads source files as text and recognises the things that matter when something changes: the APIs a service offers, the calls it makes to other services, the database tables it reads and writes, the events it publishes and consumes, the screens and fields of the user interface, and the tests that check all of this. It never runs, builds or installs your code, and it never copies secrets it finds. Only files that changed since the last time are read again, so large estates stay fast.","groups":[{"title":"Languages","items":[{"t":"Java and Python","d":"Deep support, including Spring, FastAPI, Flask and Django, and their HTTP clients."},{"t":"Go, C#, Kotlin, TypeScript","d":"Dedicated readers for each language."},{"t":"39 further languages","d":"A structural reader for functions, classes and calls in many more languages."}]},{"title":"What it recognises","items":[{"t":"APIs and contracts","d":"Endpoints, request and response shapes, API specifications."},{"t":"Calls between services","d":"Every outgoing call, with the address and configuration it uses."},{"t":"Data","d":"Database tables and columns, data models, migrations, SQL and stored procedures."},{"t":"Events","d":"Message topics, who publishes and who consumes, and the event shapes."},{"t":"Screens","d":"Pages, buttons and fields, how to locate them, and how screens lead to each other."},{"t":"Tests","d":"Automated tests and the written test cases your testers keep."},{"t":"Configuration","d":"Settings and environment variables each part of the code reads."}]},{"title":"Safe by design","items":[{"t":"Read, never run","d":"Code is read as text; nothing is built, installed or executed."},{"t":"Secrets never copied","d":"Passwords and keys found in code are left out of every result."},{"t":"Only what changed","d":"Each file is read once per version; unchanged files are never read again."}]}],"qa":[{"q":"Which languages are supported?","a":"Java and Python in depth; Go, C#, Kotlin and TypeScript with dedicated readers; 39 further languages structurally. New languages can be added through a documented extension kit."},{"q":"Is our code executed anywhere?","a":"Never. It is read as text, the way a reviewer reads it."},{"q":"What happens with code it cannot read?","a":"It is listed in the report as not analysed, so nobody mistakes silence for safety."}]},{"id":"map","title":"Map the connections","color":"#0891b2","tagline":"Join everything into one map across all repositories, and record how each connection is known.","plain":"What was read in each repository is joined into one map of the whole estate: which service calls which API, which code reads which table, which screen uses which endpoint, which test checks what. Every connection carries a label saying how it is known, for example proven by the code, declared in a contract, seen in production, or inferred from a naming match. The map is tied to exact versions of the code, so it always describes a specific moment, and connections that may be out of date are marked as such.","groups":[{"title":"One map","items":[{"t":"Across all repositories","d":"Services, APIs, functions, tables, events, screens and tests in one connected map."},{"t":"Tied to versions","d":"Each map describes exact versions of every repository."},{"t":"Kept current","d":"Connections whose evidence changed are marked out of date, never silently kept."}]},{"title":"How a connection is proven","items":[{"t":"Shared client library","d":"The caller uses a client library published by the provider."},{"t":"Resolved address","d":"The call's address comes from configuration that names the provider."},{"t":"Declared contract","d":"The caller declares the API it uses in a contract file."},{"t":"Seen in production","d":"Runtime traces show the call happening."},{"t":"Unique path match","d":"Only one API in the estate matches the call: kept, but labelled inferred."}]},{"title":"Confidence labels","items":[{"t":"Confirmed in code","d":"An explicit relationship in source code or configuration."},{"t":"Confirmed by contract","d":"Declared in an API, event or schema definition."},{"t":"Seen at runtime","d":"Observed in production telemetry."},{"t":"Inferred","d":"Produced by a named rule; to be validated."},{"t":"Unknown or out of date","d":"Not enough evidence, or evidence that may no longer hold."}]}],"qa":[{"q":"Does it guess connections from similar names?","a":"No. Similar names never create a connection. Where a connection rests on a narrow rule, such as a single matching path, it is labelled inferred so reviewers can see it."},{"q":"What if a call's target cannot be worked out?","a":"It is listed with its file and line as unresolved. The report counts how many calls were resolved and how."}]},{"id":"analyse","title":"Analyse a change","color":"#dc2626","tagline":"Find what a proposed change affects, rate it, and say honestly what is still unknown.","plain":"When someone proposes a change, the platform compares the two versions and works out what actually changed: code, an API contract, configuration, a database column or an event. It then follows the connections outwards, through calls, APIs, events and shared data, within limits you set, to find every part of the estate that may be affected. Each finding is rated with a fixed, published rule table, from critical to low, and anything the platform could not establish is listed as an open question rather than hidden. Release rules can then decide whether the change may proceed. The same inputs always give the same report.","groups":[{"title":"What changed","items":[{"t":"Code","d":"Functions added, removed or modified, and whether their behaviour changes."},{"t":"API contracts","d":"Fields removed or changed, breaking or compatible."},{"t":"Configuration","d":"Settings newly read or changed, without ever showing their values."},{"t":"Data","d":"Columns and tables changed by migrations."},{"t":"Events","d":"Event shapes and topics."}]},{"title":"Follow the ripple","items":[{"t":"Across services","d":"Through calls, APIs, events and shared databases."},{"t":"Within your limits","d":"Depth, number of results and time are configurable."}]},{"title":"Rate and decide","items":[{"t":"Severity rules","d":"Critical, high, medium or low, from the type of change and how critical the affected part is."},{"t":"Inferred is capped","d":"A finding that rests only on inferred connections is never rated above medium."},{"t":"Release rules","d":"Pass, fail, not evaluated or needs review; advisory or enforcing."}]},{"title":"Honest results","items":[{"t":"Open questions","d":"Everything not established is listed with the reason."},{"t":"Clear status","d":"Complete, complete with gaps, partial or failed."},{"t":"Repeatable","d":"The same inputs always give the same report; any report can be reproduced."}]}],"qa":[{"q":"Is this artificial intelligence guessing?","a":"No. The analysis is deterministic: fixed rules, recorded evidence and repeatable results. No language model is involved in deciding what is affected."},{"q":"What does 'partial' mean?","a":"A limit you set was reached, for example how far to follow connections. The report says which limit; raising it lets the analysis go further."},{"q":"Can we tune what counts as serious?","a":"Yes. Severity overrides, which services are critical, and what counts as material are settings per organisation, versioned and audited."}]},{"id":"deliver","title":"Deliver the answer","color":"#ea580c","tagline":"Put the result where people work: the pull request, the web application, tester views and integrations.","plain":"The result reaches people where they already work. Developers see a comment and a check on their pull request. Reviewers and release managers open the full report in the web application, where every finding shows its path and evidence. Testers get their own views: which of their test cases to run again, what to test on each entry point, a ready-to-use test pack and even a generated automation script. Everything is also available through a documented API, a Python client and a connector for AI assistants.","groups":[{"title":"For developers and reviewers","items":[{"t":"Pull-request comment and check","d":"A summary on the pull request, updated for every new version of it."},{"t":"Change impact report","d":"Findings, paths, evidence, open questions and release-rule results."},{"t":"Shareable report page","d":"A link that opens the full report for anyone allowed to see it."}]},{"title":"For testers","items":[{"t":"Which test cases to rerun","d":"Of your written test cases, exactly which ones this change touches, and why."},{"t":"What to test","d":"Each entry point the change reaches, with rule gaps and consistency checks."},{"t":"Tester pack","d":"Coverage gate, API test matrix and screen locators for this change."},{"t":"Automation script","d":"A generated browser test for a user journey."}]},{"title":"For systems","items":[{"t":"API and Python client","d":"Every result available programmatically, with permissions applied."},{"t":"AI assistant connector","d":"Coding and testing assistants can ask for impact, test scope and coverage."},{"t":"Notifications","d":"Owning teams notified by chat or e-mail; change records updated."}]}],"qa":[{"q":"Can our assistants or bots use it?","a":"Yes. A standard connector for AI assistants and a documented API expose the same answers, read-only, with the same permissions as a person."},{"q":"Who sees a report?","a":"Only people allowed to read the repositories involved. Findings in repositories someone cannot read are hidden from them."}]},{"id":"business","title":"Link to the business","color":"#16a34a","tagline":"Connect the code map to your business knowledge: systems, requirements, business rules and business test cases.","plain":"Optionally, the code map can be connected to your business knowledge graph, which holds what your documents say: business systems, requirements, user stories, business rules and the test cases your business testers keep. The platform links each code service to the business system it implements, screens to the forms they show, data to business data, and code rules to business rules once a person has confirmed the pair. A change then shows not only the technical impact but also the business requirements and the business test cases it reaches, including those that live outside your code repositories.","groups":[{"title":"What gets linked","items":[{"t":"Services to business systems","d":"Declared by owners, or matched by exact name and labelled as such."},{"t":"Screens to forms","d":"The screens in code linked to the forms the documents describe."},{"t":"Data to business data","d":"Tables and data models linked to business data entities."},{"t":"Code rules to business rules","d":"Proposed by the platform, confirmed or rejected by a person."},{"t":"Changes to user stories","d":"Story keys in commit messages link a change to its user story."}]},{"title":"What you get","items":[{"t":"Business impact of a change","d":"The systems, requirements and business test cases a change reaches."},{"t":"Tests outside the code","d":"Business test cases not in your repositories, flagged for your business testers."},{"t":"Gaps made visible","d":"Services with no business system, systems with no code, and how to fix each."}]},{"title":"Kept current","items":[{"t":"Automatic refresh","d":"Links are refreshed when the code or the business knowledge changes."},{"t":"One customer at a time","d":"Links never cross from one customer's knowledge to another's."}]}],"qa":[{"q":"Is the business link required?","a":"No. It is optional. Without it you get the full technical impact; with it you also get the business impact."},{"q":"Who decides that a code rule implements a business rule?","a":"A person. The platform only proposes pairs; nothing is linked until someone confirms it, and every decision is recorded."}]},{"id":"secure","title":"Keep it secure","color":"#475569","tagline":"Enterprise security from the first day: sign-in, roles, permissions, isolation, encryption and audit.","plain":"The platform is built for organisations that must protect their source code. People sign in through your identity provider. Five roles decide who may read, analyse, configure or administer. Repository permissions are copied from your source-control system, so people only see results for code they are already allowed to read. Each customer's data is isolated inside the database itself, and its credentials are encrypted with its own key, which can be held in your own key management service. Every action is written to a tamper-evident audit log, and the whole platform can run inside your own network with no outside connection.","groups":[{"title":"Who can do what","items":[{"t":"Single sign-on","d":"Through your identity provider (OpenID Connect or SAML), plus scoped service tokens."},{"t":"Five roles","d":"Viewer, engineer, release manager, auditor, administrator."},{"t":"Repository permissions","d":"Mirrored from your source-control system; results hidden from people who cannot read the code."}]},{"title":"Protecting data","items":[{"t":"Isolation per customer","d":"Enforced inside the database on every query."},{"t":"Encryption","d":"Encrypted connections; credentials encrypted with a key per customer; database encryption at rest by your platform."},{"t":"Your own keys","d":"The per-customer key can be held in your cloud key service or vault."},{"t":"Secrets never stored","d":"Credentials found in code never reach a report."}]},{"title":"Accountability","items":[{"t":"Audit log","d":"Every ingestion, analysis, export and change, in a tamper-evident chain."},{"t":"Retention rules","d":"How long evidence is kept, configurable per customer."},{"t":"Private installation","d":"Can run fully inside your network, even with no internet access."}]}],"qa":[{"q":"Does our code leave our network?","a":"Not if you install the platform yourselves. It can run entirely inside your boundary, including fully offline."},{"q":"Is there an audit trail?","a":"Yes. Every analysis, change of settings and external action is recorded in a tamper-evident log, with reporting for auditors."}]},{"id":"run","title":"Run it anywhere","color":"#b45309","tagline":"One container image and one database, deployable in your cloud, your data centre or as a managed service.","plain":"The platform ships as one container image that plays three roles: the web server, the background worker that runs analyses, and the database migration. It needs one database. It can be deployed with a simple compose file, on Kubernetes, or in Azure with the infrastructure templates provided. It reports health, metrics, logs and traces to your monitoring tools, and comes with backup, restore and high-availability guidance.","groups":[{"title":"Deployment","items":[{"t":"One container image","d":"Web server, background worker and database migration."},{"t":"One database","d":"PostgreSQL holds everything; an optional graph database copy serves graph tools."},{"t":"Where it runs","d":"Docker Compose, Kubernetes (Helm chart), Azure (Terraform templates)."}]},{"title":"Operations","items":[{"t":"Monitoring","d":"Metrics, structured logs, traces and health checks."},{"t":"Backup and restore","d":"Documented procedures with recovery targets."},{"t":"Scale","d":"More workers for more analyses; analyses of one customer never starve another."}]},{"title":"Measured speed","items":[{"t":"Pull-request analysis","d":"Under 9 seconds for 95% of analyses on an estate of 500 repositories."},{"t":"Opening a report","d":"Under 0.2 seconds for 95% of requests."}]}],"qa":[{"q":"What does it need to run?","a":"A container platform and a PostgreSQL database. Nothing else is required."},{"q":"How fast is it?","a":"Measured on an estate of 500 repositories: 95% of pull-request analyses finish in under 9 seconds and reports open in under 0.2 seconds."}]}];
+const JOURNEY = [{"t":"A change is proposed","d":"A developer opens a pull request, or someone uploads a new version."},{"t":"Code is read","d":"Only the files that changed are read again."},{"t":"The map is updated","d":"Connections across all repositories are refreshed, each with its confidence label."},{"t":"The ripple is followed","d":"Everything the change can reach is found and rated."},{"t":"Rules are applied","d":"Release rules decide pass, fail, not evaluated or needs review."},{"t":"People get the answer","d":"Pull-request comment, web report, tester views, API."}];
+const NS = "http://www.w3.org/2000/svg";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function wrap(text, max) {                     // split a label into lines of at most `max` characters
+  const words = String(text).split(" "), lines = [];
+  let cur = "";
+  for (const w of words) {
+    if ((cur + " " + w).trim().length > max && cur) { lines.push(cur); cur = w; } else cur = (cur + " " + w).trim();
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function label(g, x, y, lines, size, weight, fill, anchor) {
+  const t = el("text", {x, y: y - (lines.length - 1) * size * 0.62, "font-size": size, "font-weight": weight || 400, fill, "text-anchor": anchor || "middle", "dominant-baseline": "middle"}, g);
+  lines.forEach((ln, i) => { const s = el("tspan", {x, dy: i ? size * 1.24 : 0}, t); s.textContent = ln; });
+  return t;
+}
+function box(g, cx, cy, w, h, fill, stroke, r) {
+  return el("rect", {x: cx - w / 2, y: cy - h / 2, width: w, height: h, rx: r || 12, fill, stroke: stroke || "none", "stroke-width": 1.5}, g);
+}
+function curve(g, x1, y1, x2, y2, color, width) {
+  const mx = (x1 + x2) / 2;
+  el("path", {d: `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`, fill: "none", stroke: color, "stroke-width": width || 2, "stroke-opacity": .55}, g);
+}
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+// ---- overview: radial mindmap of the whole architecture ------------------------------------------------------------------------------
+function overview(svgHost) {
+  const W = 1400, H = 860, cx = W / 2, cy = H / 2;
+  const svg = el("svg", {viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `Mindmap of the ${BRAND} architecture: ${ARCH.map(a => a.title).join(", ")}`});
+  const gl = el("g", {}, svg), gn = el("g", {}, svg);
+  const n = ARCH.length, rx = 470, ry = 300;
+  ARCH.forEach((a, i) => {
+    const ang = -Math.PI / 2 + i * 2 * Math.PI / n;
+    const x = cx + rx * Math.cos(ang), y = cy + ry * Math.sin(ang);
+    curve(gl, cx, cy, x, y, a.color, 4);
+    const g = el("g", {class: "branch", tabindex: 0, role: "button", "aria-label": `Open ${a.title}`, style: "cursor:pointer"}, gn);
+    g.addEventListener("click", () => show(a.id));
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(a.id); } });
+    const chips = a.groups.map(gr => gr.title);
+    const bw = 270, bh = 74 + chips.length * 26;
+    box(g, x, y, bw, bh, css("--card"), a.color, 16);
+    el("rect", {x: x - bw / 2, y: y - bh / 2, width: bw, height: 8, rx: 4, fill: a.color}, g);
+    label(g, x, y - bh / 2 + 32, [`${i + 1}. ${a.title}`], 18, 700, css("--fg"));
+    chips.forEach((c, k) => {
+      const yy = y - bh / 2 + 66 + k * 26;
+      el("rect", {x: x - bw / 2 + 14, y: yy - 11, width: bw - 28, height: 22, rx: 11, fill: css("--chip")}, g);
+      el("circle", {cx: x - bw / 2 + 28, cy: yy, r: 4, fill: a.color}, g);
+      label(g, x - bw / 2 + 40, yy, [c], 13, 400, css("--fg"), "start");
+    });
+  });
+  box(gn, cx, cy, 300, 150, css("--fg"), "none", 75);
+  label(gn, cx, cy - 22, wrap(BRAND, 22), 22, 800, css("--bg"));
+  label(gn, cx, cy + 32, ["What does this change affect,", "and what must we test?"], 13, 400, css("--bg"));
+  svgHost.appendChild(svg);
+}
+
+// ---- one part: horizontal mindmap ------------------------------------------------------------------------------------------------------
+function partMap(svgHost, a, idx) {
+  const rowH = 66, gapG = 26;
+  const rows = a.groups.reduce((s, g) => s + Math.max(g.items.length, 1), 0);
+  const H = Math.max(420, rows * rowH + (a.groups.length - 1) * gapG + 80), W = 1400;
+  const svg = el("svg", {viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `Mindmap of ${a.title}: ` + a.groups.map(g => g.title + " (" + g.items.map(i => i.t).join(", ") + ")").join("; ")});
+  const gl = el("g", {}, svg), gn = el("g", {}, svg);
+  const rootX = 150, grpX = 470, itemX = 1060;
+  let y = 40;
+  const groupYs = [];
+  a.groups.forEach(gr => {
+    const span = Math.max(gr.items.length, 1) * rowH;
+    const gy = y + span / 2;
+    groupYs.push(gy);
+    gr.items.forEach((it, k) => {
+      const iy = y + rowH / 2 + k * rowH;
+      curve(gl, grpX + 130, gy, itemX - 320, iy, a.color, 2);
+      box(gn, itemX, iy, 640, 56, css("--chip"), "none", 14);
+      el("circle", {cx: itemX - 302, cy: iy - 12, r: 5, fill: a.color}, gn);
+      const t = label(gn, itemX - 288, iy - 12, [it.t], 14, 700, css("--fg"), "start");
+      const d = wrap(it.d, 92).slice(0, 2);
+      if (d.length === 2 && wrap(it.d, 92).length > 2) d[1] = d[1].replace(/[ ,.;:]*$/, "") + "…";
+      label(gn, itemX - 288, iy + 8 + (d.length - 1) * 7.5, d, 12, 400, css("--mut"), "start");
+      const title = el("title", {}, t); title.textContent = it.d;
+    });
+    y += span + gapG;
+  });
+  const rootY = (groupYs[0] + groupYs[groupYs.length - 1]) / 2;
+  a.groups.forEach((gr, k) => {
+    curve(gl, rootX + 130, rootY, grpX - 130, groupYs[k], a.color, 3.5);
+    box(gn, grpX, groupYs[k], 260, 50, css("--card"), a.color, 14);
+    label(gn, grpX, groupYs[k], wrap(gr.title, 26), 16, 700, css("--fg"));
+  });
+  box(gn, rootX, rootY, 260, 110, a.color, "none", 20);
+  label(gn, rootX, rootY - 12, wrap(`${idx + 1}. ${a.title}`, 20), 20, 800, "#fff");
+  label(gn, rootX, rootY + 34, ["Part " + (idx + 1) + " of " + ARCH.length], 12, 400, "#fff");
+  svgHost.appendChild(svg);
+}
+
+// ---- pages ---------------------------------------------------------------------------------------------------------------------------
+const main = document.getElementById("main"), nav = document.getElementById("nav");
+const PAGES = [{id: "overview", title: "Overview", color: "var(--fg)"}, ...ARCH.map(a => ({id: a.id, title: a.title, color: a.color})),
+               {id: "journey", title: "How a change flows", color: "var(--mut)"}];
+PAGES.forEach(p => {
+  const b = document.createElement("button");
+  b.setAttribute("role", "tab"); b.dataset.page = p.id;
+  b.innerHTML = `<i style="background:${p.color}"></i>${esc(p.title)}`;
+  b.onclick = () => show(p.id);
+  nav.appendChild(b);
+});
+
+function build() {
+  main.innerHTML = "";
+  // overview
+  const ov = document.createElement("section"); ov.className = "page"; ov.id = "page-overview";
+  ov.innerHTML = `<div class="card"><h2>The whole platform on one page</h2>
+    <p class="lead">${esc(BRAND)} answers one question for every proposed change: <b>what does it affect, and what must we test?</b>
+    It is built from eight parts. Click any part to open its own map.</p><div id="ovsvg"></div>
+    <p class="hint">Tip: click a box to drill down; use the buttons above to move between parts. Printing gives one part per page.</p></div>
+    <div class="grid">${ARCH.map((a, i) => `<div class="card"><h3><span style="color:${a.color}">●</span> ${i + 1}. ${esc(a.title)}</h3><p class="mut" style="margin:0">${esc(a.tagline)}</p></div>`).join("")}</div>`;
+  main.appendChild(ov);
+  overview(ov.querySelector("#ovsvg"));
+  // parts
+  ARCH.forEach((a, i) => {
+    const s = document.createElement("section"); s.className = "page"; s.id = "page-" + a.id;
+    s.innerHTML = `<div class="card"><h2><span style="color:${a.color}">●</span> ${i + 1}. ${esc(a.title)}</h2><p class="lead">${esc(a.tagline)}</p>
+      <div class="mapsvg"></div></div>
+      <details class="card" style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">Show every item with a one-line explanation</summary>${a.groups.map(g => `<p style="margin:10px 0 4px"><b>${esc(g.title)}</b></p>` +
+        g.items.map(it => `<div style="display:flex;gap:10px;padding:3px 0"><span style="color:${a.color}">●</span><span><b>${esc(it.t)}</b>: <span class="mut">${esc(it.d)}</span></span></div>`).join("")).join("")}</details>`;
+    main.appendChild(s);
+    partMap(s.querySelector(".mapsvg"), a, i);
+  });
+  // journey
+  const j = document.createElement("section"); j.className = "page"; j.id = "page-journey";
+  j.innerHTML = `<div class="card"><h2>How one change flows through the platform</h2><p class="lead">From a proposed change to an answer, in six steps.
+    Steps 1–3 bring information in; steps 4–6 work only on what the platform already holds, so the same inputs always give the same answer.</p>
+    <div class="journey">${JOURNEY.map((s, i) => `<div class="step"><div class="n">${i + 1}</div><b>${esc(s.t)}</b><p class="mut" style="margin:6px 0 0">${esc(s.d)}</p></div>`).join("")}</div>
+    <h3 style="margin-top:18px">Confidence labels on every connection</h3>
+    <div class="legend"><span>Confirmed in code</span><span>Confirmed by contract</span><span>Seen at runtime</span><span>Confirmed by two sources</span><span>Inferred (to be validated)</span><span>Unknown</span><span>Out of date</span></div>
+    <h3 style="margin-top:18px">Result status</h3>
+    <div class="legend"><span><b>Complete</b>: everything in scope analysed</span><span><b>Complete with gaps</b>: finished, some open questions</span><span><b>Partial</b>: a limit was reached</span><span><b>Failed</b>: no result could be produced</span></div></div>`;
+  main.appendChild(j);
+}
+
+function show(id) {
+  document.querySelectorAll("section.page").forEach(s => s.classList.toggle("on", s.id === "page-" + id));
+  nav.querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.page === id)));
+  try { history.replaceState(null, "", "#" + id); } catch (e) {}
+  window.scrollTo({top: 0});
+}
+build();
+show((location.hash || "#overview").slice(1) in {overview: 1, journey: 1, ...Object.fromEntries(ARCH.map(a => [a.id, 1]))} ? (location.hash || "#overview").slice(1) : "overview");
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { const cur = (location.hash || "#overview").slice(1); build(); show(cur); });
+</script>
+</body>
+</html>

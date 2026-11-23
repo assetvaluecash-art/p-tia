@@ -304,7 +304,7 @@ def _regression(reg: dict) -> str:
 
 
 def _business(report: dict) -> str:
-    """Knowledge Fabric: the business side of the change (docs/KF-BRIDGE-PLAN.md section 10)."""
+    """Knowledge Fabric: the business side of the change (docs/KF-BRIDGE.md)."""
     bi = report.get("business_impact")
     if not bi:
         return ""

@@ -116,7 +116,7 @@ def main(argv=None) -> int:
     kc.add_argument("--format", choices=["text", "json"], default="text")
 
     kl = sub.add_parser("kf-link", help="link these repositories' graph to a Knowledge Fabric customer (service -> System, test case -> TestCase), "
-                                        "print the links and gaps (docs/KF-BRIDGE-PLAN.md)")
+                                        "print the links and gaps (docs/KF-BRIDGE.md)")
     kl.add_argument("--repo", action="append", default=[], metavar="NAME=PATH", help="repeatable; include all repos in scope")
     kl.add_argument("--tenant-id", default=os.environ.get("TIA_TENANT_ID") or "local", help="TIA tenant the mirror belongs to (default: local)")
     kl.add_argument("--customer", required=True, help="Knowledge Fabric customer_id (see tia kf-customers)")

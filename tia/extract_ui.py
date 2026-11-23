@@ -1,4 +1,4 @@
-"""Front-end adapter (UC-3, docs/CASE-STUDY.md): pages, their UI elements, how to locate each one uniquely, whether it is mandatory, its
+"""Front-end adapter (UC-3, docs/USER-GUIDE.md): pages, their UI elements, how to locate each one uniquely, whether it is mandatory, its
 input rules, the values a dropdown offers, and the API calls a page makes.
 
 Reads Angular (component templates, @Component, reactive-form validators, route tables), React (JSX, React Router <Route>), Vue

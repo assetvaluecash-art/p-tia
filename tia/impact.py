@@ -967,7 +967,7 @@ def _analyze(req: AnalysisRequest, store: Optional[Store] = None, persist: bool 
         fs = failure_signatures(ev["test_run"], ev.get("incident", []), req.target, base_sha, head_sha)
         if fs["signatures"]:
             report["failure_signatures"] = fs
-    # Knowledge Fabric: the business side of the change (docs/KF-BRIDGE-PLAN.md section 10), from the context the bridge captured and this
+    # Knowledge Fabric: the business side of the change (docs/KF-BRIDGE.md), from the context the bridge captured and this
     # analysis pinned as evidence; never a live call. The changed service first, then every service with a material finding.
     kf = kf_canonical(cfg.knowledge_fabric)
     if kf["enabled"]:

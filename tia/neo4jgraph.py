@@ -1,4 +1,4 @@
-"""TIA's graph mirrored into Neo4j (docs/MEETING-PAWAN.md step 0; docs/NEO4J.md).
+"""TIA's graph mirrored into Neo4j (docs/NEO4J.md).
 
 PostgreSQL stays the system of record: graph versions are built, stored and traversed there (tia.graphstore, docs/GRAPH-STORE.md). This
 module projects ONE graph version of a tenant into a Neo4j database (Knowledge Fabric 2.5 runs on Neo4j), so KF agents and Cypher can walk
@@ -340,7 +340,7 @@ def regression_tests(driver, tenant: str, changed: list, max_depth: int = 8, dat
         return s.execute_read(lambda tx: [r.data() for r in tx.run(q, tenant=tenant, changed=list(changed))])
 
 
-# ---- the Knowledge Fabric bridge (docs/KF-BRIDGE-PLAN.md; planning is in tia.kfbridge) --------------------------------------------------
+# ---- the Knowledge Fabric bridge (docs/KF-BRIDGE.md; planning is in tia.kfbridge) --------------------------------------------------
 # Knowledge Fabric's graph is multi-customer: every read below is confined to one customer (and its tenant), and every bridge edge records
 # both sides' scope. TIA never creates, edits or deletes a Knowledge Fabric node; it writes only edges from its own nodes (bridge=true,
 # owner='tia') and prunes only those.

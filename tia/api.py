@@ -1925,7 +1925,7 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
         return {"analysis_id": rep["analysis_id"], "status": rep["status"],
                 "report": redact(rep, audience(x_tia_readable_repos))}
 
-    # ---- tester pack: one finished analysis -> what to retest + coverage gate, locator pack, API matrix (docs/CASE-STUDY.md) ----------
+    # ---- tester pack: one finished analysis -> what to retest + coverage gate, locator pack, API matrix (docs/USER-GUIDE.md) ----------
     def tester_pack_of(rep: dict, header: Optional[str]) -> dict:
         """rep: the caller's (already redacted) report. The pack is computed over the repositories the caller may read, the changed
         repository at its proposed revision and the others at the revisions the analysis used. Nothing is analysed anew: the extracts

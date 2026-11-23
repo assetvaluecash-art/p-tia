@@ -1,4 +1,4 @@
-"""The `knowledge_fabric` tenant setting: defaults and validation (docs/KF-BRIDGE-PLAN.md section 7).
+"""The `knowledge_fabric` tenant setting: defaults and validation (docs/KF-BRIDGE.md section 7).
 
 In the rules layer so the tenant configuration (tia.tenantconfig) can validate it; the bridge itself (tia.kfbridge) plans the links.
 """

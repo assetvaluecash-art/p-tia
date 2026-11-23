@@ -1,6 +1,6 @@
 """The TIA graph schema: every node type and relationship type, what each relationship connects, and which ones a change travels along.
 
-This is the representation Pawan asked to be fixed once (docs/MEETING-PAWAN.md): each use case is answered from it, and it changes only by
+This is the representation Pawan asked to be fixed once (docs/USER-GUIDE.md): each use case is answered from it, and it changes only by
 a deliberate, versioned decision. tests/test_graphschema.py checks every graph the fixtures build against it, and docs/GRAPH-SCHEMA.md is
 generated from it (python tools/gen_graph_schema.py), so the code, the check and the document cannot drift apart.
 

@@ -1,4 +1,4 @@
-"""Knowledge Fabric 2.5's node identity, reproduced exactly (docs/KF-BRIDGE-PLAN.md section 6).
+"""Knowledge Fabric 2.5's node identity, reproduced exactly (docs/KF-BRIDGE.md section 6).
 
 Knowledge Fabric names every graph node by a deterministic id:
 

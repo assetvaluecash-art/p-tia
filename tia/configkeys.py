@@ -1,4 +1,4 @@
-"""Configuration and environment-variable changes (docs/MEETING-PAWAN.md, ask 1a: "he also added a new environment variable that other
+"""Configuration and environment-variable changes (docs/USER-GUIDE.md: "he also added a new environment variable that other
 methods use - test these too").
 
 Two kinds of change are found between the base and the proposed revision of the changed repository:

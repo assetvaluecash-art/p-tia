@@ -76,7 +76,7 @@ class TenantConfig:
     retention: dict = field(default_factory=dict)          # *_days -> days kept (absent = forever; PRD 11.4, tia.retention)
     incident_window_hours: float = 72                      # how far before an incident a deployment counts as time-correlated (FR-031)
     coordination: dict = field(default_factory=lambda: {"auto_notify": False, "channels": {}, "default": None})   # FR-045
-    knowledge_fabric: dict = field(default_factory=dict)   # the Knowledge Fabric bridge (tia.kfbridge; docs/KF-BRIDGE-PLAN.md section 7)
+    knowledge_fabric: dict = field(default_factory=dict)   # the Knowledge Fabric bridge (tia.kfbridge; docs/KF-BRIDGE.md section 7)
     version: int = 0                                      # 0 = nothing stored: the built-in defaults
     digest: str = "default"
 

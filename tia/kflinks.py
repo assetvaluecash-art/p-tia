@@ -1,4 +1,4 @@
-"""Links between TIA's code graph and Knowledge Fabric's document-derived nodes (docs/NEO4J.md, docs/MEETING-2026-11-17.md).
+"""Links between TIA's code graph and Knowledge Fabric's document-derived nodes (docs/NEO4J.md, docs/NEO4J.md).
 
 Knowledge Fabric ingests documents that live outside the code: an API registry (often a spreadsheet), test cases, requirements. Each
 becomes a node in Neo4j. This module decides, without a server, which TIA node each of them is, on shared identifiers only:

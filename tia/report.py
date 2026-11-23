@@ -369,7 +369,7 @@ ITEM_LABEL = {"FormCapture": "form", "DataEntity": "data entity", "Rule": "busin
 
 
 def _business_md(bi: dict | None, max_rows: int) -> list:
-    """Knowledge Fabric: the business requirements, processes and test cases on the systems this change affects (docs/KF-BRIDGE-PLAN.md)."""
+    """Knowledge Fabric: the business requirements, processes and test cases on the systems this change affects (docs/KF-BRIDGE.md)."""
     if not bi:
         return []
     s = bi["summary"]

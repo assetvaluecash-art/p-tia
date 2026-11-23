@@ -1,4 +1,4 @@
-"""Automation inventory (UC-3, docs/CASE-STUDY.md): what an automation tester needs from the code, without reading it.
+"""Automation inventory (UC-3, docs/USER-GUIDE.md): what an automation tester needs from the code, without reading it.
 
 * APIs: every endpoint with its path, query and header parameters and request-body fields; for each, whether it is mandatory,
   multi-valued, the values it allows and its limits (lengths, ranges, patterns, formats); generated valid and invalid values; a test

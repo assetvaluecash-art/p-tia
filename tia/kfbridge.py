@@ -1,4 +1,4 @@
-"""The TIA <-> Knowledge Fabric bridge: settings, link planning and business impact (docs/KF-BRIDGE-PLAN.md sections 7, 8 and 10).
+"""The TIA <-> Knowledge Fabric bridge: settings, link planning and business impact (docs/KF-BRIDGE.md).
 
 Pure: no database, no Neo4j. tia.neo4jgraph reads the Knowledge Fabric index and writes the links this module plans; tia.analysis_service
 runs both as a job; tia.impact adds the business impact of a change to its report from the context the job captured.

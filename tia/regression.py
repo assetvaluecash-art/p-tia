@@ -1,4 +1,4 @@
-"""Regression test selection (docs/MEETING-PAWAN.md, use case 1): "out of your 10 test cases, these 4 must be regression-tested".
+"""Regression test selection (docs/USER-GUIDE.md): "out of your 10 test cases, these 4 must be regression-tested".
 
 The suite is the written (functional) test cases kept in the analysed repositories (testcases/*.csv|yaml|json, tia.testcases) as they
 were BEFORE the change: the regression suite the tester already has. Each case is put in exactly one bucket:

@@ -1,4 +1,4 @@
-"""Execution flow and design view (docs/MEETING-PAWAN.md item 4: "show me the execution flow, the main entities, the controllers and
+"""Execution flow and design view (docs/USER-GUIDE.md: "show me the execution flow, the main entities, the controllers and
 models - the design, not which method calls which").
 
 For an entry point: the handler that serves it, the code it runs (CALLS), the other services it calls (ISSUES -> CONSUMES_API), the data

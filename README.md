@@ -2,10 +2,10 @@
 
 Cross-repository change-impact analysis for a pull request, producing an evidence-backed
 **Change Impact Report** (JSON + PR-comment markdown). Built from
-[PRD](../development/docs/PRD.md), [architecture](../development/docs/ARCHITECTURE.md) and [technical framework](../development/docs/TECHNICAL-FRAMEWORK.md).
+[PRD](../development/docs/PRD.md), [architecture as built](../development/docs/ARCHITECTURE-AS-BUILT.md) and [technical framework](../development/docs/TECHNICAL-FRAMEWORK.md).
 
 This folder is what is built and deployed: the `tia` package, `pyproject.toml` and `deploy/` (Dockerfile, Compose, Helm, Terraform).
-Documentation, tests, fixtures, tools and the client SDK are in [`../development/`](../development/).
+The final documents and the tutorial are in [`Tutorial doc/`](Tutorial%20doc/README.md) (a copy; they are edited in `../development/` and copied with `development/tools/sync_production_docs.py`). Tests, fixtures, tools and the client SDK are in [`../development/`](../development/).
 
 Sample repositories to ingest and try TIA on are in [`Sample test repos/`](Sample%20test%20repos/README.md): five Northwind Pay services as folders and zip uploads, six change scenarios, CI evidence files and the expected results (`expected.json`). Run `python "Sample test repos/make_git_repos.py"` to turn them into git repositories.
 
@@ -54,24 +54,24 @@ packages: {payments_client: payments-service}        # generated client package 
 | Area | State |
 |---|---|
 | Python (FastAPI / Flask, requests / httpx) and Java (Spring Web, RestTemplate / WebClient / OpenFeign) adapters | Implemented and tested; the Java adapter is also checked on real Spring code |
-| FR-006 / FR-006a data layer (ORM + migrations) | Implemented: JPA / Spring Data, SQLAlchemy / SQLModel / Django models; Flyway, Liquibase, Alembic, Django migrations. Raw SQL and stored procedures are reported as "data access not analysed" (FR-041 is not built) |
+| FR-006 / FR-006a data layer (ORM + migrations) | Implemented: JPA / Spring Data, SQLAlchemy / SQLModel / Django models; Flyway, Liquibase, Alembic, Django migrations. Raw SQL and stored procedures: SQL lineage and procedure calls (FR-041, `sqllineage.py`); tested on samples written for the tests |
 | AC-024 data impact | Implemented: a migration that drops a column is traced to every service that maps it (shared database declared in `tia-services.yaml` or named by `spring.datasource.url`), then on to API consumers |
 | FR-018 basic REST diff (P0 list) | Implemented; anything else reported as "compatibility not evaluated" |
 | Report status, unknowns, coverage, resolution rate, redaction, audit, determinism | Implemented and tested (AC-001..006, 009, 010, 012, 015..024) |
 | FR-003 / FR-005 persisted versioned graph, incremental extraction, stale relationships, freshness, evidence snapshots | Implemented on multi-tenant PostgreSQL (forced RLS); verified on real PostgreSQL and a live GitHub sandbox |
-| GitHub: clone, PR fetch, comment upsert, signed webhook receiver | Verified live against GitHub with a personal access token; webhook delivery is only simulated (no public endpoint yet); a neutral check run and a publish endpoint are built but only simulated (they need a GitHub App); Azure DevOps is not built |
+| GitHub: clone, PR fetch, comment upsert, signed webhook receiver | Verified live against GitHub with a personal access token; webhook delivery is only simulated (no public endpoint yet); a neutral check run and a publish endpoint are built but only simulated (they need a GitHub App) |
 | Permalink report page (`/analyses/{id}`) | Implemented; tested in a real browser at desktop and mobile widths |
 | Tenant lifecycle and storage quota (suspend, resume, offboard with deletion certificate) | Implemented; verified live on PostgreSQL through the admin CLI, API and worker |
 | Secrets (envelope encryption, secret references, scrubbing, TLS enforcement) | Implemented; Vault only tested against a fake, PostgreSQL TLS not verified (embedded PostgreSQL has none), no KMS wrappers |
 | Observability (Prometheus metrics, JSON logs, traces to OTLP, health/readiness) | Implemented; OTLP only tested against a fake collector |
 | Per-tenant configuration (limits, severity overrides, criticality, gateway prefixes; versioned) | Implemented; verified live through admin CLI, API, worker and browser |
 | Code upload (zip / folder, 2 GiB cap) | Implemented and tested in a real browser |
-| Phase 2+ (CI, coverage, events, runtime, policy, ITSM, MCP) | Not started |
+| Releases 2-4 (CI and coverage ingestion, events, runtime telemetry, deployments and builds, release policy, ServiceNow, MCP, temporal queries, incidents, retention, GitLab / Bitbucket / Azure DevOps, Go / C# / Kotlin / TypeScript and 39 structural languages, SQL lineage, calibration, team coordination) | Implemented and tested; external systems verified against stand-ins only (see `development/docs/RELEASE-GATES.md`) |
 | GitHub App connector | Implemented: App JWT, installation tokens (comments, **real check runs**, clone/fetch), webhooks routed to the tenant owning the installation, linking by the operator or by an administrator who proves access through GitHub, repository discovery. Verified against a GitHub platform stand-in (live through the real processes); **no real GitHub App has been registered or used** |
 | Azure DevOps | Service hooks, one PR comment thread updated in place, advisory PR status, manual publish; tested against a stand-in only; no permission mirroring from Azure DevOps |
 | Knowledge Fabric V2.5 | `POST /query/tia` returns finished reports in KF's QueryResponse shape, checked field for field against KF 2.5's `retriever_api.py` (`development/docs/KF-ADAPTER.md`). The bridge (`development/docs/KF-BRIDGE.md`) links services to KF `System` nodes and test cases to KF `TestCase` nodes with KF's own entity ids and adds the business test cases of a change to every report; tested against a simulated KF graph in a real Neo4j, **not yet against a real KF instance** |
-| Containers | `deploy/` Dockerfile, Compose file and Helm chart; statically checked; **never built or installed** (no Docker here) |
-| Sign-in and permissions | Implemented: OIDC (browser and bearer tokens), SAML 2.0, scoped service tokens, five roles on a deny-by-default route table, per-repository access mirrored from GitHub (unreadable repositories answer 404; reports redacted per reader; a PR comment names another repository only if all its readers may read it); the credential names the tenant. Verified against our own OIDC/SAML provider and a fake GitHub API (live in a real browser); **no real identity provider has been used**, Azure DevOps permission mirroring is not built, rate limiting is left to a reverse proxy |
+| Containers | `deploy/` Dockerfile, Compose file and Helm chart; the Compose stack was built and run on Docker Desktop (migrate, server, worker, an analysis, upgrade, backup and restore); the Helm chart and Azure Terraform are **not deployed** to a real cluster or subscription |
+| Sign-in and permissions | Implemented: OIDC (browser and bearer tokens), SAML 2.0, scoped service tokens, five roles on a deny-by-default route table, per-repository access mirrored from GitHub (unreadable repositories answer 404; reports redacted per reader; a PR comment names another repository only if all its readers may read it); the credential names the tenant. Verified against our own OIDC/SAML provider and a fake GitHub API (live in a real browser); **no real identity provider has been used**, permission mirroring also from GitLab, Bitbucket and Azure DevOps; in-app rate limiting |
 | Accuracy (PRD 15.3) | Measured with `development/tools/accuracy.py` against curated truth: two **independent** real-code Java landscapes (spring-petclinic-microservices, piggymetrics) and a synthetic Python one; every measured target met. Small samples; no independent Python reference yet; the assessment-time target is not measured; context paths from external config must be set by hand |
 | CI | `.github/workflows/tia-ci.yml` and `development/tools/ci.py` (tests, package, migration and tenant-table gates, secret scan, dependency audit); **never run on GitHub Actions** |
 | Performance (PRD 12) | `development/tools/benchmark.py`: at 500 generated repositories / 0.6 M lines, PR analysis P95 5.3 s, report P95 0.07 s, a 50-job burst P95 163 s; the 20 M LOC scan and availability targets are **not demonstrated** (see `development/docs/PERFORMANCE.md`) |
@@ -83,8 +83,8 @@ packages: {payments_client: payments-service}        # generated client package 
 - Static call resolution only: dynamic URLs, env-supplied hosts not in the service map, and
   wrapper clients stay *unresolved* (listed with file/line) or *inferred* - never guessed.
 - Intra-repo `CALLS` match by simple name; ambiguous matches are counted as an unknown, not linked.
-- Test association is static (import+call, HTTP-call to endpoint, or naming = inferred); no CI results.
-- The demo landscapes are synthetic; precision/recall have **not** been measured on real multi-repository landscapes.
+- Test association is static (import+call, HTTP-call to endpoint, or naming = inferred); CI results and coverage are used when they are ingested.
+- Precision and recall are measured on two independent real-code Java landscapes; not yet on a labelled real-code landscape for the other languages, events or SQL.
 - Data impact: tables belong to a database, and two services are linked only when they name the same
   database (`database:` in `tia-services.yaml`, or a literal `spring.datasource.url`); otherwise each service's
   database is private and the report says so. Only columns an analysed entity maps are traced.

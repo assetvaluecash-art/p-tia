@@ -486,7 +486,7 @@ def make_handlers(db, allow_local: bool = False, allowed_hosts: Optional[list] =
             raise RuntimeError(str(e))                            # unreachable: retried with backoff
 
     def kf_bridge(job):
-        """Link the tenant's software graph to its Knowledge Fabric customer and capture the business context (docs/KF-BRIDGE-PLAN.md)."""
+        """Link the tenant's software graph to its Knowledge Fabric customer and capture the business context (docs/KF-BRIDGE.md)."""
         if cancelled(job):
             return {"skipped": "superseded by a newer run"}
         store = Store(db, job.tenant_id, audit_key)
@@ -536,7 +536,7 @@ def make_handlers(db, allow_local: bool = False, allowed_hosts: Optional[list] =
             "scm_pull_request": scm_pull_request}
 
 
-# ---- the Knowledge Fabric bridge (docs/KF-BRIDGE-PLAN.md sections 8-10) -----------------------------------------------------------------
+# ---- the Knowledge Fabric bridge (docs/KF-BRIDGE.md) -----------------------------------------------------------------
 class KfBridgeError(Exception):
     """The bridge cannot run: disabled, misconfigured, or Knowledge Fabric has no such customer. Not retried."""
 
@@ -626,7 +626,7 @@ def kf_link(driver, database: Optional[str], tenant: str, ex: dict, g, gid: str,
 def kf_bridge_run(store: Store, svc: RepoService, driver, database: Optional[str] = None, reason: str = "manual",
                   ex: Optional[dict] = None) -> dict:
     """One bridge run for a tenant (kf_link), recorded as evidence: the run (links, gaps, fingerprints) and the business context that
-    analyses pin (docs/KF-BRIDGE-PLAN.md sections 8-10)."""
+    analyses pin (docs/KF-BRIDGE.md)."""
     import time
     from .kfontology import BRIDGE_VERSION
     t0 = time.monotonic()

@@ -1,4 +1,4 @@
-"""Technical coverage (UC-2, docs/CASE-STUDY.md): "are my test cases enough?" on the technical side.
+"""Technical coverage (UC-2, docs/USER-GUIDE.md): "are my test cases enough?" on the technical side.
 
 For each entry point (API endpoint) and page, the code implies technical aspects a test suite should cover:
   call             the entry point is exercised at all

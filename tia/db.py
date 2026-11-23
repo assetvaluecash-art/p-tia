@@ -1,6 +1,6 @@
 """PostgreSQL access: connection pool with tenant-bound transactions, migrations, tenant registry.
 
-Isolation model (TECHNICAL-FRAMEWORK 9.1): every tenant-owned table has tenant_id and FORCED row-level
+Isolation model (TECHNICAL-FRAMEWORK.md section 9.1): every tenant-owned table has tenant_id and FORCED row-level
 security. The runtime connects as `tia_app` (not an owner, no BYPASSRLS) and every transaction first runs
 set_config('tia.tenant_id', ..., true); a session without a tenant sees no rows. Migrations and the tenant
 registry use a separate admin DSN that the request path never holds.

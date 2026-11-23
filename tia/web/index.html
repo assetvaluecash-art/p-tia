@@ -928,7 +928,7 @@ function show(rep, comment, opts) {
 $("copy").onclick = () => navigator.clipboard.writeText(COMMENT_MD || $("comment").textContent);
 $("json").onclick = () => $("raw").classList.toggle("hidden");
 
-// ================= tester views (docs/CASE-STUDY.md UC-1, UC-2, UC-3) =================
+// ================= tester views (docs/USER-GUIDE.md UC-1, UC-2, UC-3) =================
 const EFFECT = {breaking:"breaking", behaviour_change:"behaviour change", compatible_change:"compatible change", no_functional_change:"no functional change", unknown:"unknown (file-level)"};
 const pill = (cls, text) => `<span class="pill ${esc(cls)}">${esc(text)}</span>`;
 const v2s = v => v === null || v === undefined ? "?" : typeof v === "string" ? JSON.stringify(v) : JSON.stringify(v);
@@ -984,7 +984,7 @@ function scopeHtml(ts) {
   return regressionHtml(ts.regression) + scopeCore(ts) +
     (ts.config_checks || []).map(c => `<div class="banner"><b>Configuration</b>: ${esc(c.check)}${c.entry_points.length ? `<br>Entry points: ${c.entry_points.map(e => `<code>${esc(e.entry_point)}</code>`).join(", ")}` : ""}</div>`).join("");
 }
-// Knowledge Fabric: the business side of the change (docs/KF-BRIDGE-PLAN.md section 10)
+// Knowledge Fabric: the business side of the change (docs/KF-BRIDGE.md)
 function businessHtml(bi) {
   if (!bi) return "";
   const tc = bi.test_cases.map(c => { const v = c.via[0];
@@ -1003,7 +1003,7 @@ function businessHtml(bi) {
     (sys || its ? `<ul>${sys}${its}</ul>` : "") + bi.limits.map(l => `<p class="mut">${esc(l)}</p>`).join("") +
     (bi.withheld ? `<p class="mut">${esc(bi.withheld.note)}</p>` : "");
 }
-// the regression answer (docs/MEETING-PAWAN.md): which written test cases to run again because of this change
+// the regression answer (docs/USER-GUIDE.md): which written test cases to run again because of this change
 function regressionHtml(reg) {
   if (!reg || !reg.summary || !reg.summary.test_cases) return "";
   const li = c => `<li><code>${esc(c.id)}</code> ${esc(c.title)}: <span class="mut">${esc(c.reason)}</span></li>`;

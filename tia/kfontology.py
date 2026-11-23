@@ -1,4 +1,4 @@
-"""TIA's software ontology and the TIA <-> Knowledge Fabric bridge ontology, in Knowledge Fabric's canonical shape (docs/KF-BRIDGE-PLAN.md
+"""TIA's software ontology and the TIA <-> Knowledge Fabric bridge ontology, in Knowledge Fabric's canonical shape (docs/KF-BRIDGE.md
 section 5).
 
 Knowledge Fabric 2.5 describes its business graph in `config/canonical/model.yaml`: `node_types` (each with a `layer`) and

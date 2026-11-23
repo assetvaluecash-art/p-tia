@@ -1,4 +1,4 @@
-"""Test scope (UC-1 in docs/CASE-STUDY.md): what a change means for a tester, in things a tester can test without reading code.
+"""Test scope (UC-1 in docs/USER-GUIDE.md): what a change means for a tester, in things a tester can test without reading code.
 
 * change effect of a changed function: breaking / behaviour change / compatible change / no functional change, with the reason;
 * entry points to test: every API endpoint a change reaches (in the changed service and in each analysed consumer), why it is reached,

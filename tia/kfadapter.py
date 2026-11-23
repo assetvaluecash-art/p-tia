@@ -349,7 +349,7 @@ INTENT_FIRST = {"regression_scope": ("regression_summary", "regression_test", "b
 
 
 def business_chunks(rep: dict, domain: str) -> tuple[list, list]:
-    """Knowledge Fabric's business impact of the change (docs/KF-BRIDGE-PLAN.md section 10) as chunks and paths: one summary, one chunk
+    """Knowledge Fabric's business impact of the change (docs/KF-BRIDGE.md) as chunks and paths: one summary, one chunk
     per business test case (with the chain from the changed code), one per affected system. The evidence status is the TIA side's link from
     code to the system; Knowledge Fabric's own relationships are its document extraction, not verified by TIA."""
     bi = rep.get("business_impact")

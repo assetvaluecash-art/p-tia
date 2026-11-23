@@ -1,4 +1,4 @@
-"""The tester pack of one analysis (docs/CASE-STUDY.md: one change, three answers from the same code facts).
+"""The tester pack of one analysis (docs/USER-GUIDE.md: one change, three answers from the same code facts).
 
 For the entry points a change reaches, and only those:
   1. what to retest, the tests found, and a coverage gate (covered / gaps / not_evaluated) over their technical aspects;

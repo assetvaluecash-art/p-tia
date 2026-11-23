@@ -1,4 +1,4 @@
-"""Automation script for a user flow (docs/MEETING-PAWAN.md use case 2: "develop an automation script for this flow, from screen A to
+"""Automation script for a user flow (docs/USER-GUIDE.md: "develop an automation script for this flow, from screen A to
 screen B").
 
 The graph gives the route: Application -HAS_SCREEN-> Screen -NAVIGATES_TO-> Screen (docs/GRAPH-SCHEMA.md). For each screen on it, the

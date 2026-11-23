@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TIA, explained: a step-by-step guide with one running example</title><style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1a1d21;--mut:#5b6472;--line:#dfe3e8;--acc:#1f4fd8;--accbg:#e8eefc;--code:#f1f3f6;--ok:#127a3b;--warn:#a86400;--bad:#b3261e;
+--ma:#1f4fd8;--mb:#0b6e4f;--mc:#8e5bd9;--t-c:#6b7280;--t-s:#0b6e4f;--t-n:#a86400;--t-k:#8e2bc7;--t-key:#1f4fd8;--side:280px}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#14171c;--card:#1d2127;--fg:#e8eaed;--mut:#9aa3af;--line:#2d333b;--acc:#7aa2ff;--accbg:#1f2a44;--code:#161a20;
+--ok:#5fd08a;--warn:#f0b35a;--bad:#ff8f87;--ma:#7aa2ff;--mb:#4cc9a0;--mc:#b794f6;--t-c:#8b95a5;--t-s:#7fd6a8;--t-n:#f0b35a;--t-k:#c792ea;--t-key:#7aa2ff}}
+:root[data-theme=dark]{--bg:#14171c;--card:#1d2127;--fg:#e8eaed;--mut:#9aa3af;--line:#2d333b;--acc:#7aa2ff;--accbg:#1f2a44;--code:#161a20;--ok:#5fd08a;--warn:#f0b35a;--bad:#ff8f87;
+--ma:#7aa2ff;--mb:#4cc9a0;--mc:#b794f6;--t-c:#8b95a5;--t-s:#7fd6a8;--t-n:#f0b35a;--t-k:#c792ea;--t-key:#7aa2ff}
+*{box-sizing:border-box}html{scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--fg);font:15.5px/1.6 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--acc)}
+.layout{display:grid;grid-template-columns:var(--side) minmax(0,1fr);min-height:100vh}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:18px 14px 28px;border-right:1px solid var(--line);background:var(--card);font-size:13.5px}
+nav.toc .brand{font-weight:700;font-size:15px;margin:0 6px 2px}nav.toc .sub{color:var(--mut);margin:0 6px 12px;font-size:12.5px}
+nav.toc ol{list-style:none;margin:0;padding:0}nav.toc li{margin:0}
+nav.toc a{display:block;padding:4px 8px;border-radius:6px;color:var(--fg);text-decoration:none;border-left:3px solid transparent}
+nav.toc a:hover{background:var(--accbg)}nav.toc a.on{background:var(--accbg);border-left-color:var(--acc);font-weight:600}
+nav.toc ol ol{margin:0 0 4px 12px}nav.toc ol ol a{color:var(--mut);padding:2px 8px;font-size:12.5px}nav.toc ol ol a.on{color:var(--fg)}
+nav.toc .m-a>a{border-left-color:var(--ma)}nav.toc .m-b>a{border-left-color:var(--mb)}nav.toc .m-c>a{border-left-color:var(--mc)}
+main{max-width:1020px;width:100%;padding:28px 36px 80px;margin:0 auto}
+.hero{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 26px 10px;margin-bottom:22px}
+.hero h1{font-size:27px;line-height:1.25;margin:0 0 10px}.hero p{margin:6px 0}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+button,.btn{font:inherit;font-size:13px;padding:5px 12px;border-radius:7px;border:1px solid var(--acc);background:transparent;color:var(--acc);cursor:pointer;text-decoration:none}
+button:hover,.btn:hover{background:var(--accbg)}
+h2{font-size:22px;margin:42px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+h2.mod{border-bottom-width:3px}h2.mod-a{border-bottom-color:var(--ma)}h2.mod-b{border-bottom-color:var(--mb)}h2.mod-c{border-bottom-color:var(--mc)}
+h3{font-size:17.5px;margin:30px 0 8px}
+.anchor{opacity:0;margin-left:8px;color:var(--mut);text-decoration:none;font-weight:400}h2:hover .anchor,h3:hover .anchor{opacity:1}
+p{margin:10px 0}hr{border:0;border-top:1px solid var(--line);margin:30px 0}
+blockquote{margin:14px 0;padding:2px 16px;border-left:4px solid var(--warn);background:var(--card);border-radius:0 8px 8px 0}
+code{font:12.8px/1.45 ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;background:var(--code);padding:1px 3px;border-radius:4px;overflow-wrap:anywhere}
+.code{margin:12px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--code)}
+.code .bar{display:none;align-items:center;justify-content:space-between;min-height:30px;padding:2px 8px 2px 14px;border-bottom:1px solid var(--line);background:var(--card);font-size:11px;color:var(--mut)}
+.js .code .bar,.code .bar.has-lang{display:flex}
+.code .lang{text-transform:uppercase;letter-spacing:.05em}
+.code .copy{display:none;padding:1px 9px;font-size:12px}.js .code .copy{display:inline-block}
+.code pre{margin:0;padding:14px 16px;background:var(--code);overflow-x:auto;tab-size:4}
+.code pre code{background:none;padding:0;font-size:12.6px;line-height:1.5;white-space:pre;overflow-wrap:normal;display:block}
+.t-c{color:var(--t-c);font-style:italic}.t-s{color:var(--t-s)}.t-n{color:var(--t-n)}.t-k{color:var(--t-k);font-weight:600}.t-key{color:var(--t-key)}
+.tw{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:8px 11px;border-bottom:1px solid var(--line)}
+th{background:var(--code);font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--mut);white-space:nowrap}
+tr:last-child td{border-bottom:0}tbody tr:hover td{background:var(--accbg)}td code{font-size:12.3px}
+td.st-ok{color:var(--ok);font-weight:600}td.st-warn{color:var(--warn);font-weight:600}td.st-bad{color:var(--bad);font-weight:600}
+ol,ul{padding-left:24px}li{margin:6px 0}
+footer{margin-top:50px;color:var(--mut);font-size:12.5px;border-top:1px solid var(--line);padding-top:12px}
+.menu{display:none}
+@media (max-width:1000px){
+  .layout{display:block}nav.toc{position:static;height:auto;max-height:none;border-right:0;border-bottom:1px solid var(--line)}
+  .js nav.toc{display:none}.js nav.toc.open{display:block}.js .menu{display:inline-block}
+  main{padding:18px 14px 60px}h2{font-size:20px}.hero{padding:16px}.hero h1{font-size:22px}}
+@media print{
+  :root{--bg:#fff;--card:#fff;--fg:#000;--mut:#444;--line:#bbb;--code:#f3f3f3;--accbg:#fff}
+  nav.toc,.tools,.copy,.anchor,.menu{display:none!important}.layout{display:block}main{max-width:none;padding:0}
+  body{font-size:11pt;background:#fff}.hero,.tw,.code{border-color:#999}.code .copy{display:none!important}
+  h2,h3{break-after:avoid}.tw,.code,blockquote,tr{break-inside:avoid}.code pre{white-space:pre-wrap;overflow:visible}
+  a{color:inherit;text-decoration:none}td.st-ok,td.st-warn,td.st-bad{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+
+.hero p{max-width:760px}
+blockquote p{margin:6px 0}
+</style></head>
+<body><div class="layout"><nav class="toc" id="toc" aria-label="Contents"><p class="brand">TIA, explained</p><p class="sub">Contents</p><ol><li><a href="#1-the-problem-tia-solves">1. The problem TIA solves</a><ol></ol></li><li><a href="#2-the-example-used-in-this-guide">2. The example used in this guide</a><ol></ol></li><li><a href="#3-step-one-reading-the-code">3. Step one: reading the code</a><ol></ol></li><li><a href="#4-step-two-joining-the-services-together">4. Step two: joining the services together</a><ol></ol></li><li><a href="#5-step-three-what-exactly-changed">5. Step three: what exactly changed</a><ol></ol></li><li><a href="#6-step-four-following-the-change">6. Step four: following the change</a><ol></ol></li><li><a href="#7-step-five-deciding-how-serious-it-is">7. Step five: deciding how serious it is</a><ol></ol></li><li><a href="#8-step-six-what-to-test">8. Step six: what to test</a><ol></ol></li><li><a href="#9-what-tia-does-not-know">9. What TIA does not know</a><ol></ol></li><li><a href="#10-adding-information-from-your-pipelines">10. Adding information from your pipelines</a><ol></ol></li><li><a href="#11-pull-requests-from-a-proposed-change-to-a-comment">11. Pull requests: from a proposed change to a comment</a><ol></ol></li><li><a href="#12-how-tias-own-code-is-organised">12. How TIA's own code is organised</a><ol></ol></li><li><a href="#13-where-information-is-kept-and-who-can-see-it">13. Where information is kept, and who can see it</a><ol></ol></li><li><a href="#14-connecting-other-tools">14. Connecting other tools</a><ol></ol></li><li><a href="#15-try-it-on-your-own-computer">15. Try it on your own computer</a><ol></ol></li><li><a href="#what-tia-has-not-yet-been-proven-on">What TIA has not yet been proven on</a><ol></ol></li><li><a href="#glossary">Glossary</a><ol></ol></li><li><a href="#where-to-go-next">Where to go next</a><ol></ol></li></ol></nav><main id="main">
+<header class="hero" id="top"><h1>TIA, explained: a step-by-step guide with one running example</h1>
+<p>This guide explains what TIA does and how it does it, from the first look at your code to the comment it writes on a pull request. It follows one small example from start to finish. Every output you see in it was produced by running TIA on that example while this guide was built, so what you read is what the program really says.</p>
+<p><strong>Who it is for.</strong> Testers, developers and managers who are new to TIA. You do not need to read code to follow the first nine chapters; where code appears, the text says in words what it does. Chapters 12 to 14 are for people who will work on TIA itself.</p>
+<p><strong>Prefer a picture?</strong> <a href="index.html">The pipeline page</a> shows the same steps left to right; click any step to open its business logic, code logic, a real example and ideas for the future.</p>
+<p><strong>How to read it.</strong> Read chapters 1 to 9 in order: each builds on the one before. The rest can be read in any order. Words in <em>italics</em> are explained in the glossary at the end.</p>
+<p><strong>One note on the examples.</strong> A <em>commit</em> (a saved version of the code) has an ID that is different on every computer, so those IDs are shown as <code>&lt;commit&gt;</code>. Nothing else in the examples has been changed.</p>
+<div class="tools"><button id="menu" class="menu" type="button">Contents</button><button id="theme" type="button">Light / dark</button><button id="print" type="button">Print / save as PDF</button></div></header>
+<h2 id="1-the-problem-tia-solves">1. The problem TIA solves<a class="anchor" href="#1-the-problem-tia-solves" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> why a small change in one program can break another, and the question TIA answers.</p>
+<p>Large companies do not run one big program. They run many smaller programs, called <em>services</em>, that ask each other for information. A bank might have one service that keeps the list of payments, another that prints the monthly statement, and another that shows payments on the customer's screen. The statement service and the screen do not keep their own copy of the payments: they ask the payments service every time.</p>
+<p>That is efficient, but it creates a risk. Imagine a developer on the payments team removes one piece of information that the payments service sends out. Their own tests pass, because their own service still works. But the statement service relied on that piece of information. Next month, statements are wrong, and nobody connected the two events.</p>
+<p>Before a change goes live, someone has to answer three questions:</p>
+<ol><li><strong>What does this change affect?</strong> Not only in the service that changed, but in every service that depends on it.</li><li><strong>How serious is it?</strong> Will something stop working, or will it just behave a little differently?</li><li><strong>What must we test?</strong> Which screens, reports and tests should be checked before release?</li></ol>
+<p>Today, people answer these by asking around and by memory. TIA answers them from the code itself. It reads every service's code, works out which service asks which other service for what, and when someone proposes a change, it follows that change to everything it can reach.</p>
+<p><strong>What TIA does not do.</strong> It does not run your programs, and it does not guess. It reads the code as text. When it cannot prove a connection, it says so instead of making one up. Chapter 9 is about exactly that.</p>
+<p><strong>In short</strong></p>
+<ul><li>Services depend on each other, so a change in one can break another.</li><li>TIA answers: what does this change affect, how serious is it, and what must we test.</li><li>It works by reading the code, never by running it or guessing.</li></ul>
+<h2 id="2-the-example-used-in-this-guide">2. The example used in this guide<a class="anchor" href="#2-the-example-used-in-this-guide" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> the three small services we follow through the whole guide, and the change we will analyse.</p>
+<p>Our example is a tiny bank with three services. Each one lives in its own <em>repository</em> (a folder of code with its full history, kept by a tool called git).</p>
+<div class="tw"><table><thead><tr><th>Service</th><th>Its addresses (what other programs can ask it for)</th><th>Files TIA read</th></tr></thead><tbody><tr><td>payments-service</td><td><code>GET /accounts/{account_id}/payments</code>, <code>POST /accounts/{account_id}/payments</code></td><td>2</td></tr><tr><td>statement-service</td><td><code>GET /statements/{account_id}/pdf</code></td><td>6</td></tr><tr><td>customer-portal</td><td><code>GET /portal/accounts/{account_id}/payments</code>, <code>POST /portal/accounts/{account_id}/payments</code></td><td>7</td></tr></tbody></table></div>
+<p>The middle column lists each service's <em>addresses</em>. An address is what another program asks for, written as an action and a path, for example <code>GET /accounts/{account_id}/payments</code>: "get the payments of this account". Developers call these <em>endpoints</em>; this guide says "address".</p>
+<p><strong>The payments service</strong> keeps the payments. Here is the part of its code that describes one payment, and the address that hands out the list. The numbers on the left are line numbers in the file.</p>
+<div class="code"><div class="bar has-lang"><span class="lang">python</span><button class="copy" type="button" aria-label="Copy this code">Copy</button></div><pre><code><span class="t-n">12</span>  <span class="t-k">class</span> Payment(BaseModel):
+<span class="t-n">13</span>      payment_id: str
+<span class="t-n">14</span>      status: str
+<span class="t-n">15</span>      amount: float
+<span class="t-n">16</span>      disputed: bool
+...
+<span class="t-n">47</span>  @app.get(<span class="t-s">"/accounts/{account_id}/payments"</span>, response_model=List[Payment])
+<span class="t-n">48</span>  <span class="t-k">def</span> list_payments(account_id: str, status: Optional[PaymentStatus] = <span class="t-k">None</span>):
+<span class="t-n">49</span>      <span class="t-s">""</span><span class="t-s">"Payments of one account."</span><span class="t-s">""</span>
+<span class="t-n">50</span>      <span class="t-k">if</span> account_id <span class="t-k">not</span> <span class="t-k">in</span> ACCOUNTS:
+<span class="t-n">51</span>          <span class="t-k">raise</span> HTTPException(status_code=<span class="t-n">404</span>, detail=<span class="t-s">"unknown account"</span>)
+<span class="t-n">52</span>      <span class="t-k">return</span> ordered(load_payments(account_id))</code></pre></div>
+<p>In words: a payment has four pieces of information, an ID, a status, an amount, and <strong><code>disputed</code></strong>, which says whether the customer has challenged the payment. The address <code>GET /accounts/{account_id}/payments</code> sends back a list of those payments.</p>
+<p><strong>The statement service</strong> prints the monthly statement as a PDF. It asks the payments service for the payments with this small piece of code:</p>
+<div class="code"><div class="bar has-lang"><span class="lang">python</span><button class="copy" type="button" aria-label="Copy this code">Copy</button></div><pre><code><span class="t-n">5</span>  PAYMENTS_BASE_URL = os.getenv(<span class="t-s">"PAYMENTS_BASE_URL"</span>, <span class="t-s">"http://payments-service"</span>)
+<span class="t-n">6</span>  
+<span class="t-n">7</span>  
+<span class="t-n">8</span>  <span class="t-k">def</span> fetch_payments(account_id: str):
+<span class="t-n">9</span>      <span class="t-k">return</span> requests.get(f<span class="t-s">"{PAYMENTS_BASE_URL}/accounts/{account_id}/payments"</span>, timeout=<span class="t-n">5</span>).json()</code></pre></div>
+<p>In words: it reads a setting called <code>PAYMENTS_BASE_URL</code>, which holds where the payments service can be reached, and asks that address for an account's payments.</p>
+<p>Then it applies the bank's rule: <strong>disputed payments do not appear on the statement.</strong></p>
+<div class="code"><div class="bar has-lang"><span class="lang">python</span><button class="copy" type="button" aria-label="Copy this code">Copy</button></div><pre><code> <span class="t-n">8</span>  <span class="t-k">def</span> statement_rows(account_id: str):
+ <span class="t-n">9</span>      payments = fetch_payments(account_id)
+<span class="t-n">10</span>      <span class="t-k">return</span> [p <span class="t-k">for</span> p <span class="t-k">in</span> payments <span class="t-k">if</span> <span class="t-k">not</span> p[<span class="t-s">"disputed"</span>]]</code></pre></div>
+<p>Line 10 keeps only the payments that are not disputed. Remember this line: it matters later.</p>
+<p><strong>The customer portal</strong> shows payments on the customer's screen. It asks the payments service in the same way, and shows every payment it gets back:</p>
+<div class="code"><div class="bar has-lang"><span class="lang">python</span><button class="copy" type="button" aria-label="Copy this code">Copy</button></div><pre><code><span class="t-n">15</span>  @app.get(<span class="t-s">"/portal/accounts/{account_id}/payments"</span>)
+<span class="t-n">16</span>  <span class="t-k">def</span> account_payments(account_id: str):
+<span class="t-n">17</span>      payments = fetch_payments(account_id)
+<span class="t-n">18</span>      <span class="t-k">return</span> [{<span class="t-s">"id"</span>: p[<span class="t-s">"payment_id"</span>], <span class="t-s">"amount"</span>: p[<span class="t-s">"amount"</span>], <span class="t-s">"status"</span>: p[<span class="t-s">"status"</span>]} <span class="t-k">for</span> p <span class="t-k">in</span> payments]</code></pre></div>
+<p>Notice that the portal does <strong>not</strong> leave out disputed payments. Whether that is right is a business question, and in chapter 8 TIA raises it.</p>
+<p><strong>How TIA learns who talks to whom.</strong> Each service has a small settings file called <code>tia-services.yaml</code>. This is the statement service's:</p>
+<div class="code"><div class="bar has-lang"><span class="lang">yaml</span><button class="copy" type="button" aria-label="Copy this code">Copy</button></div><pre><code>service: statement-service
+owner: team-statements
+config_keys:
+  PAYMENTS_BASE_URL: payments-service
+entry_points:
+  GET /statements/{account_id}/pdf: Monthly statement PDF</code></pre></div>
+<p>It says three things in plain terms: the service's name and owning team; that the setting <code>PAYMENTS_BASE_URL</code> points at the payments service; and that the address <code>GET /statements/{account_id}/pdf</code> is the "Monthly statement PDF", a name a tester will recognise.</p>
+<p><strong>The change we will analyse.</strong> A developer on the payments team deletes the <code>disputed</code> field. This is the whole change, shown as a <em>diff</em> (lines starting with <code>-</code> were removed):</p>
+<div class="code"><div class="bar has-lang"><span class="lang">diff</span><button class="copy" type="button" aria-label="Copy this code">Copy</button></div><pre><code>--- app.py (before)
++++ app.py (after)
+@@ -13,7 +13,6 @@
+     payment_id: str
+     status: str
+     amount: float
+-    disputed: bool
+ 
+ 
+ class Currency(str, Enum):</code></pre></div>
+<p>One line removed. The payments team's own tests still pass. The question for TIA: what else does this break?</p>
+<p><strong>In short</strong></p>
+<ul><li>Three services: payments (the data), statement (a PDF that leaves out disputed payments), portal (a screen that shows all payments).</li><li>Both the statement and the portal get their data from the payments service.</li><li>The change: the payments service stops sending <code>disputed</code>.</li></ul>
+<h2 id="3-step-one-reading-the-code">3. Step one: reading the code<a class="anchor" href="#3-step-one-reading-the-code" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> what TIA finds when it reads each repository, and why it never runs the code.</p>
+<p>TIA's first job is to read every file and write down the facts it needs. It does this for each language it knows (Python, Java, Go, C#, Kotlin, TypeScript and JavaScript, plus web pages, database files and written test cases). It reads files as text. <strong>It never runs, installs or builds your code</strong>, so a broken or even malicious repository cannot do anything inside TIA.</p>
+<p>Here is what TIA found in the payments service.</p>
+<p><strong>Its addresses</strong>, which function answers each one, and where in the code:</p>
+<div class="tw"><table><thead><tr><th>Address</th><th>Answered by the function</th><th>Where</th><th>Sends back</th></tr></thead><tbody><tr><td><code>GET /accounts/{account_id}/payments</code></td><td><code>list_payments</code></td><td>app.py line 48</td><td>Payment</td></tr><tr><td><code>POST /accounts/{account_id}/payments</code></td><td><code>create_payment</code></td><td>app.py line 61</td><td>not declared</td></tr></tbody></table></div>
+<p><strong>Its data shapes</strong> (developers say <em>schemas</em>): the structure of the information it sends and receives:</p>
+<div class="tw"><table><thead><tr><th>Data shape</th><th>Fields</th></tr></thead><tbody><tr><td><code>Payment</code></td><td>payment_id, status, amount, disputed</td></tr><tr><td><code>PaymentRequest</code></td><td>amount, currency, reference, express, tags</td></tr></tbody></table></div>
+<p><strong>Its tests</strong>, and which address each test calls:</p>
+<div class="tw"><table><thead><tr><th>Test</th><th>File</th><th>What it calls</th></tr></thead><tbody><tr><td><code>test_create_payment</code></td><td>tests/test_payments.py</td><td>POST /accounts/123/payments</td></tr><tr><td><code>test_create_payment_requires_a_reference</code></td><td>tests/test_payments.py</td><td>POST /accounts/123/payments</td></tr><tr><td><code>test_list_payments</code></td><td>tests/test_payments.py</td><td>GET /accounts/123/payments</td></tr><tr><td><code>test_unknown_account_is_404</code></td><td>tests/test_payments.py</td><td>GET /accounts/999/payments</td></tr></tbody></table></div>
+<p>In the statement service, TIA also found the places where the code <strong>calls out</strong> to another program:</p>
+<div class="tw"><table><thead><tr><th>Call made by</th><th>Asks for</th><th>Address taken from</th><th>Where</th></tr></thead><tbody><tr><td><code>fetch_payments</code></td><td><code>GET /accounts/{}/payments</code></td><td>setting <code>PAYMENTS_BASE_URL</code></td><td>client.py line 9</td></tr><tr><td><code>StatementRequest</code></td><td><code>GET /statements/{}/pdf</code></td><td>nothing: the page calls its own server</td><td>web/src/StatementRequest.jsx line 8</td></tr><tr><td><code>download</code></td><td><code>GET /statements/{}/pdf</code></td><td>nothing: the page calls its own server</td><td>web/src/StatementRequest.jsx line 8</td></tr></tbody></table></div>
+<p>The first row is the call we saw in chapter 2: <code>fetch_payments</code> asks for <code>GET /accounts/{}/payments</code> at the address held in the setting <code>PAYMENTS_BASE_URL</code>. (TIA writes <code>{}</code> for any part of a path that changes, such as an account number.) The other two rows are the statement's web page asking its own server for the PDF.</p>
+<p>TIA also reads <strong>written test cases</strong>, the ones testers keep in spreadsheets or files, so it can tell you later which of them a change affects:</p>
+<div class="tw"><table><thead><tr><th>Written test case</th><th>Title</th></tr></thead><tbody><tr><td>TC-201</td><td>Statement PDF leaves out disputed payments</td></tr><tr><td>TC-202</td><td>Download a statement</td></tr><tr><td>TC-203</td><td>Account number with letters</td></tr><tr><td>TC-204</td><td>Old statements are archived</td></tr></tbody></table></div>
+<p><strong>Why this step is fast after the first time.</strong> TIA remembers the facts of every file it has read, keyed by the exact content of the file. When a new version changes one file out of a thousand, it reads one file.</p>
+<p><strong>In short</strong></p>
+<ul><li>TIA reads each file as text and writes down facts: addresses, data shapes, functions, tests, outgoing calls and written test cases.</li><li>It never runs your code.</li><li>It remembers what it has read, so only changed files are read again.</li></ul>
+<h2 id="4-step-two-joining-the-services-together">4. Step two: joining the services together<a class="anchor" href="#4-step-two-joining-the-services-together" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> how TIA works out that one service calls another, and how sure it is.</p>
+<p>Facts from one repository are not enough. The important question is which call in one service reaches which address in another. TIA joins them into one map. (Developers call it a <em>graph</em>: points joined by lines.)</p>
+<p>TIA found <strong>7 calls</strong> that go out of a program and linked <strong>3</strong> of them to the service they reach.</p>
+<p>These are the three links it made:</p>
+<div class="tw"><table><thead><tr><th>The call</th><th>is linked to</th><th>How sure</th><th>How it was found</th></tr></thead><tbody><tr><td>the call on line 9 of client.py (statement-service)</td><td>the address GET /accounts/{}/payments (payments-service)</td><td>confirmed in the source code</td><td>the address setting names the service (strategy R2)</td></tr><tr><td>the call on line 13 of client.py (customer-portal)</td><td>the address POST /accounts/{}/payments (payments-service)</td><td>confirmed in the source code</td><td>the address setting names the service (strategy R2)</td></tr><tr><td>the call on line 9 of client.py (customer-portal)</td><td>the address GET /accounts/{}/payments (payments-service)</td><td>confirmed in the source code</td><td>the address setting names the service (strategy R2)</td></tr></tbody></table></div>
+<p>Take the first row. The statement service's call on line 9 of <code>client.py</code> uses the setting <code>PAYMENTS_BASE_URL</code>. The settings file says that setting means the payments service. The payments service has exactly one address that matches <code>GET /accounts/{}/payments</code>. All three facts are in the code, so TIA marks the link <strong>confirmed in the source code</strong>.</p>
+<p><strong>How sure is TIA?</strong> Every link carries a label saying how it was established. "Confirmed in the source code" is the strongest. When TIA can only infer a link, for example because a path matches but the code does not say which service it is calling, it labels the link <em>inferred</em> and treats anything that depends on it as a lead to check, not a fact. When it cannot link a call at all, it says so.</p>
+<p>Here are the four calls it did <strong>not</strong> link, and why:</p>
+<div class="tw"><table><thead><tr><th>The call</th><th>Why it was not linked</th></tr></thead><tbody><tr><td>the call on line 25 of web/src/app/payments/payments.component.ts (customer-portal)</td><td>base URL not present in call</td></tr><tr><td>the call on line 29 of web/src/app/payments/payments.component.ts (customer-portal)</td><td>base URL not present in call</td></tr><tr><td>the call on line 8 of web/src/StatementRequest.jsx (statement-service)</td><td>base URL not present in call</td></tr><tr><td>the call on line 8 of web/src/StatementRequest.jsx (statement-service)</td><td>base URL not present in call</td></tr></tbody></table></div>
+<p>All four are web pages asking their own service for data, written without a server address because the browser fills it in. TIA does not guess where they go. It lists them, and the report says the connections may be incomplete. That honesty is deliberate: a missing link is shown as missing, never hidden.</p>
+<p><strong>In short</strong></p>
+<ul><li>TIA joins the facts from all repositories into one map of who calls whom.</li><li>Each link carries a label saying how sure TIA is: confirmed, inferred, or not linked.</li><li>Calls it cannot link are listed with the reason, never guessed.</li></ul>
+<h2 id="5-step-three-what-exactly-changed">5. Step three: what exactly changed<a class="anchor" href="#5-step-three-what-exactly-changed" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> how TIA compares the version before the change with the version after it.</p>
+<p>When a developer proposes a change, TIA reads the code <strong>before</strong> and <strong>after</strong>, and compares the two sets of facts. It does not compare text line by line; it compares meaning. Here is what it reported for three different changes to the payments service:</p>
+<div class="tw"><table><thead><tr><th>The change</th><th>What TIA says changed</th><th>Kind of change</th></tr></thead><tbody><tr><td>Delete the <code>disputed</code> field</td><td>the data shape Payment (payments-service)</td><td>schema_field_removed</td></tr><tr><td>List payments newest first</td><td>the function ordered (payments-service, app.py)</td><td>modified</td></tr><tr><td>Reword a comment</td><td>the function list_payments (payments-service, app.py)</td><td>modified</td></tr></tbody></table></div>
+<p>Three changes, three different results:</p>
+<ul><li><strong>Deleting <code>disputed</code></strong> changed a data shape that other services receive. TIA records it as "a field removed from a data shape", a change other programs can notice.</li><li><strong>Listing payments newest first</strong> changed the inside of one function, <code>ordered</code>. Nothing that other programs receive changed in shape, but the order they see did.</li><li><strong>Rewording a comment</strong> also touched a function's text. TIA sees that only the comment changed, not what the function does, and treats it accordingly (chapter 7 shows the result).</li></ul>
+<p>These changed items are the starting points for the next step.</p>
+<p><strong>In short</strong></p>
+<ul><li>TIA compares the facts before and after a change, not the raw text.</li><li>It tells a change other services can see (a removed field) from an internal one (a function's logic) from a harmless one (a comment).</li><li>The changed items are where the next step starts.</li></ul>
+<h2 id="6-step-four-following-the-change">6. Step four: following the change<a class="anchor" href="#6-step-four-following-the-change" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> how TIA follows a change from where it happened to everything it reaches.</p>
+<p>From each changed item, TIA walks the map: to whatever uses that item, then to whatever uses those, and so on. It stops after a fixed number of steps (eight by default), so a large landscape cannot make it run forever. If it stops early, the report says so.</p>
+<p>Here is the route it found from the deleted field to the statement PDF, one step per line:</p>
+<ol><li>The walk starts at the changed data shape.</li><li>It moves to the address that sends that shape out.</li><li>It crosses into the statement service through the call that was linked in chapter 4.</li><li>It follows the statement service's own code up to its PDF address.</li></ol>
+<p>The real route TIA recorded:</p>
+<ol><li>the data shape Payment (payments-service)</li><li>the address GET /accounts/{}/payments (payments-service)</li><li>the call on line 9 of client.py (statement-service)</li><li>the function fetch_payments (statement-service, client.py)</li><li>the function statement_rows (statement-service, app.py)</li><li>the function statement_pdf (statement-service, app.py)</li><li>the address GET /statements/{}/pdf (statement-service)</li></ol>
+<p>Read it from top to bottom: the changed shape is sent by the payments address; the statement service's call on line 9 receives it; <code>fetch_payments</code> makes that call; <code>statement_rows</code> uses <code>fetch_payments</code> (that is the function with the "no disputed payments" rule); <code>statement_pdf</code> uses <code>statement_rows</code>; and <code>statement_pdf</code> answers the PDF address. So the monthly statement PDF depends on the deleted field.</p>
+<p>TIA keeps this route for every result. When it tells you something is affected, it can always show you why, step by step, with the file and line of each step.</p>
+<p><strong>In short</strong></p>
+<ul><li>TIA walks the map from each changed item to everything that depends on it, up to a fixed limit.</li><li>Every result comes with its route, so you can check the reasoning yourself.</li><li>In our example, the route leads from the deleted field all the way to the statement PDF.</li></ul>
+<h2 id="7-step-five-deciding-how-serious-it-is">7. Step five: deciding how serious it is<a class="anchor" href="#7-step-five-deciding-how-serious-it-is" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> how TIA grades each affected item, using fixed rules rather than opinion.</p>
+<p>Each thing the walk reaches becomes a <em>finding</em>. TIA grades each finding as critical, high, medium or low, using a fixed table of rules. The grade depends on two things: <strong>what kind of change</strong> it is (does it break the other side, or only change its behaviour?) and <strong>how sure</strong> TIA is of the route (confirmed, or only inferred). A finding reached only through an inferred link is capped at medium, so TIA does not raise its loudest alarms on something it could not prove. (An organisation can change that cap in its settings; the finding then names the cap rule it used.)</p>
+<p>Here are the findings for deleting <code>disputed</code>:</p>
+<div class="tw"><table><thead><tr><th>#</th><th>Seriousness</th><th>Affected</th><th>What TIA says</th><th>Tests that touch it</th></tr></thead><tbody><tr><td>F1</td><td>high</td><td>customer-portal (a call)</td><td>customer-portal depends on the changed provider through a fully resolved HTTP call at customer-portal:client.py:9. Change: Payment.disputed removed.</td><td>test_portal_payments</td></tr><tr><td>F2</td><td>high</td><td>statement-service (a call)</td><td>statement-service depends on the changed provider through a fully resolved HTTP call at statement-service:client.py:9. Change: Payment.disputed removed.</td><td>test_statement_pdf</td></tr><tr><td>F3</td><td>high</td><td>customer-portal (an address)</td><td>customer-portal endpoint GET /portal/accounts/{}/payments depends on the changed component transitively (customer-portal:app.py:16). Change: Payment.disputed removed.</td><td>test_portal_payments</td></tr><tr><td>F4</td><td>high</td><td>statement-service (an address)</td><td>statement-service endpoint GET /statements/{}/pdf depends on the changed component transitively (statement-service:app.py:18). Change: Payment.disputed removed.</td><td>test_statement_pdf</td></tr></tbody></table></div>
+<p>All four are <strong>high</strong>: removing a field that other services read can break them, and every route is confirmed in the code. Each finding names the rule that produced its grade, so the grade can be checked and, if a team disagrees, the rule changed:</p>
+<div class="tw"><table><thead><tr><th>Finding</th><th>Rule that set the seriousness</th></tr></thead><tbody><tr><td>F1</td><td>SEV-BREAKING-CONFIRMED</td></tr><tr><td>F2</td><td>SEV-BREAKING-CONFIRMED</td></tr><tr><td>F3</td><td>SEV-BREAKING-CONFIRMED</td></tr><tr><td>F4</td><td>SEV-BREAKING-CONFIRMED</td></tr><tr><td>F5 (newest-first change)</td><td>SEV-LOCAL</td></tr></tbody></table></div>
+<p>Now compare the three changes side by side:</p>
+<div class="tw"><table><thead><tr><th>The change</th><th>Findings</th><th>High</th><th>Medium</th><th>Low</th><th>TIA's message</th></tr></thead><tbody><tr><td>Delete the <code>disputed</code> field</td><td>4</td><td>4</td><td>0</td><td>0</td><td></td></tr><tr><td>List payments newest first</td><td>5</td><td>0</td><td>4</td><td>1</td><td></td></tr><tr><td>Reword a comment</td><td>0</td><td>0</td><td>0</td><td>0</td><td>Documentation-only change to the code (docstrings); no behaviour changed, so nothing needs retesting.</td></tr></tbody></table></div>
+<ul><li><strong>Deleting the field:</strong> four high findings, because other services can break.</li><li><strong>Listing newest first:</strong> four medium findings and one low. Nothing breaks, but both the statement and the portal will show payments in a different order, so they should be checked.</li><li><strong>Rewording a comment:</strong> nothing, with the message shown. TIA saw that only a comment changed.</li></ul>
+<p>This is the core of TIA's value: the same tool says "stop and check" for the first change, "worth a look" for the second, and "nothing to do" for the third, and shows its reasons each time.</p>
+<p><strong>The same input always gives the same answer.</strong> There is no AI in any of these steps. The same code, settings and evidence always produce the same report, and TIA can re-run an old analysis to prove it.</p>
+<p><strong>In short</strong></p>
+<ul><li>Each affected item becomes a finding, graded by a fixed table of rules.</li><li>The grade depends on the kind of change and on how sure TIA is of the route.</li><li>Deleting the field gives high findings; reordering gives medium; a comment gives none.</li></ul>
+<h2 id="8-step-six-what-to-test">8. Step six: what to test<a class="anchor" href="#8-step-six-what-to-test" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> how TIA turns findings into a test plan a tester can use without reading code.</p>
+<p>Findings speak about code. Testers think about screens, reports and test cases. So TIA also writes a <strong>test scope</strong>: the things a person can actually test, named in their terms where the team has given names (chapter 2's settings file gave the PDF its name).</p>
+<div class="tw"><table><thead><tr><th>What to test</th><th>Address</th><th>Service</th><th>Effect</th><th>Existing tests</th></tr></thead><tbody><tr><td>Payments screen</td><td><code>GET /portal/accounts/{account_id}/payments</code></td><td>customer-portal</td><td>breaking</td><td>test_portal_payments</td></tr><tr><td>Monthly statement PDF</td><td><code>GET /statements/{account_id}/pdf</code></td><td>statement-service</td><td>breaking</td><td>test_statement_pdf</td></tr><tr><td>(no name given)</td><td><code>GET /accounts/{account_id}/payments</code></td><td>payments-service</td><td>breaking</td><td>test_list_payments, test_unknown_account_is_404</td></tr></tbody></table></div>
+<p>The first two rows use the names from the settings files: "Payments screen" and "Monthly statement PDF". A tester knows exactly what to open. The third row has no name because nobody gave one; it is the payments service's own address.</p>
+<p><strong>TIA also checks the business rules.</strong> Remember line 10 of the statement service, which leaves out disputed payments. TIA noticed that the statement applies that rule, but the portal, which gets the very same data, does not:</p>
+<blockquote><p>1 consumer(s) of GET /accounts/{account_id}/payments (payments-service) keep only items where <code>not p[&#x27;disputed&#x27;]</code> (fields: disputed); 1 do not: GET /portal/accounts/{account_id}/payments (customer-portal). If the rule applies to every consumer, these show items the others exclude; if it does not, confirm the difference is intended.</p></blockquote>
+<div class="tw"><table><thead><tr><th></th><th>Address</th><th>Service</th><th>Where the rule is</th></tr></thead><tbody><tr><td>applies the rule</td><td><code>GET /statements/{account_id}/pdf</code></td><td>statement-service</td><td>statement_rows in app.py line 10: <code>not p[&#x27;disputed&#x27;]</code></td></tr><tr><td>does not</td><td><code>GET /portal/accounts/{account_id}/payments</code></td><td>customer-portal</td><td>nowhere</td></tr></tbody></table></div>
+<p>TIA does not decide which is right. Maybe the screen should show disputed payments and the statement should not. Maybe it is a bug. It raises the question, with the exact file and line, so a person can decide. This is often the most useful thing in a report, because nobody was looking for it.</p>
+<p><strong>Written test cases.</strong> Because TIA read the testers' own test cases in chapter 3, it also says which of them to run again. You will see that list in the pull-request comment in chapter 11.</p>
+<p><strong>In short</strong></p>
+<ul><li>TIA turns findings into a test scope: screens, reports and addresses, with the existing tests for each.</li><li>It points out business rules that one consumer applies and another does not.</li><li>It also lists which written test cases to run again.</li></ul>
+<h2 id="9-what-tia-does-not-know">9. What TIA does not know<a class="anchor" href="#9-what-tia-does-not-know" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> how TIA reports the limits of its own knowledge, and why this matters.</p>
+<p>A report that only listed what it found would look complete even when it was not. So every TIA report ends with its <strong>unknowns</strong>: things it could not see that might change the answer. Here are the unknowns for our example:</p>
+<div class="tw"><table><thead><tr><th>Area</th><th>What TIA says</th></tr></thead><tbody><tr><td>unresolved_outbound_calls</td><td>4 outbound call site(s)/contract interaction(s) could not be resolved to a provider.</td></tr><tr><td>event_consumers</td><td>Event consumers are analysed for Kafka (code and tia-services.yaml declarations) only; consumers over other messaging (AMQP, JMS, cloud queues) are not seen.</td></tr><tr><td>external_consumers</td><td>Consumers outside the 3 analysed repositories cannot be seen; no external consumer inventory is connected.</td></tr><tr><td>compatibility_not_evaluated</td><td>Compatibility was not evaluated for: headers, error response bodies.</td></tr><tr><td>ci_results_unavailable</td><td>No CI test results have been ingested for 3 repository(ies) with relevant tests: their tests are listed as associated, not as passed or failed.</td></tr><tr><td>coverage_unavailable</td><td>No coverage has been ingested: whether a test executes a component is unknown, not 'no'.</td></tr><tr><td>runtime_evidence_absent</td><td>No runtime evidence has been ingested: relationships come from source and contracts only, and a dependency not seen in them is not excluded.</td></tr><tr><td>deployment_evidence_absent</td><td>No deployment records have been ingested: the revision running in each environment is unknown.</td></tr><tr><td>build_evidence_absent</td><td>No build records have been ingested: build status and the artifacts each revision produced are unknown.</td></tr></tbody></table></div>
+<p>In plain words, the most important ones say:</p>
+<ul><li>Four calls could not be linked (the web pages from chapter 4), so some connections may be missing.</li><li>Services outside these three repositories cannot be seen. If another team's program also reads payments, TIA does not know about it.</li><li>No test results, test coverage, live traffic records or deployment records were given to TIA, so it cannot say whether tests passed or what runs in production.</li></ul>
+<p>The report's overall verdict reflects this. Our analysis finished with the status <code>complete_with_gaps</code>: the work is done, but the gaps above limit confidence. TIA never calls a report clean when it is not.</p>
+<p>The unknowns also explain the comment-only change from chapter 7. Even with nothing to retest, TIA gave a reason:</p>
+<blockquote><p>Documentation-only change to the code (docstrings); no behaviour changed, so nothing needs retesting.</p></blockquote>
+<p><strong>In short</strong></p>
+<ul><li>Every report lists what TIA could not see, so a short report is never mistaken for a safe one.</li><li>The status <code>complete_with_gaps</code> means the analysis finished but has known blind spots.</li><li>Giving TIA more information (next chapter) removes some of those blind spots.</li></ul>
+<h2 id="10-adding-information-from-your-pipelines">10. Adding information from your pipelines<a class="anchor" href="#10-adding-information-from-your-pipelines" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> how test results and other records from your build system make the report more precise.</p>
+<p>TIA reads code, but code alone cannot tell whether a test passed last night or what version is running in production. Your build and release tools know those things. They can send that information to TIA: test results, test coverage, which version was deployed where, builds, and records of real traffic between services. TIA keeps those records and uses them in the next analysis. It never reaches out to fetch them during an analysis, so a report can always be re-created from exactly the information it used.</p>
+<p>Here is the same analysis as before, run once more after the build system reported that the statement service's PDF test failed in build 42:</p>
+<div class="tw"><table><thead><tr><th>Test</th><th>Result in CI</th><th>Build</th><th>Run of the analysed version?</th><th>States TIA records</th></tr></thead><tbody><tr><td><code>test_statement_pdf</code></td><td>failed</td><td>build-42</td><td>yes</td><td>exists, associated, failed</td></tr></tbody></table></div>
+<p>TIA keeps these facts separate on purpose: the test <strong>exists</strong>, it is <strong>associated</strong> with the affected code, and it <strong>failed</strong> in a run of the version being analysed. It never merges them into a single "tested" tick that could mean any of them.</p>
+<p>The unknowns change too:</p>
+<div class="tw"><table><thead><tr><th></th><th>What the report says about CI results</th></tr></thead><tbody><tr><td>Without CI results</td><td>No CI test results have been ingested for 3 repository(ies) with relevant tests: their tests are listed as associated, not as passed or failed.</td></tr><tr><td>With CI results for statement-service</td><td>No CI test results have been ingested for 2 repository(ies) with relevant tests: their tests are listed as associated, not as passed or failed.</td></tr></tbody></table></div>
+<p><strong>Try it yourself.</strong> A build system sends test results with one request to TIA, for example:</p>
+<div class="code"><div class="bar"><span class="lang"></span><button class="copy" type="button" aria-label="Copy this code">Copy</button></div><pre><code>curl -X POST "http://127.0.0.1:8080/api/v1/evidence/test-results?repo=statement-service&amp;revision=&lt;commit&gt;&amp;build_id=build-42" --data-binary @junit.xml</code></pre></div>
+<p>The administrator guide lists the other kinds (coverage, deployments, builds, live traffic, incidents).</p>
+<p><strong>In short</strong></p>
+<ul><li>Build and release tools can send test results, coverage, deployments and more to TIA.</li><li>TIA uses them in the next analysis and records exactly which ones it used.</li><li>Test facts are kept separate: exists, associated, passed or failed, and whether that run was of this version.</li></ul>
+<h2 id="11-pull-requests-from-a-proposed-change-to-a-comment">11. Pull requests: from a proposed change to a comment<a class="anchor" href="#11-pull-requests-from-a-proposed-change-to-a-comment" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> what happens when a developer opens a pull request, from start to finish.</p>
+<p>A <em>pull request</em> is a developer saying "here is my change, please review it before it goes in". Code-hosting systems (GitHub, GitLab, Bitbucket, Azure DevOps) can notify TIA when one is opened or updated. That notification is called a <em>webhook</em>. What happens next:</p>
+<ol><li><strong>TIA checks the notification is genuine</strong> (it carries a signature or a password agreed in advance with the code host) and finds the repository and the organisation it belongs to. It answers immediately and puts the work in a queue.</li><li><strong>A worker picks up the job.</strong> Several workers can run at once; they never take the same job twice. If the developer pushes again before the job runs, the older job is dropped and only the newest version is analysed.</li><li><strong>The worker fetches the latest code</strong>, then runs the steps from chapters 3 to 8.</li><li><strong>TIA writes one comment on the pull request</strong> and updates that same comment on every new push, so the conversation is not flooded.</li></ol>
+<p>Here is the real comment TIA wrote for our change. (It normally also contains a small diagram of the services involved; that one block is left out here.)</p>
+<div class="code"><div class="bar has-lang"><span class="lang">markdown</span><button class="copy" type="button" aria-label="Copy this code">Copy</button></div><pre><code>&lt;!-- tia-analysis --&gt;
+### TIA impact analysis - `complete_with_gaps`
+
+`payments-service` &lt;commit&gt; -&gt; &lt;commit&gt; - change type: **api_change**
+
+&gt; **Warning:** the analysis ran to completion but has unknowns that limit confidence. This is not a clean impact assessment.
+
+**4 finding(s), 4 material** - 4 high
+
+**Regression-test 7 of your 9 test case(s) (1 not affected by this change; 1 could not be mapped - review by hand).**
+
+| Test case | Why | Change effect |
+|---|---|---|
+| `TC-101` View payments | tests GET /portal/accounts/{account_id}/payments, which this change reaches (breaking) | BREAKING |
+| `TC-102` Pay with missing amount | tests GET /portal/accounts/{account_id}/payments (on page /accounts/:id/payments), which this change reaches (breaking) | BREAKING |
+| `TC-103` Pay in USD | tests GET /portal/accounts/{account_id}/payments (on page /accounts/:id/payments), which this change reaches (breaking) | BREAKING |
+| `TC-104` Reference too long | tests GET /portal/accounts/{account_id}/payments (on page /accounts/:id/payments), which this change reaches (breaking) | BREAKING |
+| `TC-201` Statement PDF leaves out disputed payments | tests GET /statements/{account_id}/pdf, which this change reaches (breaking) | BREAKING |
+| `TC-202` Download a statement | tests GET /statements/{account_id}/pdf (on page /statements), which this change reaches (breaking) | BREAKING |
+| `TC-203` Account number with letters | tests GET /statements/{account_id}/pdf (on page /statements), which this change reaches (breaking) | BREAKING |
+
+Could not be mapped (review by hand): `TC-204` Old statements are archived
+
+**What to test** (entry points this change reaches)
+
+| Entry point | Service | Change effect | Tests found |
+|---|---|---|---|
+| Payments screen (`GET /portal/accounts/{account_id}/payments`) | customer-portal | BREAKING | `test_portal_payments` |
+| Monthly statement PDF (`GET /statements/{account_id}/pdf`) | statement-service | BREAKING | `test_statement_pdf` |
+| `GET /accounts/{account_id}/payments` | payments-service | BREAKING | `test_list_payments`, `test_unknown_account_is_404` |
+
+- **Possible rule gap** - 1 consumer(s) of GET /accounts/{account_id}/payments (payments-service) keep only items where `not p['disputed']` (fields: disputed); 1 do not: GET /portal/accounts/{account_id}/payments (customer-portal). If the rule applies to every consumer, these show items the others exclude; if it does not, confirm the difference is intended.
+- **Consistency check** - GET /portal/accounts/{account_id}/payments (customer-portal) and GET /statements/{account_id}/pdf (statement-service) all take data from GET /accounts/{account_id}/payments (payments-service): call them for the same input and check they show the same records, except where a documented rule says otherwise.
+
+
+&lt;details&gt;&lt;summary&gt;Recommended tests&lt;/summary&gt;
+
+- `test_portal_payments` (customer-portal) - associated with customer-portal (test-http-call) on the impact path
+- `test_list_payments` (payments-service) - tests GET /accounts/{account_id}/payments (test-http-call)
+- `test_unknown_account_is_404` (payments-service) - tests GET /accounts/{account_id}/payments (test-http-call)
+- `test_statement_pdf` (statement-service) - associated with statement-service (test-http-call) on the impact path
+
+_Tests not listed are not shown to be safe to skip: the list is based on the evidence available, and a test with no graph path to the change may still be affected._
+
+&lt;/details&gt;
+
+
+
+**Architecture (evidence scope)**
+
+[architecture diagram left out here]
+_Diagram summarises evidence edges among services in this analysis; not a full landscape map._
+
+| Severity | Component | Evidence | Why |
+|---|---|---|---|
+| HIGH | customer-portal | source_confirmed (R2) | customer-portal depends on the changed provider through a fully resolved HTTP call at customer-portal:client.py:9 |
+| HIGH | statement-service | source_confirmed (R2) | statement-service depends on the changed provider through a fully resolved HTTP call at statement-service:client.py:9 |
+| HIGH | customer-portal | source_confirmed (R2) | customer-portal endpoint GET /portal/accounts/{}/payments depends on the changed component transitively (customer-portal:app.py:16) |
+| HIGH | statement-service | source_confirmed (R2) | statement-service endpoint GET /statements/{}/pdf depends on the changed component transitively (statement-service:app.py:18) |
+
+&lt;details&gt;&lt;summary&gt;Required verification&lt;/summary&gt;
+
+- **customer-portal**: Run the listed verification and confirm the consumer still compiles and passes contract checks.
+- **customer-portal**: Run: test_portal_payments (tests/test_portal.py)
+- **customer-portal**: Verify compatibility with the deployed consumer version
+- **statement-service**: Run the listed verification and confirm the consumer still compiles and passes contract checks.
+- **statement-service**: Run: test_statement_pdf (tests/test_statement.py)
+- **statement-service**: Verify compatibility with the deployed consumer version
+
+&lt;/details&gt;
+
+**Contract changes**
+- BREAKING: Payment.disputed removed
+
+**Coverage:** 3 repo(s) analysed; 3/7 outbound calls resolved (43%).
+
+**Unknowns that affect confidence**
+- 4 outbound call site(s)/contract interaction(s) could not be resolved to a provider.
+- Event consumers are analysed for Kafka (code and tia-services.yaml declarations) only; consumers over other messaging (AMQP, JMS, cloud queues) are not seen.
+- Consumers outside the 3 analysed repositories cannot be seen; no external consumer inventory is connected.
+
+&lt;sub&gt;Advisory only - does not block merge. analysis `&lt;analysis-id&gt;` - snapshot `&lt;snapshot-id&gt;` - config `cfg-2;sev-1;inf-2`&lt;/sub&gt;</code></pre></div>
+<p>Everything from the earlier chapters is in it: the four high findings, the test scope with the testers' names, the rule-gap question, the written test cases to run again, the tests to run, and the unknowns. The last line says it is <strong>advisory</strong>: it informs the review, it does not block the merge, unless the organisation chooses to make its release rules enforcing.</p>
+<p><strong>Who sees what.</strong> The comment is visible to everyone who can see the pull request. So TIA only names other repositories in it if everyone who can read this pull request can also read those repositories. Anything else is replaced by a count.</p>
+<p><strong>In short</strong></p>
+<ul><li>A code host notifies TIA of a pull request; TIA queues the work and answers at once.</li><li>A worker runs the analysis on the newest version and writes one comment, updated on each push.</li><li>The comment is advisory and only shows what its readers are allowed to see.</li></ul>
+<h2 id="12-how-tias-own-code-is-organised">12. How TIA's own code is organised<a class="anchor" href="#12-how-tias-own-code-is-organised" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> the parts of TIA and how they fit, for people who will work on TIA itself.</p>
+<p>TIA's code is in the folder <code>tia/</code>, split into ten layers. A layer may use the layers below it, never the ones above. This keeps the important parts honest: the part that analyses changes sits below the part that talks to GitHub, so it cannot reach out to the internet in the middle of an analysis. The rule is checked automatically every time the tests run.</p>
+<div class="tw"><table><thead><tr><th>#</th><th>Layer</th><th>What it is responsible for</th><th>Files</th></tr></thead><tbody><tr><td>1</td><td>Entry points</td><td>The processes and commands that start everything: the API server, the queue worker, the command line and the schema migration.</td><td>4</td></tr><tr><td>2</td><td>HTTP API, web UI and agent surfaces</td><td>Every way in: the REST API and web UI, sign-in, permissions on each request, the shareable report page, MCP for coding assistants and the Knowledge Fabric adapter.</td><td>10</td></tr><tr><td>3</td><td>Orchestration, ingestion and jobs</td><td>Turns a request into work: resolves revisions, registers and syncs repositories, queues jobs and runs an analysis end to end, the same way for the UI, the API and a pull-request webhook.</td><td>8</td></tr><tr><td>4</td><td>Source-control and change-management connectors</td><td>Talks to the outside on the platform's behalf: webhooks in, pull-request comments and check runs out, repository permissions mirrored from the host, ServiceNow change records, and the Neo4j mirror of the graph for Knowledge Fabric.</td><td>10</td></tr><tr><td>5</td><td>Impact engine and tester views</td><td>The deterministic core: diff the change, walk the graph within bounds, attach evidence, score with the rule table, and turn the result into the report and the tester views (test scope, regression test selection, configuration checks, coverage, automation inventory, tester pack, graph questions).</td><td>19</td></tr><tr><td>6</td><td>Graph and identity resolution</td><td>Connects facts from many repositories into one typed graph: who calls which endpoint, which code reads which table, with the resolution strategy and evidence on every edge, plus the use-case structure (screens, elements, locators, requests, fields, rules).</td><td>8</td></tr><tr><td>7</td><td>Extraction (language adapters)</td><td>Reads code as bytes and parses it into facts (endpoints, call sites, functions, schemas, tables, tests, UI elements).</td><td>22</td></tr><tr><td>8</td><td>Tenancy, identity and persistence</td><td>Everything stored, and who it belongs to: tenant-bound database transactions, the analysis and evidence store with its audit chain, tenants and their configuration, users, roles, secrets and customer keys, retention and backup.</td><td>11</td></tr><tr><td>9</td><td>Rules (deterministic, versioned)</td><td>The rule tables and their evaluation: severity, release policy, contract and event compatibility, team coordination.</td><td>6</td></tr><tr><td>10</td><td>Foundations</td><td>Shared building blocks with no business logic: the data model, read-only git access, secret scrubbing, safe outbound connections, air-gap guard, transport security, logging, metrics and tracing.</td><td>13</td></tr></tbody></table></div>
+<p>How the chapters of this guide map onto the code:</p>
+<div class="tw"><table><thead><tr><th>Chapter</th><th>What happens</th><th>Where in <code>tia/</code></th></tr></thead><tbody><tr><td>3. Reading the code</td><td>Facts from each file</td><td><code>extraction.py</code>, <code>extract_python.py</code>, <code>extract_java.py</code>, <code>extract_ui.py</code>, <code>lang/</code></td></tr><tr><td>4. Joining the services</td><td>The map of who calls whom</td><td><code>resolve.py</code>, <code>graph.py</code></td></tr><tr><td>5. What changed</td><td>Before and after compared</td><td><code>impact.py</code>, <code>contracts.py</code>, <code>testscope.py</code></td></tr><tr><td>6. Following the change</td><td>The walk through the map</td><td><code>impact.py</code></td></tr><tr><td>7. How serious</td><td>The rule table</td><td><code>severity.py</code>, <code>policy.py</code></td></tr><tr><td>8. What to test</td><td>Test scope and rule checks</td><td><code>testscope.py</code>, <code>coverage.py</code>, <code>automation.py</code>, <code>testerpack.py</code></td></tr><tr><td>9. Unknowns</td><td>The limits of the report</td><td><code>impact.py</code></td></tr><tr><td>10. Pipeline information</td><td>Stored records used in analysis</td><td><code>evidence.py</code>, <code>enrich.py</code></td></tr><tr><td>11. Pull requests</td><td>Notification, queue, comment</td><td><code>webhooks.py</code>, <code>jobs.py</code>, <code>worker.py</code>, <code>publish.py</code>, <code>github.py</code></td></tr></tbody></table></div>
+<p><strong>Try it yourself.</strong> Every module, with its size and what it uses, is listed in <a href="../docs/ARCHITECTURE-AS-BUILT.html">the architecture page</a>, which is generated from the code.</p>
+<p><strong>In short</strong></p>
+<ul><li>TIA is split into ten layers; each may only use the ones below it.</li><li>The analysis cannot contact outside systems, which keeps its results repeatable.</li><li>Each chapter of this guide corresponds to a handful of files.</li></ul>
+<h2 id="13-where-information-is-kept-and-who-can-see-it">13. Where information is kept, and who can see it<a class="anchor" href="#13-where-information-is-kept-and-who-can-see-it" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> how TIA stores its information and keeps each customer's information separate.</p>
+<p><strong>Where.</strong> Everything TIA records is kept in one PostgreSQL database: the facts read from each file, the maps, the reports, the records from your pipelines, the job queue, users and settings. The code itself is kept as copies of the repositories in one folder on disk. TIA reads those copies but never runs them.</p>
+<p><strong>Reports are saved as they were.</strong> Each report is stored with a list of exactly what it was based on: the commit of every repository, the settings, and the pipeline records. If the code changes later, the old report still says what was true then, and TIA can re-run it to show the same inputs give the same result.</p>
+<p><strong>A tamper-evident log.</strong> Important events (an analysis requested, a setting changed, a user added) are written to a log where each entry is sealed together with the one before it. Changing or deleting an old entry breaks the seal, and TIA can check the whole log on request.</p>
+<p><strong>Keeping customers apart.</strong> One TIA installation can serve many organisations; each is called a <em>tenant</em>. Every stored row carries its tenant's ID, and the database itself refuses to show one tenant's rows to another, even if TIA's own code had a mistake. A request with no tenant sees nothing at all.</p>
+<p><strong>Who sees what inside one organisation.</strong> People sign in through the organisation's own login system. Each person has a role (viewer, engineer, release manager, auditor, administrator) that decides what they may do. Which repositories they may read follows the code host's own permissions, copied regularly. A repository someone may not read simply does not exist for them: TIA answers "not found", and their reports leave out its findings.</p>
+<p><strong>In short</strong></p>
+<ul><li>Everything is in one PostgreSQL database; code is kept as read-only copies on disk.</li><li>Reports keep a record of exactly what they used, and important events go into a sealed log.</li><li>Tenants are kept apart by the database itself; people see only the repositories they may read.</li></ul>
+<h2 id="14-connecting-other-tools">14. Connecting other tools<a class="anchor" href="#14-connecting-other-tools" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> how AI assistants and other systems can use what TIA knows.</p>
+<p>TIA's results are not only for people. Other tools can ask TIA the same questions:</p>
+<ul><li><strong>Coding assistants.</strong> TIA offers a set of read-only questions in a standard format called MCP, which coding assistants understand: "what does this analysis say", "what should be tested", "who uses this address". They see only what the signed-in user may see.</li><li><strong>Knowledge Fabric.</strong> A separate company system that stores documents (an API register, test cases, requirements) can ask TIA for a finished report through the address <code>POST /query/tia</code>. TIA answers in the format that system already expects. That format was built from the system's written description; it has not yet been checked against the real system.</li><li><strong>Neo4j.</strong> TIA can copy its map into a Neo4j database used by Knowledge Fabric, and join its addresses and test cases to the documents stored there, using shared identifiers only (the same address, the same test case ID), never similar wording. TIA's own database stays the original; the Neo4j copy can be rebuilt at any time.</li><li><strong>Scripts.</strong> A Python library (<code>sdk/python</code>) and the web API let any script start analyses and read results.</li></ul>
+<p><strong>In short</strong></p>
+<ul><li>Assistants, Knowledge Fabric and scripts can all ask TIA questions, under the same sign-in and permissions as people.</li><li>TIA can copy its map into Neo4j and link it to documents on shared identifiers only.</li><li>The Knowledge Fabric connection has not yet been tested against the real system.</li></ul>
+<h2 id="15-try-it-on-your-own-computer">15. Try it on your own computer<a class="anchor" href="#15-try-it-on-your-own-computer" aria-label="Link to this section">#</a></h2>
+<p><strong>In this chapter:</strong> how to start TIA with the example from this guide and repeat what you have read.</p>
+<p>You need Python and git installed, and the project folder <code>Project TIA</code>.</p>
+<ol><li>Open a terminal in the <code>Project TIA</code> folder.</li><li>Start TIA with the example from this guide:</li></ol>
+<div class="code"><div class="bar"><span class="lang"></span><button class="copy" type="button" aria-label="Copy this code">Copy</button></div><pre><code>python tools/run_dev.py --demo --landscape lanes</code></pre></div>
+<ol><li>Open <code>http://127.0.0.1:8080</code> in a browser. The page has numbered sections; these are the ones this guide used:</li></ol>
+<div class="tw"><table><thead><tr><th>Section on the page</th><th>What you do there</th><th>Chapter</th></tr></thead><tbody><tr><td>1. Ingest repositories</td><td>See the three repositories TIA has read</td><td>3</td></tr><tr><td>2. Code graph</td><td>See the map of who calls whom</td><td>4</td></tr><tr><td>3. Analyse a change</td><td>Choose a repository and a change</td><td>5 to 8</td></tr><tr><td>4. Change Impact Report</td><td>Read the findings, the test scope, the unknowns and the comment</td><td>7 to 11</td></tr><tr><td>5. Tester views</td><td>Coverage of the test cases and the list of screens and fields</td><td>8</td></tr></tbody></table></div>
+<ol><li>In section 3, choose <strong>Repository</strong> <code>payments-service</code>, <strong>Head</strong> <code>contract</code> (the branch that deletes <code>disputed</code>) and <strong>Base</strong> <code>main</code> (the version before), then press <strong>Run analysis</strong>. You should see the four high findings from chapter 7.</li><li>Try <strong>Head</strong> <code>behaviour</code> (newest first) and <strong>Head</strong> <code>docstring</code> (the comment change) and compare the results with chapter 7.</li></ol>
+<p>The same analysis from a terminal:</p>
+<div class="code"><div class="bar"><span class="lang"></span><button class="copy" type="button" aria-label="Copy this code">Copy</button></div><pre><code>curl -X POST http://127.0.0.1:8080/api/v1/impact-analyses -H "content-type: application/json" -d "{\"target\":\"payments-service\",\"head\":\"contract\",\"base\":\"main\"}"</code></pre></div>
+<p>To stop TIA, press Ctrl+C in the terminal.</p>
+<p><strong>In short</strong></p>
+<ul><li><code>python tools/run_dev.py --demo --landscape lanes</code> starts TIA with this guide's example.</li><li>Section 3 of the page runs an analysis; section 4 shows the report.</li><li>Compare <code>contract</code>, <code>behaviour</code> and <code>docstring</code> to see the three outcomes from chapter 7.</li></ul>
+<h2 id="what-tia-has-not-yet-been-proven-on">What TIA has not yet been proven on<a class="anchor" href="#what-tia-has-not-yet-been-proven-on" aria-label="Link to this section">#</a></h2>
+<p>A guide should be honest about limits. Everything in this guide runs and is checked by TIA's automated tests on this example and on larger test landscapes. These parts have only been tested against stand-ins for the real systems, not the real ones: GitHub App installations, GitLab, Bitbucket, Azure DevOps, ServiceNow, company login systems, cloud key stores and Knowledge Fabric. TIA has not yet been measured on a very large codebase of real code (around 20 million lines), and has not had an independent security test.</p>
+<h2 id="glossary">Glossary<a class="anchor" href="#glossary" aria-label="Link to this section">#</a></h2>
+<div class="tw"><table><thead><tr><th>Word</th><th>Meaning in this guide</th></tr></thead><tbody><tr><td>Address</td><td>Something another program can ask a service for, such as <code>GET /accounts/{account_id}/payments</code>. Developers call it an endpoint.</td></tr><tr><td>Branch</td><td>A line of work in a repository; a change is usually made on its own branch.</td></tr><tr><td>Call</td><td>A place in one program's code where it asks another program for something.</td></tr><tr><td>Commit</td><td>One saved version of the code in a repository, with an ID.</td></tr><tr><td>Data shape</td><td>The structure of information a service sends or receives, such as a payment's four fields. Developers call it a schema.</td></tr><tr><td>Diff</td><td>The difference between two versions of a file: lines removed and added.</td></tr><tr><td>Finding</td><td>One thing TIA says a change affects, with a grade and the route that led to it.</td></tr><tr><td>Graph, map</td><td>All the facts joined together: points (services, addresses, functions, tests) and lines (who calls or uses whom).</td></tr><tr><td>Inferred</td><td>A link TIA believes but could not prove from the code. Findings that depend on it are treated as leads, not facts.</td></tr><tr><td>Pull request</td><td>A proposed change waiting for review before it is added to the main code.</td></tr><tr><td>Repository</td><td>A folder of code with its full history, kept by git.</td></tr><tr><td>Rule gap</td><td>A business rule that one service applies to some data and another service, using the same data, does not.</td></tr><tr><td>Service</td><td>A program that does one job and that other programs ask for information.</td></tr><tr><td>Severity, grade</td><td>How serious a finding is: critical, high, medium or low, set by fixed rules.</td></tr><tr><td>Tenant</td><td>One organisation using a shared TIA installation; its information is kept apart from all others.</td></tr><tr><td>Test scope</td><td>The screens, reports and addresses a tester should check for a change, with the existing tests for each.</td></tr><tr><td>Unknown</td><td>Something TIA could not see that might change the answer, listed in every report.</td></tr><tr><td>Webhook</td><td>A notification a code host sends to TIA when something happens, such as a pull request being opened.</td></tr></tbody></table></div>
+<h2 id="where-to-go-next">Where to go next<a class="anchor" href="#where-to-go-next" aria-label="Link to this section">#</a></h2>
+<ul><li><a href="../docs/USER-GUIDE.md">User guide</a>: every part of the web page, in detail.</li><li><a href="../docs/ADMIN-GUIDE.md">Administrator guide</a>: installing, configuring and running TIA.</li><li><a href="../docs/ARCHITECTURE-AS-BUILT.html">Architecture as built</a>: every module, generated from the code.</li><li><a href="../docs/DEMO-WALKTHROUGH.html">Demo walkthrough</a>: a 100-minute technical demo script.</li><li><a href="../docs/DEMO-SPEECH.html">Client demo script</a>: a 40-minute client demo on the Northwind Pay showcase, with what to click and what to say.</li><li><a href="../docs/PRD.md">Product requirements</a>: what TIA is required to do.</li></ul>
+<footer>Generated from <code>tutorial/src/book.md and a real run of TIA on the demo code</code> by <code>tools/gen_tutorial.py</code>. Edit tutorial/src/book.md, then run the generator. Every example is produced by running TIA.</footer></main></div><script>
+(function () {
+  var root = document.documentElement; root.classList.add("js");
+  try { var t = localStorage.getItem("tia-walk-theme"); if (t) root.setAttribute("data-theme", t); } catch (e) {}
+  document.getElementById("theme").onclick = function () {
+    var dark = root.getAttribute("data-theme") ? root.getAttribute("data-theme") === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = dark ? "light" : "dark"; root.setAttribute("data-theme", next);
+    try { localStorage.setItem("tia-walk-theme", next); } catch (e) {}
+  };
+  document.getElementById("print").onclick = function () { window.print(); };
+  var toc = document.getElementById("toc"), menu = document.getElementById("menu");
+  menu.onclick = function () { toc.classList.toggle("open"); };
+  toc.addEventListener("click", function (e) { if (e.target.tagName === "A") toc.classList.remove("open"); });
+  document.querySelectorAll(".copy").forEach(function (b) {
+    b.onclick = function () {
+      var pre = b.closest(".code").querySelector("pre"), text = pre.innerText;
+      var done = function () { b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1400); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () {});
+      else { var r = document.createRange(); r.selectNodeContents(pre); var s = getSelection(); s.removeAllRanges(); s.addRange(r); try { document.execCommand("copy"); done(); } catch (e) {} }
+    };
+  });
+  var links = {}; document.querySelectorAll("nav.toc a").forEach(function (a) { links[a.getAttribute("href").slice(1)] = a; });
+  var heads = [].slice.call(document.querySelectorAll("main h2[id], main h3[id]"));
+  function spy() {
+    var cur = heads[0], y = window.scrollY + 90;
+    heads.forEach(function (h) { if (h.getBoundingClientRect().top + window.scrollY <= y) cur = h; });
+    Object.keys(links).forEach(function (k) { links[k].classList.toggle("on", cur && k === cur.id); });
+    var on = cur && links[cur.id];
+    if (on && toc.scrollHeight > toc.clientHeight && getComputedStyle(toc).position === "sticky") {      // keep the active entry in view: scroll the sidebar only, never the page
+      var tr = toc.getBoundingClientRect(), r = on.getBoundingClientRect();
+      if (r.top < tr.top + 40 || r.bottom > tr.bottom - 40) toc.scrollTop += (r.top - tr.top) - toc.clientHeight / 2;
+    }
+  }
+  var tick = false; addEventListener("scroll", function () { if (!tick) { tick = true; requestAnimationFrame(function () { tick = false; spy(); }); } }, {passive: true});
+  spy();
+})();
+</script></body></html>

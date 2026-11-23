@@ -1,4 +1,4 @@
-"""Written (manual) test cases kept in a repository: testcases/*.csv | *.yaml | *.yml | *.json (UC-2, docs/CASE-STUDY.md).
+"""Written (manual) test cases kept in a repository: testcases/*.csv | *.yaml | *.yml | *.json (UC-2, docs/USER-GUIDE.md).
 
 CSV is what test-management tools export; the column names are matched loosely (ID / Test Case ID / Key, Title / Summary / Name,
 Steps / Description / Procedure, Expected / Expected Result, Entry point / Endpoint / API / Screen / Page, Priority, Type). YAML and

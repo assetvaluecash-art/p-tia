@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TIA client demo script</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1b2430; --muted:#5b6777; --line:#d9dee6; --accent:#1f5fbf; --accent-soft:#e6eefb;
+  --say:#0e5a47; --say-bg:#e8f5f0; --do:#1f5fbf; --see:#7a4d00; --see-bg:#fbf3e4; --warn:#a13a2a; --warn-bg:#fbebe8; --code:#eef1f5;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#12161c; --panel:#1a2029; --ink:#e6eaf0; --muted:#9aa6b6; --line:#2e3744; --accent:#7fb0ff; --accent-soft:#1e2c44;
+    --say:#7fdcbc; --say-bg:#16302a; --do:#8fbaff; --see:#f0c070; --see-bg:#2e2616; --warn:#ff9c8a; --warn-bg:#3a2320; --code:#232b36;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:920px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:27px;margin:0 0 6px}
+h2{font-size:21px;margin:34px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+h2 .t{float:right;font-size:13px;font-weight:500;color:var(--muted);background:var(--code);padding:2px 9px;border-radius:12px;margin-top:4px}
+h3{font-size:16px;margin:18px 0 6px}
+p{margin:8px 0}
+.lead{color:var(--muted)}
+code{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;font-size:13.5px;background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);padding:10px 12px;border-radius:6px;overflow-x:auto;font-size:13.5px}
+pre code{background:none;padding:0}
+a{color:var(--accent)}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+th{background:var(--code)}
+.tw{overflow-x:auto}
+.beat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:12px 0}
+.do,.see,.say,.note{border-radius:6px;padding:8px 12px;margin:8px 0}
+.do{border-left:4px solid var(--do);background:var(--accent-soft)}
+.see{border-left:4px solid var(--see);background:var(--see-bg)}
+.say{border-left:4px solid var(--say);background:var(--say-bg);font-size:16.5px}
+.note{border-left:4px solid var(--warn);background:var(--warn-bg);font-size:14.5px}
+.do::before,.see::before,.say::before,.note::before{display:block;font:700 11px/1.4 system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}
+.do::before{content:"Do";color:var(--do)} .see::before{content:"They see";color:var(--see)}
+.say::before{content:"Say";color:var(--say)} .note::before{content:"Presenter note";color:var(--warn)}
+.say p{margin:6px 0}
+nav.toc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 16px;margin:16px 0}
+nav.toc ol{margin:4px 0;padding-left:22px;columns:2;column-gap:28px}
+@media (max-width:640px){nav.toc ol{columns:1}}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.legend span{font-size:13px;padding:3px 10px;border-radius:12px}
+ul.check{list-style:none;padding-left:0} ul.check li::before{content:"\2610  ";color:var(--muted)}
+@media print{body{font-size:13px}.beat{break-inside:avoid}h2{break-after:avoid}}
+</style>
+</head>
+<body>
+<main>
+<h1>TIA client demo: step-by-step script</h1>
+<p class="lead">A 40-minute live demo plus questions, using the <b>Northwind Pay</b> showcase: five small repositories, fourteen written test cases, and prepared changes whose expected results are checked by the test suite (<code>tests/test_showcase.py</code>). Every result quoted below comes from those checked expectations.</p>
+<div class="legend">
+  <span style="background:var(--accent-soft);color:var(--do)"><b>Do</b>: what you click or type</span>
+  <span style="background:var(--see-bg);color:var(--see)"><b>They see</b>: what appears on screen</span>
+  <span style="background:var(--say-bg);color:var(--say)"><b>Say</b>: your words, ready to speak</span>
+  <span style="background:var(--warn-bg);color:var(--warn)"><b>Presenter note</b>: for you only</span>
+</div>
+
+<nav class="toc"><b>Run sheet</b>
+<ol>
+<li><a href="#prep">Before the client arrives</a></li>
+<li><a href="#open">Opening</a> (2 min)</li>
+<li><a href="#problem">The problem</a> (2 min)</li>
+<li><a href="#land">The example landscape</a> (3 min)</li>
+<li><a href="#map">The map of the code</a> (4 min)</li>
+<li><a href="#breaking">Change 1: a breaking API change</a> (9 min)</li>
+<li><a href="#config">Change 2: a new setting</a> (4 min)</li>
+<li><a href="#nothing">Change 3: a comment only</a> (2 min)</li>
+<li><a href="#tester">Tools for testers</a> (7 min)</li>
+<li><a href="#trust">Why you can trust it</a> (4 min)</li>
+<li><a href="#fit">How it fits your process</a> (2 min)</li>
+<li><a href="#close">Close and next step</a> (1 min)</li>
+<li><a href="#qa">Questions and honest answers</a></li>
+<li><a href="#rescue">If something goes wrong</a></li>
+</ol></nav>
+
+<!-- ================================================================== -->
+<h2 id="prep">0. Before the client arrives <span class="t">20 min, the day before</span></h2>
+<p>Do a full rehearsal once. Screen labels below follow the showcase guide (<a href="../docs/SHOWCASE.md">SHOWCASE.md</a>); if a label on your screen differs, trust the screen and correct this script.</p>
+<h3>Start TIA with the showcase data</h3>
+<p>Open two terminals in the <code>Project TIA</code> folder. For a clean start, delete the folder <code>demo-data/showcase</code> first if it exists from an earlier rehearsal.</p>
+<pre><code># terminal 1: TIA itself (leave it running)
+python tools/run_dev.py --data demo-data/showcase
+
+# terminal 2: build the pack and load it: uploads the 5 base zips, CI results, deployments, runtime calls, an incident
+python tools/showcase.py --out showcase --load http://127.0.0.1:8080</code></pre>
+<p>Open <code>http://127.0.0.1:8080</code> and press <b>Ctrl+F5</b> (an old cached page is the most common demo failure).</p>
+<h3>Checklist</h3>
+<ul class="check">
+<li>Section 1 shows five repositories of kind <i>upload</i>: payments-api, statement-service, mobile-bff, web-portal, qa-testcases.</li>
+<li>Open the folder <code>showcase/zips/</code> in File Explorer next to the browser. You will upload from <code>scenarios/04-…</code>, <code>01-…</code>, <code>06-…</code>, and re-upload <code>base/payments-api.zip</code> between them.</li>
+<li>Browser zoom at 125% so the room can read it. Close other tabs and notifications.</li>
+<li>Run all three changes once (sections 5–7 below) and confirm the numbers match. Then re-upload <code>base/payments-api.zip</code> so you start clean.</li>
+<li>Have <a href="../tutorial/index.html">the tutorial's pipeline page</a> open in a second tab in case a technical person asks "how does it work inside".</li>
+</ul>
+<div class="note">This is development mode: no sign-in, you act as administrator. If asked, say production uses single sign-on (OIDC or SAML) and roles; do not demo sign-in.</div>
+
+<!-- ================================================================== -->
+<h2 id="open">1. Opening <span class="t">2 min</span></h2>
+<div class="beat">
+<div class="do">Show the TIA home page. Do not click anything yet.</div>
+<div class="say">
+<p>Thank you for your time. In the next forty minutes I want to show you one thing: when a developer changes code, TIA tells your testers exactly what that change affects and which of their test cases to run again, in their language, before the change is merged.</p>
+<p>I will use a small, made-up bank called Northwind Pay, so we can see every result without touching your code. Everything you will see today is computed live from the code on this laptop.</p>
+</div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="problem">2. The problem <span class="t">2 min</span></h2>
+<div class="beat">
+<div class="say">
+<p>Here is the situation most teams are in. A developer changes one service. The tester gets a ticket that says "updated payments API". Now the tester has to guess: which other systems use this API? Which screens? Which of my test cases are affected?</p>
+<p>Usually there are two answers. Either we retest everything, which is slow and expensive, or we guess, and the defect we missed shows up in production, often in a different team's system.</p>
+<p>TIA replaces the guess with evidence. It reads the code of all your services, builds a map of who depends on whom, and for each change follows that map to everything affected. And for every claim it makes, it shows you the file and line that prove it.</p>
+</div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="land">3. The example landscape <span class="t">3 min</span></h2>
+<div class="beat">
+<div class="do">Scroll to section <b>1. Repositories</b>.</div>
+<div class="see">Five repositories, each of kind <i>upload</i>.</div>
+<div class="say">
+<p>Northwind Pay has five parts. <b>payments-api</b> is the core service: it takes payments, refunds and balances. Two other services read from it: <b>statement-service</b>, which produces the monthly statement PDF, and <b>mobile-bff</b>, which feeds the mobile app. <b>web-portal</b> is the website customers click through: log in, see accounts, pay, done. And <b>qa-testcases</b> holds the testers' fourteen written test cases, exported from a test management tool as a spreadsheet.</p>
+<p>I brought these in by uploading zip files. With your systems, TIA connects to GitHub, GitLab, Bitbucket or Azure DevOps directly, or you upload a folder. It only reads the code. It never builds it or runs it.</p>
+</div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="map">4. The map of the code <span class="t">4 min</span></h2>
+<div class="beat">
+<div class="do">Section <b>2. Code graph</b>: choose level <b>service</b> and load the graph.</div>
+<div class="see">payments-api in the middle, with statement-service, mobile-bff and web-portal calling it, and the topic <code>payments.created</code> consumed by statement-service.</div>
+<div class="say">
+<p>This is the map TIA built by reading the code. Nobody drew it and nobody declared it. TIA found the calls in each service's code and matched them to the API that answers them.</p>
+<p>Each line is a dependency, and its colour says how sure TIA is. A solid line means TIA found the actual call in the code. If TIA can only guess, for example because two APIs look alike, it draws the line differently and labels it as a guess. It never presents a guess as a fact.</p>
+</div>
+</div>
+<div class="beat">
+<div class="do">Still in section 2, open <b>Ask the graph</b>. Choose <b>Consumers of</b> and type <code>GET /accounts/{account_id}/payments</code>.</div>
+<div class="see">statement-service, mobile-bff and web-portal.</div>
+<div class="say">
+<p>You can also just ask questions. "Who uses the payment-history API?" Three systems: the statement, the mobile app and the website. A tester can ask this before any change exists, and so can an AI assistant, through the same interface.</p>
+</div>
+</div>
+<div class="note">If someone asks how the website call was linked, the answer is in the evidence column of the graph: method and path matched, with the file and line.</div>
+
+<!-- ================================================================== -->
+<h2 id="breaking">5. Change 1: a breaking API change <span class="t">9 min</span></h2>
+<div class="beat">
+<div class="say">
+<p>Now a developer makes a change. They remove a field called <code>disputed</code> from the payment-history API, because payments-api itself no longer needs it. Their own tests pass. Let us see what TIA says.</p>
+</div>
+<div class="do">Section <b>1. Repositories → Upload zip</b>: upload <code>zips/scenarios/04-feature-remove-disputed/payments-api.zip</code> with the name <b>payments-api</b>. Then press <b>Analyse vs previous upload</b>, then <b>Run analysis</b>.</div>
+<div class="say"><p>I upload the changed version of payments-api and ask TIA to compare it with the previous one. That is all the input it needs.</p></div>
+</div>
+
+<h3>The tester's answer first</h3>
+<div class="beat">
+<div class="do">Section <b>4. Report</b>: stay at the top, the <b>What to test</b> block.</div>
+<div class="see"><b>Regression-test 4 of your 14 test case(s)</b>: NW-06 Payment history, NW-08 Accounts screen shows the balance, NW-11 Statement leaves out disputed payments, NW-12 Mobile activity shows every payment. NW-14 is listed under <i>review by hand</i>.</div>
+<div class="say">
+<p>This is the first thing your tester sees: <b>four of your fourteen test cases need to run again</b>, and here they are by name. Each one has a reason: which screen or API it tests, and how the change reaches it.</p>
+<p>Notice what is not on the list. Ten cases are not affected, so your team does not spend time on them.</p>
+<p>And notice NW-14, "Archive export reaches the archive". TIA cannot connect that test case to anything in the code, so it does not pretend. It puts it under "review by hand". It never silently drops a test case.</p>
+</div>
+</div>
+
+<h3>The engineer's answer</h3>
+<div class="beat">
+<div class="do">Scroll to the <b>Findings</b> table.</div>
+<div class="see">A <b>critical</b> finding on statement-service and a <b>high</b> finding on mobile-bff, marked breaking.</div>
+<div class="say">
+<p>For engineers, the same result as findings. statement-service is <b>critical</b>: the change breaks it, and statement-service is marked as a critical service. mobile-bff is <b>high</b>: also broken, but less critical.</p>
+<p>The severity is not an opinion. It comes from a fixed rule table: was the change breaking, is the link proven, how critical is the affected service. Each finding names the rule that produced it. Your organisation can tune those rules, and every change to them is recorded.</p>
+</div>
+<div class="do">Press <b>Show</b> in the Graph column of the statement-service row, then read the <b>Why</b> column aloud.</div>
+<div class="say">
+<p>And here is the proof. The changed response, the API that returns it, and the exact line in statement-service that calls it. File and line. An engineer can open that file and check it in ten seconds.</p>
+</div>
+</div>
+
+<h3>The defect nobody asked about</h3>
+<div class="beat">
+<div class="do">Back in <b>What to test</b>: point at <b>Possible rule gaps</b> and <b>Consistency checks</b>.</div>
+<div class="see">One rule gap: statement-service leaves out disputed payments; mobile-bff does not. One consistency check on the shared API.</div>
+<div class="say">
+<p>This is my favourite part. TIA noticed something nobody asked it about. The statement leaves disputed payments out. The mobile app shows all of them. Same data, two different business rules.</p>
+<p>Maybe that is intended, maybe it is a defect. Either way, a customer could see one total in the app and a different total on their statement. TIA found that by reading the code, and it tells you exactly where the rule is applied and where it is missing. Now your tester knows to compare those two screens for the same account.</p>
+</div>
+</div>
+
+<h3>The tester pack</h3>
+<div class="beat">
+<div class="do">Press <b>Tester pack</b>. Open its three tabs one by one.</div>
+<div class="see">The coverage gate per affected entry point; the API test matrix; the UI locator pack.</div>
+<div class="say">
+<p>Finally, everything a tester needs for this one change, in one place. First, for each affected API: are your existing tests enough, and if not, which aspects are not covered. Second, the test matrix for the affected APIs: valid values, invalid values, boundaries. Third, for the affected screens: every field and button, and how an automation script can find it reliably.</p>
+</div>
+</div>
+<div class="note">Before the next change, upload <code>zips/base/payments-api.zip</code> again as <b>payments-api</b>, so the next comparison is against the original. Say: "I'll put the original back so the next change is compared fairly."</div>
+
+<!-- ================================================================== -->
+<h2 id="config">6. Change 2: a new setting <span class="t">4 min</span></h2>
+<div class="beat">
+<div class="say">
+<p>Second change, a quieter one. The developer adds a feature behind a switch: the balance now subtracts money that is on hold, but only when a new setting, <code>HOLDS_ENABLED</code>, is turned on. This is exactly the kind of change that passes code review and then behaves differently in the test environment.</p>
+</div>
+<div class="do">Upload <code>zips/scenarios/01-feature-holds/payments-api.zip</code> as <b>payments-api</b> → <b>Analyse vs previous upload</b> → <b>Run analysis</b>.</div>
+<div class="see"><b>Regression-test 5 of your 14</b>: NW-01, NW-02, NW-03, NW-07, NW-08. Under <b>Configuration</b>: <code>balance_of</code> now reads <code>HOLDS_ENABLED</code>; no file sets it; <code>held_amount</code> already reads the same key.</div>
+<div class="say">
+<p>Five test cases this time: creating a payment, the minimum-balance refusal, the amount limit, the balance itself, and the accounts screen.</p>
+<p>And look at the configuration check. TIA says: the code now reads <code>HOLDS_ENABLED</code>, and no configuration file in the repository sets it. So before your tester starts, someone has to set it in the test environment. Otherwise the tester is testing the old behaviour and reports "all passed". That is a lost day, and TIA prevents it with one line.</p>
+<p>It also says another function already reads the same setting. Change it, and that function's behaviour changes too.</p>
+</div>
+</div>
+<div class="note">The related scenario 02 (MIN_BALANCE raised from 80 to 100 in a config file) gives "Regression-test 3 of your 14". If asked whether TIA shows secret values: it reports only that a value changed, never the value.</div>
+<div class="do">Upload <code>zips/base/payments-api.zip</code> again.</div>
+
+<!-- ================================================================== -->
+<h2 id="nothing">7. Change 3: a comment only <span class="t">2 min</span></h2>
+<div class="beat">
+<div class="say"><p>Last change. A developer only rewords a comment in the code. No behaviour changes.</p></div>
+<div class="do">Upload <code>zips/scenarios/06-docs-clarify/payments-api.zip</code> → <b>Analyse vs previous upload</b> → <b>Run analysis</b>.</div>
+<div class="see"><b>Regression-test 0 of your 14</b>. Documentation only: nothing to retest.</div>
+<div class="say">
+<p>Zero. Nothing to retest. This matters as much as the first result. A tool that flags everything gets ignored within a week. TIA tells you when a change is harmless, so when it does raise something, people listen.</p>
+</div>
+</div>
+<div class="do">Upload <code>zips/base/payments-api.zip</code> again.</div>
+
+<!-- ================================================================== -->
+<h2 id="tester">8. Tools for testers, with no change at all <span class="t">7 min</span></h2>
+<div class="beat">
+<div class="say"><p>Everything so far was about one change. The same map also helps testers every day, change or not. Four quick examples.</p></div>
+<div class="do">Section <b>5. Tester views → Technical coverage</b>.</div>
+<div class="see">Every API and screen, the aspects your tests and the 14 written cases cover, and the gaps.</div>
+<div class="say"><p><b>Are our tests enough?</b> For every API and screen, TIA lists what should be tested, taken from the code's own rules: required fields, limits, allowed values, error responses. Then it shows which of your automated tests and written test cases cover each one, and what is missing.</p></div>
+
+<div class="do"><b>Check one test case</b>: paste NW-02's title, entry point <code>POST /payments</code> and expected result.</div>
+<div class="see">Which technical aspects it covers, including the 409 refusal.</div>
+<div class="say"><p><b>Is this one test case any good?</b> Paste a test case and TIA tells you which aspects it really covers. Useful when reviewing a new tester's work.</p></div>
+
+<div class="do"><b>Execution flow</b>: entry point <code>POST /payments</code>, then <b>Show execution flow</b>.</div>
+<div class="see"><code>api_create_payment [controller]</code> → <code>create_payment [service]</code> → <code>load_account</code> / <code>save_payment [data access]</code> and <code>publish_created [events]</code> → topic <code>payments.created</code>; below it, the design of each service.</div>
+<div class="say"><p><b>What happens when a customer pays?</b> The path through the code, step by step, in design terms: the controller, the business logic, the database access, and the event it publishes for other systems. A tester or a new team member understands the design without reading the code.</p></div>
+
+<div class="do"><b>Automation script</b>: repository <code>web-portal</code>, from <code>/login</code> to <code>/done</code>, then <b>Generate script</b>.</div>
+<div class="see">A Playwright test through /login, /accounts, /pay and /done that fills every input with a valid value and waits for <code>POST /payments</code> to answer 201. Nothing left to review.</div>
+<div class="say">
+<p><b>Automate this flow.</b> Login, accounts, pay, done. TIA wrote a working automation script: it found the screens, filled each field with a valid value according to the code's rules, clicked through, and checks that the payment API answers correctly.</p>
+<p>When the code does not tell it something, for example a value that only exists at run time, it marks that line "to review" instead of inventing a value. Here there was nothing to review.</p>
+</div>
+</div>
+<div class="note">Optional if time allows: <b>Automation: pages &amp; locators</b> shows the four screens with every element and its locator; <b>Common components &amp; rule gaps</b> shows the shared API and the same rule gap without any change.</div>
+
+<!-- ================================================================== -->
+<h2 id="trust">9. Why you can trust it <span class="t">4 min</span></h2>
+<div class="beat">
+<div class="say">
+<p>A tool like this is only useful if you can trust it. Four things.</p>
+<p><b>One: there is no AI guessing in the analysis.</b> TIA reads the code with parsers and applies a fixed rule table. Same code, same settings, same answer, every time. You can ask it to re-run an old analysis and it confirms the result is identical.</p>
+<p><b>Two: it shows its evidence.</b> Every finding ends in a file and a line.</p>
+<p><b>Three: it tells you what it does not know.</b></p>
+</div>
+<div class="do">Scroll to <b>Unknowns</b> in the current report.</div>
+<div class="say">
+<p>Every report has this section. Calls it could not resolve, systems outside the code it was given, files it could not read. A clean report with unknowns is not a clean bill of health, and TIA says so instead of hiding it.</p>
+<p><b>Four: it never runs your code and never blocks your developers.</b> It reads code as text. Its pull-request comment is advice; your process decides.</p>
+</div>
+</div>
+<div class="beat">
+<div class="note">Optional, for a technical audience (3 extra minutes): upload <code>zips/scenarios/05-feature-drop-reference/payments-api.zip</code> → analyse. Status is <b>PARTIAL</b> on purpose: the walk reached its depth limit (8), stated under Unknowns. Regression-test 6 of 14. Then section <b>6. Configuration</b>: raise <code>max_depth</code> to 12 and rerun; status becomes <i>complete with gaps</i>. Say: "When TIA hits a limit it says so and tells you which setting to change. It never quietly stops short." Re-upload the base zip afterwards.</div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="fit">10. How it fits your process <span class="t">2 min</span></h2>
+<div class="beat">
+<div class="say">
+<p>Today I clicked buttons, but in daily use nobody has to. When a developer opens a pull request, TIA runs automatically and posts one comment on it: what is affected, what to retest, and a picture of the services involved. Each new push updates the same comment.</p>
+<p>Your test management tool, your pipelines and your AI assistants can ask the same questions through an API. And it runs inside your own network if you need it to, with no connection to the outside.</p>
+</div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="close">11. Close and next step <span class="t">1 min</span></h2>
+<div class="beat">
+<div class="say">
+<p>To sum up: for every change, TIA tells your testers which test cases to run again and why, finds the rule differences between your systems, tells you about settings that must be in place, and says plainly when a change needs no testing at all.</p>
+<p>What I cannot tell you yet is how accurate it is on your code, because we have not run it on your code. So my proposal for a next step is a short pilot: we take a slice of your services and a few recent changes where you already know what broke, run TIA on them, and compare its answers with what really happened. Then you judge it on your own evidence.</p>
+<p>Thank you. Questions?</p>
+</div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="qa">12. Questions and honest answers</h2>
+<p>Answer exactly this much. Do not round up "tested against a stand-in" to "works with".</p>
+<div class="tw"><table>
+<tr><th>They ask</th><th>You answer</th></tr>
+<tr><td>Is this AI?</td><td>No. The analysis uses parsers and a fixed rule table, which is why it is repeatable and every claim cites a file and line. AI assistants can consume its results.</td></tr>
+<tr><td>Which languages and frameworks?</td><td>In depth, including HTTP links between services: Python, Java, Kotlin, C#, Go, TypeScript and JavaScript; front end Angular, React, Vue, HTML; data JPA, SQLAlchemy, Django, Entity Framework, SQL and stored procedures, Kafka. For 39 more languages, among them Rust, Ruby, PHP, C and C++, Scala, Swift, Dart and Elixir, TIA reads the structure: functions, classes, calls and tests. A change there reaches its callers and tests, and the report says that HTTP links in those languages are not read.</td></tr>
+<tr><td>How accurate is it on our code?</td><td>Not measured yet. It met its accuracy targets on real Java code bases and test landscapes. That is exactly why the next step is a pilot on your code.</td></tr>
+<tr><td>What can it miss?</td><td>Anything not visible in the code: addresses built at run time, systems outside the repositories it is given. It lists these under Unknowns rather than hiding them.</td></tr>
+<tr><td>Does it run or copy our code anywhere?</td><td>It never runs it; it reads files as text. Secrets found in code are kept out of its records and reports. People only see results for repositories they are allowed to read.</td></tr>
+<tr><td>Can it block a release?</td><td>Not by default. It is advisory. An organisation can configure release rules, and an enforcing mode reports a failed mandatory rule to the pull-request check.</td></tr>
+<tr><td>GitHub, GitLab, Azure DevOps, ServiceNow?</td><td>The GitHub pull-request comment is verified on github.com. GitLab, Bitbucket, Azure DevOps and ServiceNow are built and tested against simulated services, not yet against the real ones.</td></tr>
+<tr><td>Is it secure for several customers on one system?</td><td>Each customer's data is isolated inside the database itself, and that is tested. An independent penetration test has not been done yet.</td></tr>
+<tr><td>How big a code base?</td><td>Measured on 500 generated repositories (0.6 million lines): a pull-request analysis in under 9 seconds at the 95th percentile. Larger sizes are not measured yet.</td></tr>
+<tr><td>Can we put our own brand on it?</td><td>Not as a setting today; the name is fixed in code. It is a small, scoped piece of work.</td></tr>
+<tr><td>What do we need to run it?</td><td>A PostgreSQL database and one container image (an API process and one or more workers). No GPU and no external service.</td></tr>
+</table></div>
+
+<!-- ================================================================== -->
+<h2 id="rescue">13. If something goes wrong</h2>
+<div class="tw"><table>
+<tr><th>You see</th><th>Likely cause</th><th>What to do (and say)</th></tr>
+<tr><td>Old page, buttons missing</td><td>Browser cache</td><td>Ctrl+F5. "One moment, the browser is showing yesterday's page."</td></tr>
+<tr><td>Numbers differ from this script</td><td>Previous scenario still loaded</td><td>Upload <code>zips/base/payments-api.zip</code> again, then repeat the scenario. "Let me put the original back first."</td></tr>
+<tr><td>Fewer than five repositories</td><td>The load step did not finish</td><td>Rerun terminal 2's command. Talk through section 2 of this script while it runs.</td></tr>
+<tr><td>Page does not open</td><td>Server stopped</td><td>Restart terminal 1. Meanwhile, walk through <a href="../tutorial/index.html">the tutorial's pipeline page</a> with the same example.</td></tr>
+<tr><td>Releases, deployments or incident tabs empty</td><td>Evidence not loaded</td><td>Skip them; they are not in the main script.</td></tr>
+</table></div>
+<p class="lead">For a longer technical session with engineers, use the 100-minute <a href="DEMO-WALKTHROUGH.html">demo walkthrough</a> instead.</p>
+</main>
+</body>
+</html>

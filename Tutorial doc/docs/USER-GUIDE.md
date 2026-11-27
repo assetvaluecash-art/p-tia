@@ -170,9 +170,39 @@ When your administrator has connected TIA to Knowledge Fabric ([KF-BRIDGE.md](KF
 - the business systems the change affects (the changed service and every service with a material finding), each with its requirements, processes, open defects and incidents from Knowledge Fabric;
 - the **Knowledge Fabric test cases** that cover those requirements, with the requirement each one covers and whether it is also in your repository suite. A test case marked *not in your repository suite* is one only the business testers hold: plan it with them;
 - how each system was linked: *declared* (by an owner or administrator), *ID match*, or *name match (inferred)*. Treat inferred links with care until someone confirms them;
-- the forms, data entities and business rules the change touches (a dropped column shows the data entity it stores and the test cases on its requirements), and the **user stories** named by issue keys (`PAY-4521`) in the change's commit messages.
+- the forms, data entities and business rules the change touches (a dropped column shows the data entity it stores and the test cases on its requirements), and the **user stories** named by issue keys (`PAY-4521`) in the change's commit messages, or in the pull request's title and branch when the host sent them;
+- the **products affected**, when your administrator has mapped repositories to Knowledge Fabric's business tree (domain > product line > function): one row per product line, with the services that reach it, the entry points to test and the business test cases. The headline starts with them ("Affects Retail Cards (consumer_retail)."). A product reached only because a linked business system sits there is marked *inherited*, which is *inferred*.
 
-Business rules are linked only after someone confirms the pair TIA proposes: web UI section **5c. Knowledge Fabric: business rules to review**.
+In the report, **Only test cases not in your repository suite** hides the ones you already hold, and **Export business test cases (CSV)** gives the list to hand to business testers. Each business system name opens the Links tab of section 5c filtered to it.
+
+Every report also records the issue keys its change names (`change.issue_keys`), so a Knowledge Fabric question about a story finds its analyses.
+
+### 5c. Knowledge Fabric
+
+The section shows and runs the bridge without JSON or the API. A **status strip** is always visible:
+- the state: *Off*, *Never run*, *Running*, *Failed* or *Connected*;
+- the customer and the domains;
+- the time and reason of the last run;
+- how many links of each kind there are, with links to the items to review and the gaps;
+- **Relink now** (engineers). While a bridge job runs, the page follows it and reloads when it ends.
+
+Seven tabs (arrow keys move between them; the page remembers the last one):
+
+| Tab | What you do there | Who |
+|---|---|---|
+| **Status** | the last run in detail: how long it took, links added, kept and removed, warnings, the last failure, the next automatic check; whether Neo4j is configured on the server. *How the review is going*: open items by kind and age, the time to a decision, the share of links confirmed versus guessed, and how often links found by name are rejected (with advice to switch name matching off when most are) | everyone |
+| **Connect & settings** | the four-step setup when the bridge is off: (1) check the connection, (2) choose the customer, (3) all domains or some, (4) options, then *Save and run the first link*. When it is on: the same form, the **aliases** (code name → Knowledge Fabric name, or `id:<entity id>` to name one of two items with the same name), and **Turn the bridge off** (by default it also removes TIA's links from Knowledge Fabric's graph) | release managers, administrators |
+| **Links** | every link of the last run with its evidence (*source-confirmed*, *contract-confirmed*, *inferred: please confirm*) and how it was found; filters by kind, evidence, way found, domain and text; *Export CSV*. A guessed link has **Confirm** / **Reject**; a link from a tenant alias has **Remove alias**; a reviewed one has **Undo**; *details* shows the entity id and the id check | everyone; decisions by engineers |
+| **Gaps** | one card per kind of gap, each in a sentence, with the fix next to the row: *Link to …* (suggested names first), a typed name, *Use this one* for a name that matches several items, *Fix alias*, *Fix domains*. A fix saves an alias as a new configuration version; the bridge relinks when automatic relink is on | fixes by release managers, administrators |
+| **Review** | the review queue (below), with tick boxes and **Confirm ticked** for many at once, keyboard shortcuts (*j*/*k* next/previous, *c* confirm, *r* reject, *l* later, *x* tick), and **Decided**: every decision with who, when and why, and *Undo* | everyone; decisions by engineers |
+| **Products** | which domain and product line each repository serves (also reachable with **Product…** in the repository list of section 1) | release managers, administrators |
+| **Ontology** | TIA's software ontology and the bridge ontology, readable, with *Download YAML* / *Download JSON* | everyone |
+
+The views come from the last bridge run TIA stored, so they work even when Knowledge Fabric's database is down; only connecting, relinking and turning off reach it. A person who cannot read every repository sees the counts but not the names, and the Links and Gaps tabs explain why they are empty for them.
+
+Links TIA is not sure of wait in the **Review** tab: links found by name, names that match several business items, suggestions, business rule pairs, product places, issue keys without a user story, and decisions whose business item disappeared. Engineers decide them (*Confirm*, *Choose*, *Reject*, *Later*, *Undo*); each decision is recorded with who made it and applies on the next bridge run.
+
+**In the code graph (section 2)**, *Show Knowledge Fabric links* adds the business items next to the code: purple boxes (business system, form, data entity, business rule), joined by purple lines that are solid when confirmed and dashed when inferred. More than five items on one node become one "+N in Knowledge Fabric" box. Services have links at every level of detail; entities and tables at *Functions*. Clicking a node shows its Knowledge Fabric block at the top of the side panel: the linked items, their requirements, processes, open defects, incidents and test cases (marked *also in your repository suite*). *Product (Knowledge Fabric)* narrows the graph to the repositories of one product.
 
 If the section is missing, the unknowns say why: the bridge has not run yet (`kf_context_unavailable`), or a service affected by the change is not linked to any Knowledge Fabric system (`kf_systems_unmapped`). The business context is the one captured by the last bridge run and is pinned in the analysis, so a reproduction shows the same list.
 
@@ -347,7 +377,7 @@ Coding and testing assistants read TIA through its MCP server (`POST /mcp`). Eve
 | `check_test_case` | what one test case covers and misses |
 | `get_shared_components` | components many entry points depend on, and rule gaps |
 | `query_graph` | a direct question about one component (section 2, *Ask the graph*) |
-| `get_business_impact` | for one analysis: the Knowledge Fabric systems and business test cases it reaches (4a, *Business test cases*) |
+| `get_business_impact` | for one analysis: the products, Knowledge Fabric systems and business test cases it reaches (4a, *Business test cases*) |
 
 * An assistant should cite the analysis id and narrate only what the answer contains, including its unknowns and limits.
 * The same calls exist in the REST API and in the Python client (`tia_client`): `tester_pack`, `coverage`, `api_inventory`, `ui_inventory`, `check_test_case`, `shared_components`, `consumers_of`, `dependencies_of`, `tests_covering`, `covered_by_test`, `agent_answer`.

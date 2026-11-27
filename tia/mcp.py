@@ -77,7 +77,8 @@ TOOLS += [
           {"question": {"type": "string", "enum": ["consumers", "dependencies", "tests", "covers"]}, "component": {"type": "string"},
            "repository": {"type": "string"}, "limit": {"type": "integer"}}, ("question", "component")),
     _tool("get_business_impact", "Business impact of an analysis (Knowledge Fabric)",
-          "The business side of a change, when the tenant's Knowledge Fabric bridge is on: the Knowledge Fabric Systems the affected services "
+          "The business side of a change, when the tenant's Knowledge Fabric bridge is on: the products (domain > product line) the change "
+          "reaches, the Knowledge Fabric Systems the affected services "
           "realise, the requirements, processes, defects and incidents on them, and the business test cases covering those requirements, each "
           "with its chain from the code and its evidence status. Knowledge Fabric's own relationships come from its documents and are not "
           "verified by TIA: say so when you report them.", {"analysis_id": {"type": "string"}}, ("analysis_id",)),

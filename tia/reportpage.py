@@ -309,6 +309,16 @@ def _business(report: dict) -> str:
     if not bi:
         return ""
     out = f"<h2>Business impact (Knowledge Fabric)</h2><p><b>{_e(bi['summary']['headline'])}</b></p>"
+    if bi.get("products"):
+        rows = []
+        for row in bi["products"]:
+            svcs = ", ".join(f"<code>{_e(x['service'])}</code>" + (f' <span class="mut">(via {_e(", ".join(x["via"]))}, inferred)</span>'
+                                                                   if x.get("via") else "") for x in row["services"])
+            fn = f' <span class="mut">&gt; {_e(", ".join(row["functions"]))}</span>' if row["functions"] else ""
+            rows.append(f"<tr><td><b>{_e(row['product_line'])}</b>{fn} <span class='mut'>({_e(row['domain'])})</span></td><td>{svcs}</td>"
+                        f"<td>{row['entry_points']}</td><td>{len(row['test_cases'])}</td></tr>")
+        out += ("<table><thead><tr><th>Product affected</th><th>Services</th><th>Entry points to test</th><th>Business test cases</th></tr>"
+                "</thead><tbody>" + "".join(rows) + "</tbody></table>")
     if bi["test_cases"]:
         rows = []
         for c in bi["test_cases"]:
@@ -333,8 +343,9 @@ def _business(report: dict) -> str:
     for st in bi.get("user_stories") or []:
         reqs = ", ".join(_e(r["name"] or "") for r in st.get("requirements", [])[:8])
         title = _e(st["story"]) if st["story"] != st["key"] else ""
-        commits = ", ".join(_e(c[:7]) for c in st["commits"][:3])
-        items.append(f"<li>implements user story <b>{_e(st['key'])}</b> {title} <span class='mut'>(commit {commits})</span>"
+        named = ", ".join((["commit " + ", ".join(_e(c[:7]) for c in st["commits"][:3])] if st["commits"] else [])
+                          + [_e(str(x).replace("_", " ")) for x in st.get("named_in") or []])
+        items.append(f"<li>implements user story <b>{_e(st['key'])}</b> {title} <span class='mut'>({named})</span>"
                      + (f"<br><span class='mut'>Requirements: {reqs}</span>" if reqs else "") + "</li>")
     if items:
         out += "<ul>" + "".join(items) + "</ul>"

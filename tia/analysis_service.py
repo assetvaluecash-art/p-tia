@@ -156,6 +156,7 @@ def execute(svc: RepoService, store: Store, c: dict, secrets=None) -> dict:
     cfg = TenantConfig.from_stored(c["config"], c.get("config_version", 0), c.get("config_digest", "default")) if c.get("config") else DEFAULT
     rep = analyze(AnalysisRequest(repos=paths, target=c["target"], base=c["base"], head=c["head"],
                                   revisions=c["revisions"], pull_request=c.get("pr"), change_record=c.get("change_record"),
+                                  pr_title=c.get("pr_title"), pr_branch=c.get("pr_branch"),
                                   max_depth=c["max_depth"], max_results=c["max_results"], time_budget_s=c.get("time_budget_s", 60.0),
                                   strip_prefixes=tuple(c.get("strip_prefixes", ())),
                                   exclude_patterns=tuple(c.get("exclude_patterns", cfg.exclude_patterns or ())),
@@ -207,6 +208,7 @@ def reproduce(svc: RepoService, store: Store, analysis_id: str) -> dict:
     new = analyze(AnalysisRequest(
         repos=paths, target=target, base=snap["target_base"], head=snap["target_head"],
         revisions={r: c for r, c in snap["revisions"].items() if r != target}, pull_request=orig["change"].get("pull_request"),
+        pr_title=orig["change"].get("pull_request_title"), pr_branch=orig["change"].get("branch"),
         change_record=orig["change"].get("change_record"), max_depth=snap["max_depth"], max_results=snap["max_results"],
         test_naming=snap["test_naming"], strip_prefixes=tuple(snap["strip_prefixes"]),
         exclude_patterns=tuple(snap.get("exclude_patterns") or ()), freshness=snap["freshness"],
@@ -349,6 +351,7 @@ def make_handlers(db, allow_local: bool = False, allowed_hosts: Optional[list] =
             refresh_landscape(svc, store)
             cfg = store.effective_config()
             concrete = resolve(svc, {"target": p["repo"], "pr": p["pr"], "base": p["base_ref"], "token": scm.github_token}, cfg=cfg)
+            concrete.update({k: p[f] for k, f in (("pr_title", "title"), ("pr_branch", "head_ref")) if p.get(f)})
             rep = execute(svc, store, concrete, SecretStore(db, job.tenant_id, keywrapper) if keywrapper else None)
         except IngestError as e:
             refresh_landscape(svc, store)          # a failed fetch makes this repository's relationships stale
@@ -500,7 +503,9 @@ def make_handlers(db, allow_local: bool = False, allowed_hosts: Optional[list] =
         finally:
             drv.close()
         kf_next_poll(queue, store)
-        return {"links": out["links_total"], "added": out["written"]["added"], "removed": out["written"]["removed"], "gaps": out["summary"]["gaps"]}
+        inbox = kf_inbox_run(store)
+        return {"links": out["links_total"], "added": out["written"]["added"], "removed": out["written"]["removed"], "gaps": out["summary"]["gaps"],
+                "review": out["review_sync"], **({"inbox": inbox} if inbox else {})}
 
     def kf_poll(job):
         """Run the bridge when either graph moved: Knowledge Fabric's customer graph (fingerprint), TIA's landscape (graph head), or a
@@ -529,7 +534,9 @@ def make_handlers(db, allow_local: bool = False, allowed_hosts: Optional[list] =
         finally:
             drv.close()
         kf_next_poll(queue, store)
-        return {"ran": bool(why), "why": why, **({"links": out.get("links_total"), "error": out.get("error")} if why else {})}
+        inbox = kf_inbox_run(store)
+        return {"ran": bool(why), "why": why, **({"links": out.get("links_total"), "error": out.get("error")} if why else {}),
+                **({"inbox": inbox} if inbox else {})}
 
     return {"impact_analysis": impact_analysis, "github_pull_request": github_pull_request, "ado_pull_request": ado_pull_request,
             "kf_bridge": kf_bridge, "kf_poll": kf_poll,
@@ -573,13 +580,18 @@ def kf_items(tenant: str, ex: dict, g) -> tuple[dict, list]:
     return items, rules
 
 
-def kf_link(driver, database: Optional[str], tenant: str, ex: dict, g, gid: str, s: dict, decisions: Optional[dict] = None) -> dict:
+def kf_link(driver, database: Optional[str], tenant: str, ex: dict, g, gid: str, s: dict, decisions: Optional[dict] = None,
+            recent_keys: Optional[dict] = None, hot: Optional[set] = None) -> dict:
     """The bridge without TIA's database (also used by the command line): make sure the tenant's mirror is current (re-sync it when it is
-    missing, e.g. after Knowledge Fabric's reset script), resolve the customer and domains, plan and write the links, capture the business
-    context. s: the canonical knowledge_fabric setting."""
-    from . import kfbridge, neo4jgraph
+    missing, e.g. after Knowledge Fabric's reset script), resolve the customer, domains and product places, plan and write the links, capture
+    the business context, and turn what is uncertain into review items. s: the canonical knowledge_fabric setting; decisions: the review
+    decisions (kf_decisions); recent_keys: issue keys recent analyses named ({key: [{analysis_id, repo, service}]}); hot: services a recent
+    change touched."""
+    from . import kfbridge, kfreview, neo4jgraph
+    from .kfsettings import place as normal_place
     if not s["customer_id"]:
         raise KfBridgeError("knowledge_fabric.customer_id is not set (pick it from GET /api/v1/kf/customers)")
+    decisions = decisions or {}
     mirrored = neo4jgraph.mirror_version(driver, tenant, database)
     restored = mirrored is None
     if mirrored != gid:
@@ -596,37 +608,79 @@ def kf_link(driver, database: Optional[str], tenant: str, ex: dict, g, gid: str,
         warnings.append(f"knowledge_fabric.kf_tenant_id {s['kf_tenant_id']!r} differs from the customer's CustomerRoot tenant {cust['tenant_id']!r}")
     available = neo4jgraph.kf_domains(driver, s["customer_id"], kf_tenant, database)
     domains, unknown = kfbridge.resolve_domains(s["domains"], available)
-    index = neo4jgraph.kf_index(driver, s["customer_id"], kf_tenant, domains, labels=("System", "TestCase", "FormCapture", "DataEntity", "Rule"),
-                                database=database)
+    catalog = neo4jgraph.kf_catalog(driver, s["customer_id"], kf_tenant, database)
 
     def declared(e):
         b = (e.service_map or {}).get("business_systems")
         return [str(x) for x in b if isinstance(x, (str, int))] if isinstance(b, list) else [b] if isinstance(b, str) else []
-    services = [{"key": f"{tenant}|svc:{e.service}", "service": e.service, "repo": repo, "declared": declared(e)} for repo, e in sorted(ex.items())]
+
+    def declared_products(e):
+        b = (e.service_map or {}).get("business_products")
+        b = [b] if isinstance(b, dict) else b
+        return [p for p in (normal_place(x) for x in b) if p] if isinstance(b, list) else []
+    services = [{"key": f"{tenant}|svc:{e.service}", "service": e.service, "repo": repo, "declared": declared(e),
+                 "declared_products": declared_products(e)} for repo, e in sorted(ex.items())]
+    products, pgaps = kfbridge.resolve_products(services, s, catalog, decisions)
+    mapped = sorted({p["domain"] for ps in products.values() for p in ps} & set(available))
+    index = neo4jgraph.kf_index(driver, s["customer_id"], kf_tenant, sorted(set(domains) | set(mapped)),
+                                labels=("System", "TestCase", "FormCapture", "DataEntity", "Rule"), database=database)
     cases = [{"key": f"{tenant}|testcase:{repo}:{tc['id']}", "id": tc["id"], "repo": repo}
              for repo, e in sorted(ex.items()) for tc in e.manual_tests if tc.get("id")]
     items, rules = kf_items(tenant, ex, g)
-    planned = kfbridge.plan(services, cases, index, s, kf_tenant, domains, items=items, rules=rules, decisions=decisions or {})
-    planned["gaps"]["unknown_domains"] = [{"domain": d} for d in unknown]
+    planned = kfbridge.plan(services, cases, index, s, kf_tenant, domains, items=items, rules=rules, decisions=decisions, products=products)
+    planned["gaps"]["unknown_domains"] = [{"domain": d} for d in sorted(set(unknown) | set(pgaps["unknown_domains"]))]
+    planned["gaps"]["product_not_found"] = pgaps["product_not_found"]
+    in_use = bool(products or pgaps["product_not_found"] or s["repository_products"] or s["service_products"]
+                  or any(x["declared_products"] for x in services))
+    planned["gaps"]["unmapped_repositories"] = pgaps["unmapped_repositories"] if in_use else []
     fp = neo4jgraph.kf_fingerprint(driver, s["customer_id"], kf_tenant, database)
     written = neo4jgraph.write_bridge(driver, tenant, s["customer_id"], kf_tenant, planned["links"], {"tia_graph_version": gid, "kf_fingerprint": fp},
                                       database)
     ctx = neo4jgraph.read_context(driver, tenant, s["customer_id"], s["max_context_items"], database)
     item_ctx = neo4jgraph.read_item_context(driver, tenant, s["customer_id"], {repo: e.service for repo, e in ex.items()}, s["max_context_items"],
                                             database)
-    stories = {}
+    stories, story_gaps = {}, []
     if s["link_issue_keys"]:
-        stories = neo4jgraph.read_stories(driver, tenant, s["customer_id"], kf_tenant, domains, s["max_context_items"], database=database)
+        stories = neo4jgraph.read_stories(driver, tenant, s["customer_id"], kf_tenant, sorted(set(domains) | set(mapped)), s["max_context_items"],
+                                          database=database)
+        chosen = {t[len("issue:"):]: e for (t, e), d in decisions.items() if d.get("kind") == "story" and d.get("decision") == "choose"}
+        ignored = {t[len("issue:"):] for (t, e), d in decisions.items() if d.get("kind") == "story" and d.get("decision") == "reject"}
+        for key, eid in chosen.items():
+            if len(stories.get(key) or []) > 1:
+                stories[key] = [x for x in stories[key] if x["entity_id"] == eid] or stories[key]
+        for key, refs in sorted((recent_keys or {}).items()):
+            found = stories.get(key) or []
+            if key in ignored or len(found) == 1:
+                continue
+            story_gaps.append({"key": key, "analyses": refs, "service": refs[0].get("service") if refs else None,
+                               "repo": refs[0].get("repo") if refs else None,
+                               "options": [{"entity_id": x["entity_id"], "name": x["name"], "domain": x["domain"]} for x in found]})
+    # the places analyses roll up to: the declared ones, and for a service without one the places of its Systems (inferred)
+    context_products = {svc: [{k: p.get(k) for k in ("domain", "product_line", "product_line_id", "function", "sub_function", "level", "source",
+                                                      "status") if p.get(k) is not None} for p in ps] for svc, ps in products.items()}
+    for sg in planned["product_suggestions"]:
+        r, _ = kfbridge.resolve_place(catalog, sg["place"])
+        if r is not None and sg["service"] not in products:
+            context_products.setdefault(sg["service"], []).append(
+                {**{k: r[k] for k in ("domain", "product_line", "product_line_id", "level") if k in r},
+                 **({"function": r["function"]} if r.get("function") else {}), "source": "inherited", "status": kfbridge.NAME_MATCH,
+                 "via": [v["system"] for v in sg["via"]]})
+
+    def node_info(tid: str) -> dict:
+        a = g.nodes.get(tid) or {}
+        return {k: a.get(k) for k in ("type", "name", "file", "line", "route", "component", "expr")}
+    review_items = kfreview.build_items({**planned, "repo_of": {e.service: r for r, e in ex.items()}}, products, story_gaps, hot or set(), node_info)
     return {"customer_id": s["customer_id"], "kf_tenant_id": kf_tenant, "domains": domains, "available_domains": available,
             "domain_mode": "auto" if s["domains"] == "auto" else "restricted", "graph_version": gid, "kf_fingerprint": fp,
             "mirror_restored": restored, "mirror_synced": mirrored != gid, "planned": planned, "summary": kfbridge.summary(planned),
-            "written": written, "context": ctx, "items": item_ctx, "stories": stories, "warnings": warnings}
+            "written": written, "context": ctx, "items": item_ctx, "stories": stories, "warnings": warnings, "catalog": catalog,
+            "products": context_products, "story_gaps": story_gaps, "review_items": review_items}
 
 
 def kf_bridge_run(store: Store, svc: RepoService, driver, database: Optional[str] = None, reason: str = "manual",
                   ex: Optional[dict] = None) -> dict:
-    """One bridge run for a tenant (kf_link), recorded as evidence: the run (links, gaps, fingerprints) and the business context that
-    analyses pin (docs/KF-BRIDGE.md)."""
+    """One bridge run for a tenant (kf_link), recorded as evidence: the run (links, gaps, fingerprints, the business tree) and the business
+    context that analyses pin (docs/KF-BRIDGE.md); then the review queue is brought up to date."""
     import time
     from .kfontology import BRIDGE_VERSION
     t0 = time.monotonic()
@@ -639,47 +693,337 @@ def kf_bridge_run(store: Store, svc: RepoService, driver, database: Optional[str
         raise KfBridgeError("no repositories are registered: there is nothing to link")
     g, gid, _ = get_or_build(store, ex, tuple(cfg.strip_prefixes), cfg.test_naming)
     es = EvidenceStore(store.db, store.tenant_id)
-    out = kf_link(driver, database, store.tenant_id, ex, g, gid, s, kf_decisions(store))
+    out = kf_link(driver, database, store.tenant_id, ex, g, gid, s, kf_decisions(store),
+                  recent_keys=store.recent_issue_keys() if s["link_issue_keys"] else {}, hot=store.recent_services())
     if out["mirror_synced"]:
         store.audit("kf_mirror_restored" if out["mirror_restored"] else "neo4j_synced", graph=gid, reason="kf_bridge")
     now = datetime.now(timezone.utc)
     ctx_rec = es.put("kf_context", KF_SOURCE, {"customer_id": out["customer_id"], "tenant_id": out["kf_tenant_id"], "fingerprint": out["kf_fingerprint"],
                                                "pulled_at": now.isoformat(timespec="seconds"), "bridge_version": BRIDGE_VERSION,
                                                "graph_version": gid, "domains": out["domains"], "services": out["context"],
-                                               "items": out["items"], "stories": out["stories"]}, observed_to=now)
+                                               "items": out["items"], "stories": out["stories"], "products": out["products"]}, observed_to=now)
     planned, written = out["planned"], out["written"]
+    items = out["review_items"]
     run = {"reason": reason, "at": now.isoformat(timespec="seconds"), "customer_id": out["customer_id"], "kf_tenant_id": out["kf_tenant_id"],
            "domains": out["domains"], "domain_mode": out["domain_mode"], "available_domains": out["available_domains"],
            "graph_version": gid, "kf_fingerprint": out["kf_fingerprint"], "bridge_version": BRIDGE_VERSION, "mirror_restored": out["mirror_restored"],
            "summary": out["summary"], "written": {k: v for k, v in written.items() if k != "not_written"}, "not_written": written["not_written"][:200],
            "links": planned["links"][:5000], "links_total": len(planned["links"]), "gaps": {k: v[:500] for k, v in planned["gaps"].items()},
-           "rule_proposals": planned["proposals"][:2000],
+           "rule_proposals": planned["proposals"][:2000], "products": out["products"], "catalog": out["catalog"],
+           "service_repos": {e.service: r for r, e in sorted(ex.items())},
+           "product_suggestions": planned["product_suggestions"][:2000], "link_suggestions": planned["link_suggestions"][:2000],
+           "review": {"items": len(items), "by_kind": {k: sum(1 for i in items if i["kind"] == k) for k in sorted({i["kind"] for i in items})}},
            "context_evidence_id": ctx_rec["id"], "warnings": out["warnings"], "duration_s": round(time.monotonic() - t0, 3)}
     rec = es.put("kf_bridge_run", KF_SOURCE, run, observed_to=now)
+    synced = kf_review_sync(store, items, rec["id"], inbox=s["review_inbox"] == "tia_and_kf")
     store.audit("kf_bridge_completed", reason=reason, links=len(planned["links"]), added=written["added"], removed=written["removed"],
-                customer=out["customer_id"], graph=gid, fingerprint=out["kf_fingerprint"])
-    return {**run, "run_evidence_id": rec["id"]}
+                customer=out["customer_id"], graph=gid, fingerprint=out["kf_fingerprint"], review_open=synced["open"])
+    return {**run, "run_evidence_id": rec["id"], "review_sync": synced}
 
 
 def kf_decisions(store: Store) -> dict:
-    """The review decisions on (code rule, Knowledge Fabric Rule) pairs: the newest per pair wins."""
+    """The review decisions, newest per pair (links, rules, products, stories); with knowledge_fabric.review_policy two_person a positive
+    decision counts only once two different people made it."""
     from .kfbridge import latest_decisions
-    return latest_decisions(EvidenceStore(store.db, store.tenant_id).list("kf_link_decision", limit=20000))
+    s = kf_settings(store)
+    return latest_decisions(EvidenceStore(store.db, store.tenant_id).list("kf_link_decision", limit=20000),
+                            two_person=s["review_policy"] == "two_person")
 
 
 def kf_decide(store: Store, proposal: dict, decision: str, actor: Optional[str], comment: Optional[str] = None) -> dict:
-    """Record a person's decision on a proposed rule pair as evidence (kind kf_link_decision); a confirmed pair becomes an ENFORCES link on
-    the next bridge run, a rejected one is not proposed again. proposal: an entry of the latest run's rule_proposals."""
-    if decision not in ("confirm", "reject"):
-        raise ValueError("decision must be confirm or reject")
+    """Record a person's decision on a proposed rule pair (POST /api/v1/kf/rule-proposals/{id}): the review item of the pair when the queue
+    has it, else directly as evidence. A confirmed pair becomes an ENFORCES link on the next bridge run, a rejected one is not proposed again."""
+    if decision not in ("confirm", "reject", "reset"):
+        raise ValueError("decision must be confirm, reject or reset")
+    from . import kfreview
+    iid = kfreview.item_id("rule_pair", proposal["tia_rule"], [proposal["kf_entity_id"]])
+    if kf_review_get(store, iid) is not None:
+        out = kf_review_decide(store, iid, decision, actor, comment)
+        return {**out, "proposal": proposal["id"], "tia_rule": proposal["tia_rule"], "kf_entity_id": proposal["kf_entity_id"],   # the shape this
+                "kf_rule": proposal.get("kf_rule"), "decision": decision, "actor": actor,                                         # route always had
+                "comment": (comment or "")[:1000] or None, "evidence_id": (out["evidence_ids"] or [None])[0]}
     now = datetime.now(timezone.utc)
-    data = {"proposal": proposal["id"], "tia_rule": proposal["tia_rule"], "expr": proposal.get("expr"), "service": proposal.get("service"),
-            "kf_entity_id": proposal["kf_entity_id"], "kf_rule": proposal.get("kf_rule"), "domain": proposal.get("domain"),
+    data = {"kind": "rule", "proposal": proposal["id"], "tia_id": proposal["tia_rule"], "tia_rule": proposal["tia_rule"], "expr": proposal.get("expr"),
+            "service": proposal.get("service"), "kf_entity_id": proposal["kf_entity_id"], "kf_rule": proposal.get("kf_rule"),
+            "kf_name": proposal.get("kf_rule"), "label": "Rule", "rel": "ENFORCES", "domain": proposal.get("domain"),
             "decision": decision, "actor": actor, "comment": (comment or "")[:1000] or None, "at": now.isoformat(timespec="seconds")}
     rec = EvidenceStore(store.db, store.tenant_id).put("kf_link_decision", KF_SOURCE, data, repo=proposal.get("repo"), observed_to=now)
     store.audit("kf_rule_link_decided", proposal=proposal["id"], decision=decision, tia_rule=proposal["tia_rule"], kf_rule=proposal.get("kf_rule"),
                 actor=actor)
     return {**data, "evidence_id": rec["id"]}
+
+
+# ---- the review queue (docs/KF-BRIDGE.md section 12) --------------------------------------------------------------------------------
+INBOX_KINDS = ("guessed_link", "ambiguous", "suggested_link", "rule_pair", "stale_decision")   # candidates are Knowledge Fabric nodes
+_ITEM_COLS = ("item_id", "kind", "status", "priority", "tia_id", "service", "repo", "domain", "product_line_id", "item", "decision",
+              "first_seen_run", "last_seen_run", "first_seen_at", "last_seen_at", "deferred_at", "decided_at", "kf_review_id", "kf_sync",
+              "kf_sync_error", "kf_sync_at", "updated_at")
+
+
+def _row(r) -> dict:
+    d = dict(zip(_ITEM_COLS, r))
+    for k in ("first_seen_at", "last_seen_at", "deferred_at", "decided_at", "kf_sync_at", "updated_at"):
+        d[k] = d[k].isoformat(timespec="seconds") if d[k] else None
+    return d
+
+
+def kf_review_sync(store: Store, items: list, run_id, inbox: bool = False) -> dict:
+    """Bring the queue up to date with one bridge run: new items are opened, items asked again are refreshed (a deferred or superseded one
+    opens again), open items no longer asked are superseded, decided items keep their decision. With the Knowledge Fabric inbox on, a new
+    item of a mapped service whose candidates are Knowledge Fabric nodes is queued for Knowledge Fabric's review screen; a superseded one
+    that is there is queued to be closed."""
+    from psycopg.types.json import Jsonb
+    now = datetime.now(timezone.utc)
+    counts = {"new": 0, "refreshed": 0, "reopened": 0, "superseded": 0}
+    with store.db.tx(store.tenant_id) as c:
+        have = {r[0]: {"status": r[1], "kf_review_id": r[2]} for r in c.execute("select item_id, status, kf_review_id from kf_review_items")}
+        seen = set()
+        for it in items:
+            iid = it["item_id"]
+            seen.add(iid)
+            cols = (it["kind"], it["priority"], it["tia_id"], it.get("service"), it.get("repo"), it.get("domain"), it.get("product_line_id"), Jsonb(it))
+            if iid in have:
+                st = have[iid]["status"]
+                new = "open" if st in ("deferred", "superseded") else st
+                counts["reopened" if new != st else "refreshed"] += 1
+                c.execute("update kf_review_items set kind = %s, priority = %s, tia_id = %s, service = %s, repo = %s, domain = %s, "
+                          "product_line_id = %s, item = %s, status = %s, last_seen_run = %s, last_seen_at = %s, updated_at = %s, "
+                          "deferred_at = case when %s = 'open' then null else deferred_at end where item_id = %s",
+                          (*cols, new, run_id, now, now, new, iid))
+            else:
+                counts["new"] += 1
+                pending = inbox and it["kind"] in INBOX_KINDS and it.get("product_line_id")
+                c.execute("insert into kf_review_items (tenant_id, item_id, kind, priority, tia_id, service, repo, domain, product_line_id, item, "
+                          "status, first_seen_run, last_seen_run, first_seen_at, last_seen_at, updated_at, kf_sync) "
+                          "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'open', %s, %s, %s, %s, %s, %s)",
+                          (store.tenant_id, iid, *cols, run_id, run_id, now, now, now, "pending" if pending else "none"))
+        gone = [i for i, h in have.items() if i not in seen and h["status"] in ("open", "deferred", "awaiting_second")]
+        for iid in gone:
+            counts["superseded"] += 1
+            c.execute("update kf_review_items set status = 'superseded', updated_at = %s, "
+                      "kf_sync = case when kf_review_id is not null and kf_sync in ('sent', 'error') then 'closing' "
+                      "when kf_sync = 'pending' then 'none' else kf_sync end where item_id = %s", (now, iid))
+        n_open = c.execute("select count(*) from kf_review_items where status in ('open', 'awaiting_second')").fetchone()[0]
+    return {**counts, "open": n_open}
+
+
+def kf_reviews(store: Store, status: Optional[str] = "open", kind: Optional[str] = None, domain: Optional[str] = None,
+               product_line: Optional[str] = None, repo: Optional[str] = None, readable: Optional[set] = None, limit: int = 100,
+               offset: int = 0) -> dict:
+    """The queue, filtered (status `all` for every status; product_line matches the id or the name). Items of a repository the caller
+    cannot read are left out; items without a repository (an issue key, a decision whose node is gone) are shown."""
+    where, args = [], []
+    if status and status != "all":
+        where.append("status = %s")
+        args.append(status)
+    for col, v in (("kind", kind), ("domain", domain), ("repo", repo)):
+        if v:
+            where.append(f"{col} = %s")
+            args.append(v)
+    if product_line:
+        where.append("(product_line_id = %s or product_line_id like %s)")
+        args += [product_line, f"%|PRODUCT_LINE:{product_line}"]
+    sql = "select " + ", ".join(_ITEM_COLS) + " from kf_review_items" + (" where " + " and ".join(where) if where else "")
+    with store.db.tx(store.tenant_id) as c:
+        rows = [_row(r) for r in c.execute(sql + " order by (priority = 'high') desc, (status = 'awaiting_second') desc, kind, item_id", args)]
+        counts = dict(c.execute("select status, count(*) from kf_review_items group by status").fetchall())
+    if readable is not None:
+        rows = [r for r in rows if not r["repo"] or r["repo"] in readable]
+    return {"total": len(rows), "items": rows[offset: offset + limit], "limit": limit, "offset": offset, "by_status": counts}
+
+
+def kf_review_get(store: Store, iid: str) -> Optional[dict]:
+    with store.db.tx(store.tenant_id) as c:
+        r = c.execute("select " + ", ".join(_ITEM_COLS) + " from kf_review_items where item_id = %s", (iid,)).fetchone()
+    return _row(r) if r else None
+
+
+def kf_review_history(store: Store, iid: str) -> list:
+    """Every decision recorded on the item (evidence kf_link_decision), newest first."""
+    return [{"evidence_id": r["id"], **r["data"]} for r in EvidenceStore(store.db, store.tenant_id).list("kf_link_decision", limit=20000)
+            if (r.get("data") or {}).get("item_id") == iid]
+
+
+class ReviewConflict(Exception):
+    """The item cannot take this decision now: already decided (the first decision wins), or a second approval by the same person."""
+
+
+def kf_review_decide(store: Store, iid: str, action: str, actor: Optional[str], comment: Optional[str] = None,
+                     kf_entity_id: Optional[str] = None, place: Optional[dict] = None, source: str = "tia",
+                     can_change_config: bool = True) -> dict:
+    """A person's decision on one review item: recorded as evidence (kf_link_decision, append-only) and on the item; applied by the next
+    bridge run (relinked when auto_relink is on). With review_policy two_person a positive decision waits for a second, different person;
+    a decision that changes the tenant setting (confirm_with_alias, a new product place for a conflict) is saved as a new configuration
+    version when it takes effect. source: `tia` (this API) or `kf` (Knowledge Fabric's review screen). Raises LookupError (no such item),
+    ReviewConflict, kfreview.ReviewError (an action that does not fit), PermissionError (a configuration change without config_write)."""
+    from psycopg.types.json import Jsonb
+    from . import kfreview
+    s = kf_settings(store)
+    now = datetime.now(timezone.utc)
+    at = now.isoformat(timespec="seconds")
+    with store.db.tx(store.tenant_id) as c:
+        r = c.execute("select " + ", ".join(_ITEM_COLS) + " from kf_review_items where item_id = %s for update", (iid,)).fetchone()
+        if r is None:
+            raise LookupError(iid)
+        row = _row(r)
+        if action == "reset":
+            if row["status"] != "decided":
+                raise ReviewConflict(f"only a decided item can be reset (this one is {row['status']})")
+        elif row["status"] not in ("open", "deferred", "awaiting_second"):
+            prior = row["decision"] or {}
+            raise ReviewConflict(f"the item is {row['status']}" + (f": {prior.get('action')} by {prior.get('by')} at {prior.get('at')} "
+                                                                    f"(in {prior.get('source', 'tia')}); the first decision wins" if prior else ""))
+        item = {**row["item"], "decision": row["decision"]}
+        out = kfreview.decide(item, action, kf_entity_id, place)
+        if out["config"] and not can_change_config:
+            raise PermissionError("this decision changes the tenant setting (an alias or a product place): it needs the config_write permission")
+        positive = action in kfreview.POSITIVE and row["item"]["kind"] != "product_conflict"
+        status, approvals = "decided", [actor]
+        if action == "defer":
+            status = "deferred"
+        elif action == "reset":
+            status = "open"
+        elif s["review_policy"] == "two_person" and positive:
+            prev = row["decision"] or {}
+            same = (row["status"] == "awaiting_second" and prev.get("action") == action and prev.get("kf_entity_id") == kf_entity_id
+                    and prev.get("place") == place)
+            if same and actor in (prev.get("approvals") or []):
+                raise ReviewConflict("the second approval must come from another person (review_policy two_person)")
+            approvals = (prev.get("approvals") or []) + [actor] if same else [actor]
+            status = "decided" if len(set(approvals)) >= 2 else "awaiting_second"
+        decision = None if action == "reset" else {"action": action, "kf_entity_id": kf_entity_id, "place": place, "by": actor, "at": at,
+                                                   "comment": (comment or "")[:1000] or None, "approvals": approvals, "source": source,
+                                                   "targets": kfreview.targets_of(out["records"]) or (row["decision"] or {}).get("targets") or []}
+        kf_sync = row["kf_sync"]
+        if row["kf_review_id"] and status == "decided":
+            kf_sync = "closed" if source == "kf" else "closing"
+        c.execute("update kf_review_items set status = %s, decision = %s, decided_at = %s, deferred_at = %s, kf_sync = %s, updated_at = %s "
+                  "where item_id = %s", (status, Jsonb(decision) if decision is not None else None, now if status == "decided" else None,
+                                         now if status == "deferred" else None, kf_sync, now, iid))
+    es = EvidenceStore(store.db, store.tenant_id)
+    ids = []
+    try:
+        for rec in out["records"]:
+            data = {**rec, "actor": actor, "comment": (comment or "")[:1000] or None, "at": at, "source": source}
+            ids.append(es.put("kf_link_decision", KF_SOURCE, data, repo=row["repo"], observed_to=now)["id"])
+        config_version = None
+        if out["config"] and status == "decided":
+            config_version = _kf_config_merge(store, out["config"], actor, f"review {iid}: {action}" + (f" ({comment})" if comment else ""))
+    except Exception:
+        with store.db.tx(store.tenant_id) as c:           # the decision did not take: the item goes back to where it was
+            c.execute("update kf_review_items set status = %s, decision = %s, decided_at = null, kf_sync = %s, updated_at = %s where item_id = %s",
+                      (row["status"], Jsonb(row["decision"]) if row["decision"] is not None else None, row["kf_sync"], now, iid))
+        raise
+    store.audit("kf_review_decided", item=iid, kind=row["kind"], action=action, status=status, actor=actor, source=source,
+                evidence=ids, config_version=config_version)
+    return {"item_id": iid, "kind": row["kind"], "action": action, "status": status, "approvals": approvals if status != "open" else [],
+            "evidence_ids": ids, "config_version": config_version, "applies": "on the next bridge run" if status == "decided" else None}
+
+
+def kf_inbox_push(store: Store, client, limit: int = 200) -> dict:
+    """Knowledge Fabric's review screen (knowledge_fabric.review_inbox tia_and_kf; tia.kfinbox): send the new items of mapped services, and
+    close the ones decided or no longer asked in TIA. A failure is kept on the item (kf_sync error) and retried on the next poll."""
+    from . import kfreview
+    from .kfinbox import KfInboxError
+    s = kf_settings(store)
+    last = kf_last_run(store) or {}
+    now = datetime.now(timezone.utc)
+    counts = {"created": 0, "closed": 0, "errors": 0}
+    with store.db.tx(store.tenant_id) as c:
+        rows = [_row(r) for r in c.execute("select " + ", ".join(_ITEM_COLS) + " from kf_review_items where kf_sync in ('pending', 'closing', 'error') "
+                                           "order by updated_at limit %s", (limit,))]
+
+    def mark(iid, sync, rid=None, err=None):
+        with store.db.tx(store.tenant_id) as c:
+            c.execute("update kf_review_items set kf_sync = %s, kf_review_id = coalesce(%s, kf_review_id), kf_sync_error = %s, kf_sync_at = %s "
+                      "where item_id = %s", (sync, rid, err, now, iid))
+    for row in rows:
+        it, iid = row["item"], row["item_id"]
+        scope = {"ingestion_batch_id": f"tia-links:{store.tenant_id}:{row['product_line_id']}", "domain_id": it.get("scope_domain"),
+                 "product_line_id": row["product_line_id"]}
+        try:
+            if row["kf_review_id"] is None:
+                if row["status"] not in ("open", "deferred", "awaiting_second"):
+                    mark(iid, "none")
+                    continue
+                rid = client.create(kfreview.inbox_payload(it, store.tenant_id, s["customer_id"], last.get("kf_tenant_id"), s["review_inbox_detail"]))
+                mark(iid, "sent", rid)
+                counts["created"] += 1
+            elif row["status"] in ("decided", "superseded"):
+                d = row["decision"] or {}
+                action = "WITHDRAWN" if row["status"] == "superseded" else kfreview.KF_ACTION.get(d.get("action"), "WITHDRAWN")
+                client.close(row["kf_review_id"], scope, {"action": action, "selected_entity_id": d.get("kf_entity_id"),
+                                                          "reviewer_id": f"tia:{d.get('by')}", "notes": d.get("comment"), "decided_at": d.get("at")})
+                mark(iid, "closed")
+                counts["closed"] += 1
+            else:
+                mark(iid, "sent")
+        except KfInboxError as e:
+            mark(iid, "error", err=str(e)[:300])
+            counts["errors"] += 1
+    if any(counts.values()):
+        store.audit("kf_inbox_synced", **counts)
+    return counts
+
+
+def kf_inbox_run(store: Store) -> Optional[dict]:
+    """The inbox step of a bridge or poll job: nothing unless review_inbox is tia_and_kf and TIA_KF_REVIEW_URL is set. Never raises."""
+    from .kfinbox import KfInboxError, KfReviewClient, config_from_env
+    s = kf_settings(store)
+    cfg = config_from_env()
+    if s["review_inbox"] != "tia_and_kf" or cfg is None:
+        return None
+    try:
+        return kf_inbox_push(store, KfReviewClient(cfg["url"], cfg["token"], cfg["private_ok"]))
+    except KfInboxError as e:
+        store.audit("kf_inbox_failed", reason=str(e)[:300])
+        return {"error": str(e)}
+
+
+def kf_inbox_receive(store: Store, ev: dict) -> dict:
+    """A decision made in Knowledge Fabric's review screen (a signed callback, tia.kfinbox.parse_callback): the item's decision, recorded
+    with the actor `kf:<reviewer>`. An alias approved there is recorded as a confirmation: the alias itself changes TIA's configuration, so
+    only TIA adds it. Raises LookupError (no such item for this tenant and customer), ReviewConflict, kfreview.ReviewError."""
+    from . import kfreview
+    s = kf_settings(store)
+    if s["review_inbox"] != "tia_and_kf":
+        raise ReviewConflict("this tenant does not use Knowledge Fabric's review screen (knowledge_fabric.review_inbox is tia)")
+    if ev.get("customer_id") and ev["customer_id"] != s["customer_id"]:
+        raise LookupError("the decision names another Knowledge Fabric customer")
+    row = kf_review_get(store, ev["plan_id"])
+    if row is None or (row["kf_review_id"] and row["kf_review_id"] != ev["review_id"]):
+        raise LookupError(ev["plan_id"])
+    action, eid = kfreview.kf_to_tia(row["item"], ev["action"], ev.get("selected_entity_id"))
+    if action == "confirm_with_alias":
+        action, eid = ("confirm", None) if "confirm" in row["item"]["actions"] else ("choose", eid)
+    if not row["kf_review_id"]:
+        with store.db.tx(store.tenant_id) as c:
+            c.execute("update kf_review_items set kf_review_id = %s, kf_sync = 'sent' where item_id = %s and kf_review_id is null",
+                      (ev["review_id"], row["item_id"]))
+    out = kf_review_decide(store, row["item_id"], action, f"kf:{ev['reviewer_id']}", ev.get("notes"), kf_entity_id=eid, source="kf",
+                           can_change_config=False)
+    return {**out, "kf_review_id": ev["review_id"], "event_id": ev.get("event_id")}
+
+
+def _kf_config_merge(store: Store, change: dict, actor: Optional[str], comment: str) -> Optional[int]:
+    """A review decision's change to the knowledge_fabric setting (aliases added, or a service's product places replaced), saved as a new
+    configuration version. -> the version, or None when nothing changed."""
+    cfg = store.effective_config().to_dict()
+    kf = cfg.setdefault("knowledge_fabric", {})
+    for setting, entries in change.items():
+        cur = dict(kf.get(setting) or {})
+        for name, vals in entries.items():
+            if setting.endswith("_aliases"):
+                cur[name] = sorted(set(cur.get(name) or []) | set(vals))
+            else:
+                cur[name] = vals
+        kf[setting] = cur
+    r = store.put_config(cfg, comment[:500], actor)
+    if r["created"]:
+        store.audit("tenant_config_changed", version=r["version"], id=r["id"], actor=actor, comment=comment[:500],
+                    changes=[x["path"] for x in r["changes"]])
+        return r["version"]
+    return None
 
 
 def kf_last_run(store: Store) -> Optional[dict]:
@@ -701,3 +1045,209 @@ def kf_next_poll(queue, store: Store) -> Optional[dict]:
     period = s["poll_minutes"] * 60
     bucket = str(int(datetime.now(timezone.utc).timestamp() // period) + 1)
     return kf_enqueue(queue, store.tenant_id, "kf_poll", "poll", delay_s=period, bucket=bucket)
+
+
+# ---- the Knowledge Fabric section of the web UI (docs/plans/KF-UI-PLAN.md section 7) ------------------------------------------------
+KF_JOB_KINDS = ("kf_bridge", "kf_poll")
+OVERLAY_RELS = ("REALIZES", "STORES", "ENFORCES", "SAME_AS")
+
+
+class VersionConflict(Exception):
+    """Someone saved the configuration after the version the caller edited."""
+
+    def __init__(self, version: int):
+        super().__init__("the configuration changed since you read it: reload and apply your change again")
+        self.version = version
+
+
+def _when(iso: Optional[str]) -> Optional[datetime]:
+    try:
+        d = datetime.fromisoformat(iso) if iso else None
+    except ValueError:
+        return None
+    return d.replace(tzinfo=timezone.utc) if d and d.tzinfo is None else d
+
+
+def kf_link_repo(run: dict, ln: dict) -> Optional[str]:
+    """The repository a bridge link's code side belongs to: the service's repository, or the one a test case key names."""
+    tid = ln["from"].split("|", 1)[-1]
+    if ln.get("service"):
+        return (run.get("service_repos") or {}).get(ln["service"])
+    if tid.startswith("testcase:"):
+        return tid.split(":", 2)[1]
+    return None
+
+
+def kf_status(store: Store, queue, all_readable: bool, neo4j_configured: bool) -> dict:
+    """GET /api/v1/kf/status: the state of the bridge for the status strip. state: off | never_run | running | failed | connected.
+    Counts for every reader; names, warnings and the failure text only for a principal who may read every repository."""
+    s = kf_settings(store)
+    cfg = store.effective_config()
+    last = kf_last_run(store)
+    bridge = queue.latest(store.tenant_id, ("kf_bridge",))
+    poll = queue.latest(store.tenant_id, ("kf_poll",))
+    job = bridge["job"]
+    if poll["job"] and poll["job"]["status"] == "running":
+        job = poll["job"]
+    failure = store.last_audit(("kf_bridge_failed",))
+    last_at = _when((last or {}).get("at"))
+    failed_after = failure is not None and (last_at is None or (_when(failure["at"]) or last_at) > last_at)
+    if job and job["status"] == "failed" and (last_at is None or (_when(job["updated_at"]) or last_at) > last_at):
+        failed_after, failure = True, failure or {"at": job["updated_at"], "reason": job["error"]}
+    if not s["enabled"]:
+        state = "off"
+    elif job and job["status"] in ("queued", "running") and (job["kind"] == "kf_bridge" or job["status"] == "running"):
+        state = "running"
+    elif failed_after:
+        state = "failed"
+    elif last is None:
+        state = "never_run"
+    else:
+        state = "connected"
+    with store.db.tx(store.tenant_id) as c:
+        review = dict(c.execute("select kind, count(*) from kf_review_items where status in ('open', 'awaiting_second') group by kind").fetchall())
+    gaps = {k: len(v or []) for k, v in ((last or {}).get("gaps") or {}).items()}
+    settings = s if all_readable else {k: v for k, v in s.items() if not k.endswith("_aliases") and not k.endswith("_products")}
+    out = {"state": state, "enabled": s["enabled"], "neo4j_configured": neo4j_configured, "settings": settings,
+           "config_version": cfg.version or 0, "to_review": {"total": sum(review.values()), "by_kind": review}, "gaps": gaps,
+           "job": job and {k: job[k] for k in ("id", "kind", "status", "created_at", "updated_at")} | {"error": job["error"] if all_readable else None},
+           "next_poll_at": poll["next_run_at"] if s["enabled"] and s["auto_relink"] else None, "last_run": None, "last_failure": None,
+           "details_withheld": not all_readable}
+    if last:
+        out["last_run"] = {k: last.get(k) for k in ("at", "reason", "duration_s", "customer_id", "kf_tenant_id", "domains", "domain_mode",
+                                                     "available_domains", "graph_version", "kf_fingerprint", "bridge_version", "mirror_restored",
+                                                     "summary", "written", "links_total", "run_evidence_id", "review")}
+        out["last_run"]["warnings"] = (last.get("warnings") or []) if all_readable else len(last.get("warnings") or [])
+    if failure and failed_after:
+        out["last_failure"] = {"at": failure["at"], "reason": failure.get("reason") if all_readable else None}
+    return out
+
+
+def kf_overlay(last: dict, readable: Optional[set]) -> dict:
+    """GET /api/v1/kf/overlay: the latest run's links as the graph view draws them (tia_id = the graph's node id), only those whose code is
+    in a repository the caller may read."""
+    rows = []
+    for ln in last.get("links") or []:
+        if ln["rel"] not in OVERLAY_RELS:
+            continue
+        repo = kf_link_repo(last, ln)
+        if readable is not None and repo not in readable:
+            continue
+        rows.append({"tia_id": ln["from"].split("|", 1)[-1], "rel": ln["rel"], "kf_label": ln["to_label"], "kf_name": ln.get("to_name"),
+                     "entity_id": ln["to"], "domain": ln.get("domain"), "status": ln["status"], "source": ln.get("source"),
+                     "strategy": ln.get("strategy"), "repo": repo})
+    return {"run_evidence_id": last.get("run_evidence_id"), "at": last.get("at"), "links": rows, "links_total": len(rows)}
+
+
+def kf_node(store: Store, last: dict, node_id: str, readable: Optional[set]) -> Optional[dict]:
+    """GET /api/v1/kf/node: one graph node's links and the business context the run captured for it (the System entry for a service, the
+    item entry for a screen, entity, table or rule). None when it has none or its repository is not readable."""
+    links = [x for x in kf_overlay(last, readable)["links"] if x["tia_id"] == node_id]
+    if not links:
+        return None
+    ctx = EvidenceStore(store.db, store.tenant_id).get_many([last["context_evidence_id"]]) if last.get("context_evidence_id") else []
+    data = (ctx[0]["data"] if ctx else {}) or {}
+    eids = {x["entity_id"] for x in links}
+    context = []
+    if node_id.startswith("svc:"):
+        context = [{"kind": "service", **e} for e in (data.get("services") or {}).get(node_id[len("svc:"):]) or [] if e.get("entity_id") in eids]
+    else:
+        context = [e for items in (data.get("items") or {}).values() for e in items if e.get("tia_id") == node_id and e.get("entity_id") in eids]
+    return {"node": node_id, "repo": links[0]["repo"], "at": last.get("at"), "links": links, "context": context,
+            "context_at": data.get("pulled_at")}
+
+
+def kf_settings_patch(store: Store, set_: dict, add_aliases: list, remove_aliases: list, actor: Optional[str], comment: Optional[str],
+                      expected_version: Optional[int]) -> dict:
+    """PATCH /api/v1/kf/settings: merge a partial change into knowledge_fabric and save it as a new configuration version.
+    Raises VersionConflict (the configuration changed since expected_version), ConfigError (invalid)."""
+    from .kfsettings import merge
+    from .tenantconfig import ConfigError
+    cfg = store.effective_config()
+    if expected_version is not None and expected_version != (cfg.version or 0):
+        raise VersionConflict(cfg.version or 0)
+    raw = cfg.to_dict()
+    new, problems = merge(raw.get("knowledge_fabric") or {}, set_, add_aliases, remove_aliases)
+    if problems:
+        raise ConfigError(problems)
+    raw["knowledge_fabric"] = new
+    r = store.put_config(raw, (comment or "Knowledge Fabric settings")[:500], actor)
+    if r["created"]:
+        store.audit("tenant_config_changed", version=r["version"], id=r["id"], actor=actor, comment=comment, changes=[c["path"] for c in r["changes"]])
+        store.audit("kf_settings_changed", version=r["version"], actor=actor, set=sorted(set_ or {}),
+                    aliases_added=len(add_aliases or []), aliases_removed=len(remove_aliases or []))
+    return {"version": r["version"], "created": r["created"], "changes": r["changes"], "settings": kf_settings(store)}
+
+
+def kf_unlink(store: Store, driver, database: Optional[str] = None) -> dict:
+    """DELETE /api/v1/kf/links: remove this tenant's bridge edges to its Knowledge Fabric customer (turning the bridge off). Knowledge Fabric's
+    own nodes and TIA's mirror stay; only the edges TIA wrote go."""
+    s = kf_settings(store)
+    last = kf_last_run(store) or {}
+    customer = s["customer_id"] or last.get("customer_id")
+    if not customer:
+        raise KfBridgeError("no Knowledge Fabric customer is set and the bridge never ran: there are no links to remove")
+    from . import neo4jgraph
+    out = neo4jgraph.write_bridge(driver, store.tenant_id, customer, s["kf_tenant_id"] or last.get("kf_tenant_id"), [],
+                                  {"tia_graph_version": None, "kf_fingerprint": None}, database)      # no links: every edge of ours goes
+    store.audit("kf_links_removed", customer=customer, removed=out["removed"])
+    return {"customer_id": customer, "removed": out["removed"]}
+
+
+def kf_review_measures(store: Store, readable: Optional[set] = None) -> dict:
+    """The review measures (docs/plans/KF-PRODUCTS-RETRIEVAL-REVIEW-PLAN.md C.9): open items by kind and age, the time to a decision, the
+    share of links confirmed versus guessed in the latest run, and how often people reject links found by name (when that is high, name
+    matching is better switched off for the tenant)."""
+    now = datetime.now(timezone.utc)
+    with store.db.tx(store.tenant_id) as c:
+        rows = c.execute("select kind, status, repo, first_seen_at, decided_at, decision from kf_review_items").fetchall()
+    rows = [r for r in rows if readable is None or not r[2] or r[2] in readable]
+    ages = ("under_1_day", "1_to_7_days", "over_7_days")
+    open_by: dict = {}
+    for kind, status, _, first, _, _ in rows:
+        if status in ("open", "awaiting_second", "deferred"):
+            days = (now - first).total_seconds() / 86400 if first else 0
+            b = open_by.setdefault(kind, dict.fromkeys(ages, 0))
+            b[ages[0] if days < 1 else ages[1] if days <= 7 else ages[2]] += 1
+    waits = sorted((d - f).total_seconds() / 3600 for _, s, _, f, d, _ in rows if s == "decided" and f and d)
+
+    def pct(p):
+        return round(waits[min(len(waits) - 1, int(p * len(waits)))], 2) if waits else None
+    named = [(dec or {}).get("action") for kind, s, _, _, _, dec in rows if kind == "guessed_link" and s == "decided"]
+    rejected, confirmed = named.count("reject"), sum(1 for a in named if a in ("confirm", "confirm_with_alias", "choose"))
+    rate = round(rejected / (rejected + confirmed), 3) if rejected + confirmed else None
+    last = kf_last_run(store) or {}
+    by_status: dict = {}
+    for ln in last.get("links") or []:
+        if readable is None or kf_link_repo(last, ln) in readable:
+            by_status[ln["status"]] = by_status.get(ln["status"], 0) + 1
+    total = sum(by_status.values())
+    guessed = by_status.get("inferred", 0)
+    return {"open_by_kind_and_age": open_by, "open_total": sum(sum(v.values()) for v in open_by.values()),
+            "hours_to_decision": {"decided": len(waits), "median": pct(0.5), "p90": pct(0.9)},
+            "links": {"total": total, "confirmed": total - guessed, "guessed": guessed, "by_status": by_status,
+                      "confirmed_share": round((total - guessed) / total, 3) if total else None},
+            "name_matches": {"decided": rejected + confirmed, "rejected": rejected, "confirmed": confirmed, "rejection_rate": rate,
+                             "advice": ("Most links found by name are rejected: consider switching knowledge_fabric.link_name_matches off "
+                                        "for this tenant.") if rate is not None and rate >= 0.5 and rejected + confirmed >= 5 else None},
+            "at": now.isoformat(timespec="seconds"), "run_at": last.get("at")}
+
+
+def kf_decision_list(store: Store, readable: Optional[set], kind: Optional[str] = None, limit: int = 200) -> list:
+    """GET /api/v1/kf/decisions: every recorded decision (links, rules, products, stories), newest first, with who, when and why; only those
+    whose code is in a readable repository (or that name none)."""
+    out = []
+    for r in EvidenceStore(store.db, store.tenant_id).list("kf_link_decision", limit=20000):
+        d = r.get("data") or {}
+        k = d.get("kind") or ("rule" if d.get("tia_rule") else "link")
+        if kind and k != kind:
+            continue
+        if readable is not None and r.get("repo") and r["repo"] not in readable:
+            continue
+        out.append({"evidence_id": r["id"], "kind": k, "decision": d.get("decision"), "tia_id": d.get("tia_id") or d.get("tia_rule"),
+                    "kf_entity_id": d.get("kf_entity_id"), "kf_name": d.get("kf_name") or d.get("kf_rule"), "label": d.get("label"),
+                    "rel": d.get("rel"), "domain": d.get("domain"), "place": d.get("place"), "item_id": d.get("item_id"),
+                    "actor": d.get("actor"), "at": d.get("at"), "comment": d.get("comment"), "source": d.get("source", "tia"), "repo": r.get("repo")})
+        if len(out) >= limit:
+            break
+    return out

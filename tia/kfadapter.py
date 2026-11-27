@@ -1,12 +1,16 @@
 """Knowledge Fabric V2.5 adapter: a finished Change Impact Report in the shape KF agents already consume (QueryResponse).
 
-Contract source: TIA_KF_V2_INTEGRATION.docx section 5 (the field lists of QueryRequest / QueryResponse / ChunkItem / PathItem /
-RetrievalMetadata in kbfabric_ingest/retrieval/retriever_api.py). The KF source file itself was not available; the models below follow the
-document field by field and must be re-checked against retriever_api.py before production use.
+Contract source: TIA_KF_V2_INTEGRATION.docx section 5, checked field for field against Knowledge Fabric's own models
+(kbfabric_ingest/retrieval/retriever_api.py: QueryRequest / QueryResponse / ChunkItem / PathItem / RetrievalMetadata) on 23 Nov 2026;
+tests/test_kfbridge.py keeps that check whenever the source is present.
 
 Rules this adapter keeps (document F1-F8, N3-N5):
 * It serves FINISHED reports and never starts an analysis: an agent's question is not parsed to guess a repository or a change (no invented
-  entities). The caller names the analysis (`analysis_id`) or the repository plus a pull request / revision, and gets the latest such report.
+  entities). The caller names the analysis (`analysis_id`), the repository plus a pull request / revision, or an issue key a change named
+  (`issue_key`), and gets the newest such report. A router in front of both retrievers finds those tokens in the question and looks them
+  up exactly (POST /query/tia/resolve; tia.kfrouter is the reference router, docs/KF-BRIDGE.md section 13).
+* Knowledge Fabric's own intent names are served as well as `software_tia`: change_impact, regression_scope and test_coverage order the
+  answer for that question (INTENT_FIRST); `any` keeps the default order. Other intents are not TIA's and get an empty answer.
 * Evidence status is never upgraded: it is carried in every chunk (extracted_fields) and path (source_evidence), and inferred or stale findings
   score lower than confirmed ones.
 * Gaps stay visible: every unknown becomes a chunk (category "unknown"), and a partial or gapped report is stated in metadata.errors.
@@ -14,6 +18,8 @@ Rules this adapter keeps (document F1-F8, N3-N5):
 * The tester's view rides along: every entry point to test, rule gap and consistency check of the report's test scope is a chunk
   (categories test_scope / rule_gap / consistency_check) and every entry point's impact path a path, so a KF agent asked "what must I test
   for this change" gets the entry points, not the functions.
+* The business side is Knowledge Fabric's, scoped by the request: `domain` keeps only that domain's business chunks, `product_line` only
+  the product line's (its services, systems and test cases); the products a change reaches are chunks of category business_product.
 * Directions are TIA's own: TIA's edges point consumer -> provider; an impact path runs from the change outward, so a hop shows
   (changed)<-[:CONSUMES_API]-(consumer), never a relationship name TIA does not have.
 """
@@ -28,6 +34,8 @@ from pydantic import BaseModel, ConfigDict, Field
 SEVERITY_SCORE = {"critical": 1.0, "high": 0.85, "medium": 0.6, "low": 0.35}
 WEAK_EVIDENCE = {"inferred": 0.5, "stale": 0.5, "unknown": 0.3}
 INTENT = "software_tia"
+KF_INTENTS = ("change_impact", "regression_scope", "test_coverage", "any")      # Knowledge Fabric's pattern names TIA answers
+INTENTS = (INTENT,) + KF_INTENTS
 FORWARD = {"HANDLES", "PUBLISHES"}                       # the one traversed relationship whose stored direction is the direction of impact
 
 
@@ -47,6 +55,9 @@ class QueryRequest(_Strict):
     repository: Optional[str] = None
     pull_request: Optional[int] = None
     revision: Optional[str] = None
+    issue_key: Optional[str] = Field(None, max_length=40, description="an issue key (PAY-4521) a change named: the newest such analysis")
+    customer_id: Optional[str] = Field(None, max_length=300, description="Knowledge Fabric's customer; must be this tenant's")
+    product_line: Optional[str] = Field(None, max_length=300, description="keep the business side of this product line only (name or id)")
     include_tester_pack: bool = True       # coverage gate and gaps, API test matrices and UI locator packs of the touched entry points
 
 
@@ -340,22 +351,60 @@ def empty(req: QueryRequest, errors: list[str], t0: float) -> QueryResponse:
                                                     chunks_considered=0, paths_considered=0, errors=errors))
 
 
-BUSINESS_RANK = {"business_summary": 0, "business_user_story": 1, "business_test_case": 2, "business_system": 3, "business_item": 4}
+BUSINESS_RANK = {"business_product": 0, "business_summary": 1, "business_user_story": 2, "business_test_case": 3, "business_system": 4,
+                 "business_item": 5}
 # the request's intent (Knowledge Fabric's traversal pattern names) puts the categories that answer it first; the rest keep their order
 INTENT_FIRST = {"regression_scope": ("regression_summary", "regression_test", "business_summary", "business_test_case"),
                 "test_coverage": ("coverage_gate", "coverage_gap", "regression_summary"),
-                "change_impact": ("contract", "transitive", "direct", "data", "event", "business_summary", "business_user_story", "business_system",
-                                  "business_item")}
+                "change_impact": ("business_product", "contract", "transitive", "direct", "data", "event", "business_summary",
+                                  "business_user_story", "business_system", "business_item")}
 
 
-def business_chunks(rep: dict, domain: str) -> tuple[list, list]:
+def scope_business(bi: Optional[dict], domain: str = "", product_line: Optional[str] = None) -> Optional[dict]:
+    """The business impact narrowed to one domain (the request's `domain`) and one product line (`product_line`, its name or id): the
+    product rows of that place, and the systems, items, stories and test cases of the services in it. None when nothing is left."""
+    if not bi or not (domain or product_line):
+        return bi
+    out = json.loads(json.dumps(bi))
+    rows = out.get("products") or []
+    if domain:
+        rows = [r for r in rows if r["domain"] == domain]
+    if product_line:
+        rows = [r for r in rows if product_line in (r["product_line"], r["product_line_id"])]
+    out["products"] = rows
+    keep = {x["service"] for r in rows for x in r["services"]} if product_line else None
+
+    def ok(x: dict) -> bool:
+        return (not domain or x.get("domain") in (domain, None)) and (keep is None or x.get("service") in keep)
+    for k in ("systems", "items"):
+        out[k] = [x for x in out.get(k) or [] if ok(x)]
+    out["user_stories"] = [x for x in out.get("user_stories") or [] if not domain or x.get("domain") == domain]
+    out["test_cases"] = [c for c in out.get("test_cases") or [] if (not domain or c.get("domain") == domain)
+                         and (keep is None or any(v.get("service") in keep for v in c["via"]))]
+    if not (out["products"] or out["systems"] or out["items"] or out["user_stories"] or out["test_cases"]):
+        return None
+    return out
+
+
+def business_chunks(rep: dict, domain: str, product_line: Optional[str] = None) -> tuple[list, list]:
     """Knowledge Fabric's business impact of the change (docs/KF-BRIDGE.md) as chunks and paths: one summary, one chunk
     per business test case (with the chain from the changed code), one per affected system. The evidence status is the TIA side's link from
     code to the system; Knowledge Fabric's own relationships are its document extraction, not verified by TIA."""
-    bi = rep.get("business_impact")
+    bi = scope_business(rep.get("business_impact"), domain, product_line)
     if not bi:
         return [], []
     aid, chunks, paths = rep["analysis_id"], [], []
+    for k, row in enumerate(bi.get("products") or []):
+        svcs = ", ".join(f"{x['service']} ({x['source']}" + (", via " + ", ".join(x["via"]) if x.get("via") else "") + ")" for x in row["services"])
+        stories = row["user_stories"]
+        text = (f"PRODUCT {row['product_line']} ({row['domain']})" + (f" > {', '.join(row['functions'])}" if row["functions"] else "")
+                + f": the change reaches it through {svcs}; {row['entry_points']} entry point(s) to test, {len(row['test_cases'])} business "
+                "test case(s)" + (f", user stor{'y' if len(stories) == 1 else 'ies'} {', '.join(stories)}" if stories else "")
+                + "." + _caveat(row["status"]))
+        chunks.append(_chunk(aid, f"business-product-{k}", "business_product", "tia_business_product", "ProductLine", text,
+                             (0.95 if row["changed"] else 0.8) * WEAK_EVIDENCE.get(row["status"], 1.0), "", row["domain"],
+                             {"product_line": row["product_line"], "product_line_id": row["product_line_id"], "evidence_status": row["status"]},
+                             {k2: row[k2] for k2 in ("functions", "services", "entry_points", "test_cases", "user_stories")}))
     chunks.append(_chunk(aid, "business", "business_summary", "tia_business_summary", "System", f"BUSINESS IMPACT: {bi['summary']['headline']}",
                          0.9, "", domain, {"kf_customer_id": bi.get("kf_customer_id"), "fingerprint": bi.get("fingerprint")},
                          {"summary": bi["summary"], "limits": bi["limits"]}))
@@ -401,7 +450,9 @@ def business_chunks(rep: dict, domain: str) -> tuple[list, list]:
                              {k2: it.get(k2, []) for k2 in ("requirements", "processes", "defects", "incidents", "test_cases")}))
     for k, st in enumerate(bi.get("user_stories") or []):
         title = f" ({st['story']})" if st["story"] != st["key"] else ""
-        text = (f"USER STORY {st['key']}{title}: named in commit(s) {', '.join(c[:7] for c in st['commits'][:3])} of this change; implements "
+        named = ([f"commit(s) {', '.join(c[:7] for c in st['commits'][:3])}"] if st["commits"] else []) + \
+            [str(x).replace("_", " ") for x in st.get("named_in") or []]
+        text = (f"USER STORY {st['key']}{title}: named in {' and '.join(named) or 'the change'} of this change; implements "
                 f"{len(st.get('requirements', []))} requirement(s), covered by {len(st.get('test_cases', []))} test case(s).")
         chunks.append(_chunk(aid, f"business-story-{k}", "business_user_story", "tia_business_user_story", "UserStory", text, 0.9, "", domain,
                              {"issue_key": st["key"], "commits": st["commits"]},
@@ -437,7 +488,7 @@ def to_query_response(rep: dict, req: QueryRequest, t0: Optional[float] = None, 
     pchunks = pack_chunks(pack, req.domain)
     for cat in PACK_RANK:
         reranked_chunks = reranked_chunks + [c for c in pchunks if c.category == cat][: req.top_k_semantic]
-    bchunks, bpaths = business_chunks(rep, req.domain)
+    bchunks, bpaths = business_chunks(rep, req.domain, req.product_line)
     reranked_chunks = reranked_chunks + sorted(bchunks, key=lambda c: (BUSINESS_RANK[c.category], -c.score, c.block_id))[: req.top_k_semantic + 1]
     reranked_paths = (reranked_paths + sorted(bpaths, key=lambda p: (-p.score, p.source_block_id)))[: req.top_k_graph]
     first = INTENT_FIRST.get(req.intent)

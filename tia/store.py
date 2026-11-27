@@ -245,6 +245,34 @@ class Store:
                 (self.tenant_id, repository, pull_request, pull_request, revision, (revision or "") + "%", limit)).fetchall()
         return [r[0] for r in rows]
 
+    def find_by_issue_key(self, key: str, limit: int = 20) -> list[dict]:
+        """The newest reports whose change names this issue key (commit messages, pull request title or branch; change.issue_keys)."""
+        with self.db.tx(self.tenant_id) as c:
+            rows = c.execute("select data from analyses where data->'change'->'issue_keys' ? %s order by created_at desc limit %s",
+                             (key, limit)).fetchall()
+        return [r[0] for r in rows]
+
+    def recent_issue_keys(self, days: int = 30, limit: int = 2000) -> dict:
+        """Issue keys the changes of the last `days` named: {key: [{"analysis_id", "repo", "service"}]}, newest first."""
+        with self.db.tx(self.tenant_id) as c:
+            rows = c.execute("select id, data->'change'->>'repository', data->'change'->>'service', data->'change'->'issue_keys' from analyses "
+                             "where created_at >= now() - make_interval(days => %s) and jsonb_typeof(data->'change'->'issue_keys') = 'array' "
+                             "order by created_at desc limit %s", (days, limit)).fetchall()
+        out: dict = {}
+        for aid, repo, service, keys in rows:
+            for k in keys or []:
+                lst = out.setdefault(str(k), [])
+                if len(lst) < 10:
+                    lst.append({"analysis_id": aid, "repo": repo, "service": service})
+        return out
+
+    def recent_services(self, days: int = 7, limit: int = 2000) -> set:
+        """Services a change touched in the last `days` (review items about them come first)."""
+        with self.db.tx(self.tenant_id) as c:
+            rows = c.execute("select distinct data->'change'->>'service' from analyses where created_at >= now() - make_interval(days => %s) "
+                             "limit %s", (days, limit)).fetchall()
+        return {r[0] for r in rows if r[0]}
+
     def list_analyses(self, since: Optional[str] = None, until: Optional[str] = None, limit: int = 20000) -> list[dict]:
         """Stored reports in a period, oldest first (trends, calibration)."""
         where, args = [], []
@@ -310,6 +338,13 @@ class Store:
         with self.db.tx(self.tenant_id) as c:
             rows = c.execute("select seq, ts, event, payload from audit_log where tenant_id = %s order by seq desc limit %s", (self.tenant_id, limit)).fetchall()
         return [{"seq": s, "ts": t, "event": e, **json.loads(p)} for s, t, e, p in rows]
+
+    def last_audit(self, events: tuple) -> Optional[dict]:
+        """The newest audit entry among these events, or None (the Knowledge Fabric status shows the last bridge failure this way)."""
+        with self.db.tx(self.tenant_id) as c:
+            r = c.execute("select seq, ts, event, payload from audit_log where tenant_id = %s and event = any(%s) order by seq desc limit 1",
+                          (self.tenant_id, list(events))).fetchone()
+        return {"seq": r[0], "at": r[1] if isinstance(r[1], str) else r[1].isoformat(), "event": r[2], **json.loads(r[3])} if r else None
 
     def verify_audit(self) -> dict:
         """Recompute the whole chain. ok=False names the first sequence number that does not verify."""

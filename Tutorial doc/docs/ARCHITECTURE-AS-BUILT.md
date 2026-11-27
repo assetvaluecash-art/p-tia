@@ -1,6 +1,6 @@
 # TIA architecture as built
 
-The system as it is coded today: 111 Python modules (31,685 lines) in 10 layers, 29 PostgreSQL tables, three processes from one container image. Everything here is read from the code by `tools/gen_architecture.py`; the design written before the build (ARCHITECTURE.md v1.3, archived) is summarised in section 7 with where the build differs.
+The system as it is coded today: 114 Python modules (34,120 lines) in 10 layers, 30 PostgreSQL tables, three processes from one container image. Everything here is read from the code by `tools/gen_architecture.py`; the design written before the build (ARCHITECTURE.md v1.3, archived) is summarised in section 7 with where the build differs.
 
 **Status: Built.** The layer rule in section 2 is checked against the real imports on every test run (`tests/test_architecture_doc.py`), so this document cannot silently go out of date.
 
@@ -27,15 +27,15 @@ All three run the same image (`deploy/Dockerfile`, entry point `python -m`, non-
 
 | # | Layer | Modules | Lines | Responsible for |
 |---|---|---|---|---|
-| 1 | Entry points | 4 | 614 | The processes and commands that start everything: the API server, the queue worker, the command line and the schema migration. |
-| 2 | HTTP API, web UI and agent surfaces | 10 | 4,729 | Every way in: the REST API and web UI, sign-in, permissions on each request, the shareable report page, MCP for coding assistants and the Knowledge Fabric adapter. Requests are authenticated, classified and bound to one tenant here, before any work starts. |
-| 3 | Orchestration, ingestion and jobs | 8 | 2,021 | Turns a request into work: resolves revisions, registers and syncs repositories, queues jobs and runs an analysis end to end, the same way for the UI, the API and a pull-request webhook. |
-| 4 | Source-control and change-management connectors | 10 | 2,537 | Talks to the outside on the platform's behalf: webhooks in, pull-request comments and check runs out, repository permissions mirrored from the host, ServiceNow change records, and the Neo4j mirror of the graph for Knowledge Fabric. Nothing below this layer calls a git host, ITSM or Neo4j. |
-| 5 | Impact engine and tester views | 19 | 5,482 | The deterministic core: diff the change, walk the graph within bounds, attach evidence, score with the rule table, and turn the result into the report and the tester views (test scope, regression test selection, configuration checks, coverage, automation inventory, tester pack, graph questions). |
-| 6 | Graph and identity resolution | 8 | 1,753 | Connects facts from many repositories into one typed graph: who calls which endpoint, which code reads which table, with the resolution strategy and evidence on every edge, plus the use-case structure (screens, elements, locators, requests, fields, rules). `graphschema` fixes the node and relationship types (docs/GRAPH-SCHEMA.md). Versioned graphs are stored, never edited. `kfontology` publishes this schema as a software ontology and `kfbridge` plans the links from it to Knowledge Fabric's business graph. |
+| 1 | Entry points | 4 | 665 | The processes and commands that start everything: the API server, the queue worker, the command line and the schema migration. |
+| 2 | HTTP API, web UI and agent surfaces | 11 | 5,448 | Every way in: the REST API and web UI, sign-in, permissions on each request, the shareable report page, MCP for coding assistants and the Knowledge Fabric adapter. Requests are authenticated, classified and bound to one tenant here, before any work starts. |
+| 3 | Orchestration, ingestion and jobs | 8 | 2,582 | Turns a request into work: resolves revisions, registers and syncs repositories, queues jobs and runs an analysis end to end, the same way for the UI, the API and a pull-request webhook. |
+| 4 | Source-control and change-management connectors | 11 | 2,735 | Talks to the outside on the platform's behalf: webhooks in, pull-request comments and check runs out, repository permissions mirrored from the host, ServiceNow change records, and the Neo4j mirror of the graph for Knowledge Fabric. Nothing below this layer calls a git host, ITSM or Neo4j. |
+| 5 | Impact engine and tester views | 19 | 5,503 | The deterministic core: diff the change, walk the graph within bounds, attach evidence, score with the rule table, and turn the result into the report and the tester views (test scope, regression test selection, configuration checks, coverage, automation inventory, tester pack, graph questions). |
+| 6 | Graph and identity resolution | 9 | 2,493 | Connects facts from many repositories into one typed graph: who calls which endpoint, which code reads which table, with the resolution strategy and evidence on every edge, plus the use-case structure (screens, elements, locators, requests, fields, rules). `graphschema` fixes the node and relationship types (docs/GRAPH-SCHEMA.md). Versioned graphs are stored, never edited. `kfontology` publishes this schema as a software ontology, `kfbridge` plans the links from it to Knowledge Fabric's business graph and `kfreview` turns the uncertain ones into review items. |
 | 7 | Extraction (language adapters) | 22 | 8,598 | Reads code as bytes and parses it into facts (endpoints, call sites, functions, schemas, tables, tests, UI elements). Never imports, runs or builds customer code. Facts are cached per git blob, so an unchanged file is never parsed twice. |
-| 8 | Tenancy, identity and persistence | 11 | 2,991 | Everything stored, and who it belongs to: tenant-bound database transactions, the analysis and evidence store with its audit chain, tenants and their configuration, users, roles, secrets and customer keys, retention and backup. |
-| 9 | Rules (deterministic, versioned) | 6 | 956 | The rule tables and their evaluation: severity, release policy, contract and event compatibility, team coordination. They depend on nothing but the foundations. Tenants can override them through configuration; every finding records which rule version produced it. One module here also acts: `coordination` delivers the team notifications its rules call for (chat webhook or e-mail, through the air-gap and outbound-safety guards). |
+| 8 | Tenancy, identity and persistence | 11 | 3,029 | Everything stored, and who it belongs to: tenant-bound database transactions, the analysis and evidence store with its audit chain, tenants and their configuration, users, roles, secrets and customer keys, retention and backup. |
+| 9 | Rules (deterministic, versioned) | 6 | 1,063 | The rule tables and their evaluation: severity, release policy, contract and event compatibility, team coordination. They depend on nothing but the foundations. Tenants can override them through configuration; every finding records which rule version produced it. One module here also acts: `coordination` delivers the team notifications its rules call for (chat webhook or e-mail, through the air-gap and outbound-safety guards). |
 | 10 | Foundations | 13 | 2,004 | Shared building blocks with no business logic: the data model, read-only git access, secret scrubbing, safe outbound connections, air-gap guard, transport security, logging, metrics and tracing. |
 
 ### Imports between layers
@@ -45,11 +45,11 @@ How many module imports go from each layer (row) to each layer (column), counted
 | From \ to | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1. Entry points | · | 3 | 4 | 6 | 7 | 2 | · | 6 | 1 | 12 |
-| 2. HTTP API, web UI and agent surfaces | · | 9 | 7 | 9 | 13 | 3 | 2 | 15 | 1 | 12 |
-| 3. Orchestration, ingestion and jobs | 1 | · | 5 | 8 | 5 | 5 | 2 | 6 | 2 | 8 |
-| 4. Source-control and change-management connectors | · | · | · | 8 | 5 | 3 | · | 1 | 3 | 17 |
+| 2. HTTP API, web UI and agent surfaces | · | 9 | 7 | 10 | 13 | 5 | 2 | 16 | 1 | 12 |
+| 3. Orchestration, ingestion and jobs | 1 | · | 5 | 9 | 5 | 6 | 2 | 6 | 2 | 8 |
+| 4. Source-control and change-management connectors | · | · | · | 8 | 5 | 3 | · | 1 | 3 | 18 |
 | 5. Impact engine and tester views | · | · | · | · | 22 | 12 | 4 | 2 | 5 | 17 |
-| 6. Graph and identity resolution | · | · | · | · | · | 8 | 3 | 1 | 1 | 6 |
+| 6. Graph and identity resolution | · | · | · | · | · | 9 | 3 | 1 | 2 | 6 |
 | 7. Extraction | · | · | · | · | · | · | 31 | 1 | 2 | 20 |
 | 8. Tenancy, identity and persistence | · | · | 1 | · | · | · | · | 17 | 6 | 13 |
 | 9. Rules | · | · | · | · | · | · | · | · | 1 | 5 |
@@ -76,7 +76,7 @@ The processes and commands that start everything: the API server, the queue work
 |---|---|---|---|---|
 | [`server`](../../tia/server.py) | 105 | Run the TIA server: python -m tia.server | 11 modules (layer 2: 2, layer 3: 1, layer 4: 2, layer 8: 2, layer 10: 4) | none |
 | [`worker`](../../tia/worker.py) | 114 | Worker loop: claims jobs from the queue and runs handlers. | `analysis_service`, `credentials`, `db`, `health`, `jobs`, `metrics`, `obs`, `tracing`, `transport`, `webhooks` | `analysis_service` |
-| [`cli`](../../tia/cli.py) | 358 | tia command line: analyze | 17 modules (layer 3: 1, layer 4: 3, layer 5: 7, layer 6: 2, layer 8: 2, layer 9: 1, layer 10: 1) | none |
+| [`cli`](../../tia/cli.py) | 409 | tia command line: analyze | 17 modules (layer 3: 1, layer 4: 3, layer 5: 7, layer 6: 2, layer 8: 2, layer 9: 1, layer 10: 1) | none |
 | [`migrate`](../../tia/migrate.py) | 37 | Apply database migrations and manage tenants | `credentials`, `db`, `transport` | none |
 
 ### 3.2 HTTP API, web UI and agent surfaces
@@ -85,16 +85,17 @@ Every way in: the REST API and web UI, sign-in, permissions on each request, the
 
 | Module | Lines | What it does | Uses | Used by |
 |---|---|---|---|---|
-| [`api`](../../tia/api.py) | 2,295 | TIA HTTP API and web UI (TFD section 8). | 56 modules (layer 2: 7, layer 3: 7, layer 4: 9, layer 5: 13, layer 6: 3, layer 7: 2, layer 8: 8, layer 9: 1, layer 10: 6) | `server` |
+| [`api`](../../tia/api.py) | 2,745 | TIA HTTP API and web UI (TFD section 8). | 59 modules (layer 2: 7, layer 3: 7, layer 4: 10, layer 5: 13, layer 6: 4, layer 7: 2, layer 8: 9, layer 9: 1, layer 10: 6) | `server` |
 | [`authapi`](../../tia/authapi.py) | 618 | Authentication, authorisation and the sign-in/administration endpoints (PL-001, PL-002). | `identity`, `jwtverify`, `netsafe`, `oidc`, `rbac`, `saml` | `api`, `server` |
 | [`oidc`](../../tia/oidc.py) | 133 | OpenID Connect (PL-001): browser sign-in by the authorization-code flow with PKCE, and bearer-token verification for API clients. | `identity`, `jwtverify`, `netsafe` | `authapi` |
 | [`saml`](../../tia/saml.py) | 216 | SAML 2.0 service provider (PL-001): SP-initiated sign-in, HTTP-Redirect request, HTTP-POST response. | `identity` | `authapi` |
 | [`ratelimit`](../../tia/ratelimit.py) | 112 | Request rate limiting (SECURITY T17, PRD 11 SaaS operations). | none | `api` |
 | [`gate`](../../tia/gate.py) | 92 | Request-path enforcement of the tenant lifecycle (UC1-20): is this tenant allowed to act, and is there storage room? | `db`, `tenants` | `api` |
 | [`health`](../../tia/health.py) | 214 | Health, readiness and scrape-time metrics (PL-007). | `credentials`, `db`, `metrics` | `api`, `worker` |
-| [`reportpage`](../../tia/reportpage.py) | 459 | The shareable report page for one analysis (UC1-16): what the PR comment and the check run link to. | none | `api` |
-| [`mcp`](../../tia/mcp.py) | 124 | MCP server for coding assistants (PRD FR-037, AC-032): read-only tools over the Model Context Protocol (JSON-RPC 2.0, the streamable-HTTP transport answered with single JSON responses) at POST /mcp, behind the same authentication ... | none | `api` |
-| [`kfadapter`](../../tia/kfadapter.py) | 466 | Knowledge Fabric V2.5 adapter: a finished Change Impact Report in the shape KF agents already consume (QueryResponse). | none | `api` |
+| [`reportpage`](../../tia/reportpage.py) | 470 | The shareable report page for one analysis (UC1-16): what the PR comment and the check run link to. | none | `api` |
+| [`mcp`](../../tia/mcp.py) | 125 | MCP server for coding assistants (PRD FR-037, AC-032): read-only tools over the Model Context Protocol (JSON-RPC 2.0, the streamable-HTTP transport answered with single JSON responses) at POST /mcp, behind the same authentication ... | none | `api` |
+| [`kfadapter`](../../tia/kfadapter.py) | 517 | Knowledge Fabric V2.5 adapter: a finished Change Impact Report in the shape KF agents already consume (QueryResponse). | none | `api` |
+| [`kfrouter`](../../tia/kfrouter.py) | 206 | The reference router: one question, two retrievers (docs/KF-BRIDGE.md section 13). | `kfbridge` | none |
 
 ### 3.3 Orchestration, ingestion and jobs
 
@@ -102,8 +103,8 @@ Turns a request into work: resolves revisions, registers and syncs repositories,
 
 | Module | Lines | What it does | Uses | Used by |
 |---|---|---|---|---|
-| [`analysis_service`](../../tia/analysis_service.py) | 703 | Resolve -> execute an impact analysis. | 27 modules (layer 1: 1, layer 3: 3, layer 4: 8, layer 5: 3, layer 6: 4, layer 7: 2, layer 8: 3, layer 9: 2, layer 10: 1) | `api`, `cli`, `worker` |
-| [`jobs`](../../tia/jobs.py) | 184 | PostgreSQL job queue (UC1-03). | `db`, `saas`, `scrub` | `analysis_service`, `api`, `worker` |
+| [`analysis_service`](../../tia/analysis_service.py) | 1,253 | Resolve -> execute an impact analysis. | 29 modules (layer 1: 1, layer 3: 3, layer 4: 9, layer 5: 3, layer 6: 5, layer 7: 2, layer 8: 3, layer 9: 2, layer 10: 1) | `api`, `cli`, `worker` |
+| [`jobs`](../../tia/jobs.py) | 195 | PostgreSQL job queue (UC1-03). | `db`, `saas`, `scrub` | `analysis_service`, `api`, `worker` |
 | [`repos`](../../tia/repos.py) | 463 | Repository ingestion: register and sync repositories from GitHub, Azure DevOps, any git URL, or a local path. | `airgap`, `credentials`, `gitutil`, `metrics`, `netsafe`, `tracing`, `upload` | `analysis_service`, `api`, `store`, `upload` |
 | [`upload`](../../tia/upload.py) | 258 | Code upload (UC1 ingestion): a zip archive or a whole folder from the user's own drive becomes a git repository in TIA's storage, so uploaded code gets the same revisions, diffs, graph and impact analysis as a cloned repository. | `repos` | `api`, `repos`, `server` |
 | [`relationships`](../../tia/relationships.py) | 124 | Relationship history and staleness (UC1-12, AC-011, FR-005). | `graph`, `store` | `analysis_service` |
@@ -117,7 +118,7 @@ Talks to the outside on the platform's behalf: webhooks in, pull-request comment
 
 | Module | Lines | What it does | Uses | Used by |
 |---|---|---|---|---|
-| [`webhooks`](../../tia/webhooks.py) | 114 | SCM webhook receiving (UC1-05): signature verification, pull-request event parsing, repository matching, and the server-side connector configuration used by the webhook endpoint and the worker. | `credentials`, `transport` | `access`, `analysis_service`, `api`, `githubapp`, `publish`, `server`, `worker` |
+| [`webhooks`](../../tia/webhooks.py) | 115 | SCM webhook receiving (UC1-05): signature verification, pull-request event parsing, repository matching, and the server-side connector configuration used by the webhook endpoint and the worker. | `credentials`, `transport` | `access`, `analysis_service`, `api`, `githubapp`, `publish`, `server`, `worker` |
 | [`github`](../../tia/github.py) | 178 | Publish the advisory PR comment (PRD FR-035 P0) and a check run. | `airgap`, `metrics`, `policy`, `report`, `tracing` | `access`, `cli`, `githubapp`, `publish` |
 | [`githubapp`](../../tia/githubapp.py) | 257 | GitHub App connector (UC1-04): the platform's own GitHub App replaces personal access tokens. | `airgap`, `github`, `jwtverify`, `webhooks` | `analysis_service`, `api` |
 | [`publish`](../../tia/publish.py) | 92 | Publish an analysis to a GitHub pull request: one advisory comment and one advisory check run, both updated in place. | `github`, `metrics`, `report`, `webhooks` | `analysis_service`, `api` |
@@ -125,8 +126,9 @@ Talks to the outside on the platform's behalf: webhooks in, pull-request comment
 | [`ado`](../../tia/ado.py) | 277 | Azure DevOps connector (UC1-06 service hooks, UC1-15 pull-request thread and status). | `airgap`, `credentials`, `metrics`, `policy`, `report` | `access`, `analysis_service`, `api`, `server` |
 | [`itsm`](../../tia/itsm.py) | 133 | Change-management integration: ServiceNow first (PRD FR-038, AC-031). | `netsafe` | `analysis_service`, `api` |
 | [`access`](../../tia/access.py) | 225 | Per-repository access control (PL-002, AC-016): which repositories a principal may read, mirrored from the source-code host. | `ado`, `github`, `identity`, `scmhosts`, `webhooks` | `analysis_service`, `api` |
-| [`neo4jgraph`](../../tia/neo4jgraph.py) | 681 | TIA's graph mirrored into Neo4j (docs/NEO4J.md). | `airgap`, `graphschema`, `kfbridge`, `kfontology`, `regression` | `analysis_service`, `api`, `cli` |
+| [`neo4jgraph`](../../tia/neo4jgraph.py) | 738 | TIA's graph mirrored into Neo4j (docs/NEO4J.md). | `airgap`, `graphschema`, `kfbridge`, `kfontology`, `regression` | `analysis_service`, `api`, `cli` |
 | [`kflinks`](../../tia/kflinks.py) | 307 | Links between TIA's code graph and Knowledge Fabric's document-derived nodes (docs/NEO4J.md, docs/NEO4J.md). | `models` | `api`, `cli` |
+| [`kfinbox`](../../tia/kfinbox.py) | 140 | TIA's review items in Knowledge Fabric's review screen (docs/KF-BRIDGE.md section 12, phase 2). | `netsafe` | `analysis_service`, `api` |
 
 ### 3.5 Impact engine and tester views
 
@@ -134,10 +136,10 @@ The deterministic core: diff the change, walk the graph within bounds, attach ev
 
 | Module | Lines | What it does | Uses | Used by |
 |---|---|---|---|---|
-| [`impact`](../../tia/impact.py) | 1,041 | Change-impact engine. | 28 modules (layer 5: 8, layer 6: 5, layer 7: 3, layer 8: 2, layer 9: 5, layer 10: 5) | `analysis_service`, `api`, `cli` |
+| [`impact`](../../tia/impact.py) | 1,053 | Change-impact engine. | 28 modules (layer 5: 8, layer 6: 5, layer 7: 3, layer 8: 2, layer 9: 5, layer 10: 5) | `analysis_service`, `api`, `cli` |
 | [`enrich`](../../tia/enrich.py) | 376 | Evidence enrichment of an analysis (PRD FR-022 to FR-029): CI results, coverage, runtime observations and deployments, read from TIA's evidence store (never queried live) and pinned in the analysis's evidence snapshot. | `evidence`, `graph`, `models` | `api`, `impact` |
 | [`evidence`](../../tia/evidence.py) | 435 | Ingested evidence (PRD FR-022 CI results, FR-023 coverage, FR-026/027 runtime, FR-028/029 deployments): parsers and the tenant store. | `models`, `scrub` | `analysis_service`, `api`, `enrich`, `incidents` |
-| [`report`](../../tia/report.py) | 439 | Report rendering and audience filtering (PRD section 8, 9.1, 11.1). | `configkeys`, `diagram`, `kfbridge`, `regression`, `testscope` | `ado`, `analysis_service`, `api`, `cli`, `github`, `publish`, `scmhosts` |
+| [`report`](../../tia/report.py) | 448 | Report rendering and audience filtering (PRD section 8, 9.1, 11.1). | `configkeys`, `diagram`, `kfbridge`, `regression`, `testscope` | `ado`, `analysis_service`, `api`, `cli`, `github`, `publish`, `scmhosts` |
 | [`findingfilter`](../../tia/findingfilter.py) | 98 | Report filters (PRD 9.3): severity; service or repository; direct versus transitive impact; contract, data, test, runtime and operational impact; evidence status; environment; policy result; unresolved or stale evidence. | none | `api` |
 | [`findings_catalog`](../../tia/findings_catalog.py) | 98 | Explainable finding catalog packaging (Pulse RULE_CATALOG shape, TIA content). | none | `impact`, `structure` |
 | [`structure`](../../tia/structure.py) | 175 | Structural risk amplifiers on the evidence graph (Pulse cycles / coupling / layers port). | `findings_catalog` | `impact` |
@@ -156,7 +158,7 @@ The deterministic core: diff the change, walk the graph within bounds, attach ev
 
 ### 3.6 Graph and identity resolution
 
-Connects facts from many repositories into one typed graph: who calls which endpoint, which code reads which table, with the resolution strategy and evidence on every edge, plus the use-case structure (screens, elements, locators, requests, fields, rules). `graphschema` fixes the node and relationship types (docs/GRAPH-SCHEMA.md). Versioned graphs are stored, never edited. `kfontology` publishes this schema as a software ontology and `kfbridge` plans the links from it to Knowledge Fabric's business graph.
+Connects facts from many repositories into one typed graph: who calls which endpoint, which code reads which table, with the resolution strategy and evidence on every edge, plus the use-case structure (screens, elements, locators, requests, fields, rules). `graphschema` fixes the node and relationship types (docs/GRAPH-SCHEMA.md). Versioned graphs are stored, never edited. `kfontology` publishes this schema as a software ontology, `kfbridge` plans the links from it to Knowledge Fabric's business graph and `kfreview` turns the uncertain ones into review items.
 
 | Module | Lines | What it does | Uses | Used by |
 |---|---|---|---|---|
@@ -166,8 +168,9 @@ Connects facts from many repositories into one typed graph: who calls which endp
 | [`data`](../../tia/data.py) | 377 | Data layer of the graph and data-change detection (FR-006, FR-006a, FR-015, AC-024). | `models` | `graph`, `impact` |
 | [`graphschema`](../../tia/graphschema.py) | 134 | The TIA graph schema: every node type and relationship type, what each relationship connects, and which ones a change travels along. | none | `graph`, `graphquery`, `graphstore`, `graphstructure`, `graphview`, `kfontology`, `neo4jgraph` |
 | [`graphstructure`](../../tia/graphstructure.py) | 170 | Use-case structure in the graph (docs/GRAPH-SCHEMA.md): screens, elements and locators for automation; requests, responses and fields for API testing; business rules found in code. | `graphschema`, `models` | `graph` |
-| [`kfontology`](../../tia/kfontology.py) | 123 | TIA's software ontology and the TIA <-> Knowledge Fabric bridge ontology, in Knowledge Fabric's canonical shape (docs/KF-BRIDGE.md section 5). | `graphschema` | `analysis_service`, `api`, `neo4jgraph` |
-| [`kfbridge`](../../tia/kfbridge.py) | 497 | The TIA <-> Knowledge Fabric bridge: settings, link planning and business impact (docs/KF-BRIDGE.md). | `kfidentity`, `kfsettings` | `analysis_service`, `impact`, `neo4jgraph`, `report` |
+| [`kfontology`](../../tia/kfontology.py) | 137 | TIA's software ontology and the TIA <-> Knowledge Fabric bridge ontology, in Knowledge Fabric's canonical shape (docs/KF-BRIDGE.md section 5). | `graphschema` | `analysis_service`, `api`, `neo4jgraph` |
+| [`kfbridge`](../../tia/kfbridge.py) | 929 | The TIA <-> Knowledge Fabric bridge: settings, link planning and business impact (docs/KF-BRIDGE.md). | `kfidentity`, `kfsettings` | `analysis_service`, `impact`, `kfreview`, `kfrouter`, `neo4jgraph`, `report` |
+| [`kfreview`](../../tia/kfreview.py) | 294 | Review of the links between code and Knowledge Fabric (human in the loop; docs/KF-BRIDGE.md section 12). | `kfbridge`, `kfsettings` | `analysis_service`, `api` |
 
 ### 3.7 Extraction (language adapters)
 
@@ -205,11 +208,11 @@ Everything stored, and who it belongs to: tenant-bound database transactions, th
 | Module | Lines | What it does | Uses | Used by |
 |---|---|---|---|---|
 | [`db`](../../tia/db.py) | 109 | PostgreSQL access: connection pool with tenant-bound transactions, migrations, tenant registry. | none | 13 modules (layer 1: 4, layer 2: 3, layer 3: 1, layer 8: 5) |
-| [`store`](../../tia/store.py) | 329 | Tenant-scoped persistence on PostgreSQL: evidence cache, analyses, repository registry, audit chain. | `db`, `identity`, `models`, `repos`, `scrub`, `tenantconfig` | `analysis_service`, `api`, `cli`, `extraction`, `graphstore`, `impact`, `relationships`, `retention` |
+| [`store`](../../tia/store.py) | 364 | Tenant-scoped persistence on PostgreSQL: evidence cache, analyses, repository registry, audit chain. | `db`, `identity`, `models`, `repos`, `scrub`, `tenantconfig` | `analysis_service`, `api`, `cli`, `extraction`, `graphstore`, `impact`, `relationships`, `retention` |
 | [`tenants`](../../tia/tenants.py) | 532 | Tenant lifecycle (UC1-20, PL-013, AC-039): provision, suspend / resume, SCM installation mapping, storage quota, offboarding with verified deletion. | `credentials`, `db`, `identity`, `kms`, `saas`, `secretstore`, `tenantconfig` | `gate`, `secretstore` |
 | [`tenantconfig`](../../tia/tenantconfig.py) | 416 | Per-tenant configuration, versioned (UC1-24; PRD 7.3 configurable severity, FR-016 configurable limits, PL-003 per-tenant configuration). | `contracts`, `coordination`, `events`, `kfsettings`, `models`, `policy`, `retention`, `scrub`, `severity` | `analysis_service`, `api`, `impact`, `retention`, `store`, `tenants` |
 | [`identity`](../../tia/identity.py) | 585 | Identity store (PL-001, PL-002): identity providers, users, browser sessions, service-account tokens, and the Principal every request runs as. | `db`, `jwtverify`, `netsafe`, `rbac`, `scrub` | `access`, `api`, `authapi`, `oidc`, `saml`, `store`, `tenants` |
-| [`rbac`](../../tia/rbac.py) | 126 | Roles, permissions and the route table (PL-002). | none | `authapi`, `identity` |
+| [`rbac`](../../tia/rbac.py) | 129 | Roles, permissions and the route table (PL-002). | none | `api`, `authapi`, `identity` |
 | [`secretstore`](../../tia/secretstore.py) | 231 | Per-tenant secret storage with envelope encryption (PL-011; the key hierarchy of PL-016 without customer-managed keys). | `credentials`, `db`, `tenants` | `analysis_service`, `api`, `server`, `tenants` |
 | [`kms`](../../tia/kms.py) | 208 | Customer-managed keys (PRD PL-016 BYOK): a tenant's data-encryption key wrapped by a key in the CUSTOMER's KMS. | `airgap`, `credentials` | `api`, `tenants` |
 | [`saas`](../../tia/saas.py) | 118 | SaaS operations per tenant: usage metering and plan limits (PRD PL-014), data residency (PL-015, AC-041). | none | `api`, `jobs`, `tenants` |
@@ -227,7 +230,7 @@ The rule tables and their evaluation: severity, release policy, contract and eve
 | [`contracts`](../../tia/contracts.py) | 147 | REST contract comparison (PRD FR-018 basic and full). | `models` | `impact`, `tenantconfig` |
 | [`events`](../../tia/events.py) | 162 | Event and message contracts (PRD FR-019, FR-020 events, AC-028). | none | `extract_java`, `extract_python`, `impact`, `tenantconfig` |
 | [`coordination`](../../tia/coordination.py) | 197 | Multi-team change coordination (PRD FR-045). | `airgap`, `netsafe` | `analysis_service`, `policy`, `tenantconfig` |
-| [`kfsettings`](../../tia/kfsettings.py) | 95 | The `knowledge_fabric` tenant setting: defaults and validation (docs/KF-BRIDGE.md section 7). | `kfidentity` | `analysis_service`, `cli`, `impact`, `kfbridge`, `tenantconfig` |
+| [`kfsettings`](../../tia/kfsettings.py) | 202 | The `knowledge_fabric` tenant setting: defaults and validation (docs/KF-BRIDGE.md section 7). | `kfidentity` | `analysis_service`, `cli`, `impact`, `kfbridge`, `kfreview`, `tenantconfig` |
 
 ### 3.10 Foundations
 
@@ -240,7 +243,7 @@ Shared building blocks with no business logic: the data model, read-only git acc
 | [`scrub`](../../tia/scrub.py) | 181 | Keep secrets out of TIA's records and reports (PL-011; PRD 11.4 P0: "secrets, credentials ... must not be copied into graph records or reports"; TFD 11: credentials found in source files are never copied). | none | 11 modules (layer 1: 1, layer 2: 1, layer 3: 1, layer 5: 2, layer 7: 1, layer 8: 3, layer 10: 2) |
 | [`credentials`](../../tia/credentials.py) | 248 | Where TIA's own secrets come from (PL-011): an approved secrets manager, never source code and never the database in clear. | `airgap` | 15 modules (layer 1: 3, layer 2: 1, layer 3: 1, layer 4: 3, layer 8: 5, layer 10: 2) |
 | [`transport`](../../tia/transport.py) | 68 | Encryption in transit (PL-011): refuse insecure transport instead of discovering it later. | `airgap`, `credentials` | `migrate`, `server`, `tracing`, `webhooks`, `worker` |
-| [`netsafe`](../../tia/netsafe.py) | 154 | Outbound fetches to addresses a tenant administrator controls (identity-provider discovery, JWKS, token endpoint). | `airgap` | `authapi`, `coordination`, `identity`, `itsm`, `oidc`, `repos` |
+| [`netsafe`](../../tia/netsafe.py) | 154 | Outbound fetches to addresses a tenant administrator controls (identity-provider discovery, JWKS, token endpoint). | `airgap` | `authapi`, `coordination`, `identity`, `itsm`, `kfinbox`, `oidc`, `repos` |
 | [`airgap`](../../tia/airgap.py) | 62 | Air-gapped operation (PRD deployment option: no connection outside the customer's network). | none | 13 modules (layer 2: 1, layer 3: 1, layer 4: 5, layer 8: 1, layer 9: 1, layer 10: 4) |
 | [`jwtverify`](../../tia/jwtverify.py) | 186 | JSON Web Token verification for OpenID Connect (PL-001), on the `cryptography` package, no other dependency. | none | `authapi`, `githubapp`, `identity`, `oidc` |
 | [`metrics`](../../tia/metrics.py) | 227 | Platform and analysis metrics in the Prometheus text exposition format (PL-007, TFD 14). | none | `ado`, `api`, `github`, `health`, `publish`, `repos`, `scmhosts`, `telemetry`, `tracing`, `worker` |
@@ -312,6 +315,7 @@ One PostgreSQL database, shared by all tenants. Every tenant-owned row carries `
 | `scm_sync_status` | `0012_repo_access.sql` | forced row-level security |
 | `evidence_records` | `0014_evidence.sql` | forced row-level security |
 | `audit_anchors` | `0017_releases_incidents_retention.sql` | forced row-level security |
+| `kf_review_items` | `0022_kf_review_items.sql` | forced row-level security |
 
 Outside the database there is one volume, `/var/lib/tia/repos`: a bare git clone per registered repository and each uploaded folder or zip turned into a git repository. Code there is read as bytes and parsed; it is never imported, executed or built.
 

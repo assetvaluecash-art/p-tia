@@ -16,6 +16,7 @@ Status words: **Met** = the criterion holds on evidence produced here. **Met (si
 | R4 | Met (simulated) | AC-036 (`test_scmhosts`), AC-037 (`test_sql_lineage`), AC-038 (`test_release4`); Azure DevOps permission mirror and namespace routing for every host (`test_ado`, `test_scmhosts`, 2026-11-12) |
 | Requirements closed 2026-11-12 | Met | FR-004 Django REST routes (`test_django_routes`), FR-007 builds, rollbacks, failure signatures (`test_operations_entities`), PL-003 webhook tenant routing, FR-039/PL-002 Azure DevOps mirror |
 | PRD v3.2 tester outputs | Met | AC-042 (`test_testscope`), AC-043 and AC-044 (`test_tester_views`), plus real-Chrome checks of the tester views |
+| Knowledge Fabric section in the web UI (KF-UI-PLAN, 2026-11-25) | Met (simulated) | `test_kfbridge_ui` (API, permissions, escaping, script parses), `test_kfbridge_ui_live` (Neo4j 5.26 + simulated Knowledge Fabric), 25/25 headless-Chromium checks on `run_dev.py --demo --kf`; not yet against a real Knowledge Fabric |
 
 Whole suite on 2026-11-06: 1168 passed, 0 failed, on real PostgreSQL 16 and real git.
 

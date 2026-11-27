@@ -13,6 +13,7 @@ PERMISSIONS = {
     "repo_write": {"engineer", "release_manager", "administrator"},                         # register, sync, discover, upload, rescan
     "repo_delete": {"administrator"},
     "evidence_write": {"engineer", "release_manager", "administrator"},                     # push CI results, coverage, telemetry, deployments
+    "kf_review": {"engineer", "release_manager", "administrator"},                          # decide uncertain links between code and Knowledge Fabric
     "config_write": {"release_manager", "administrator"},                                    # severity, materiality, limits, criticality, audience
     "audit_read": {"auditor", "administrator"},
     "access_sync": {"release_manager", "administrator"},                                     # refresh the mirror of the source-code host's permissions
@@ -30,12 +31,14 @@ ROUTES = {
     ("POST", "/api/v1/webhooks/ado"): PUBLIC,                              # authenticated by the service hook's basic-auth credentials
     ("POST", "/api/v1/webhooks/gitlab"): PUBLIC,                           # authenticated by the webhook's secret token
     ("POST", "/api/v1/webhooks/bitbucket"): PUBLIC,                        # authenticated by HMAC signature
+    ("POST", "/api/v1/webhooks/kf-review"): PUBLIC,                        # Knowledge Fabric's review screen; authenticated by HMAC signature
     ("GET", "/auth/options"): PUBLIC, ("GET", "/auth/login"): PUBLIC, ("GET", "/auth/callback"): PUBLIC,
     ("POST", "/auth/saml/acs"): PUBLIC, ("GET", "/auth/saml/metadata"): PUBLIC,
     ("GET", "/auth/me"): PUBLIC,                                           # answers {authenticated: false} instead of 401, for the UI shell
     ("POST", "/auth/logout"): AUTHENTICATED,
     ("GET", "/api/v1/me"): AUTHENTICATED,
     ("POST", "/query/tia"): "read",                                        # Knowledge Fabric V2 agents: a finished report as a QueryResponse
+    ("POST", "/query/tia/resolve"): "read",                                # exact lookup of the anchors a router found in a question
     ("GET", "/api/v1/config"): PUBLIC,
     ("GET", "/api/v1/tenant"): "read",
     # tenant configuration
@@ -77,7 +80,7 @@ ROUTES = {
     ("POST", "/api/v1/impact-analyses/{aid}/change-record"): "analyze",
     ("POST", "/mcp"): "read",                                              # MCP tools are read-only (FR-037)
     ("GET", "/api/v1/usage"): "admin",
-    ("GET", "/api/v1/evidence"): "read", ("DELETE", "/api/v1/evidence/{rid}"): "evidence_write", ("GET", "/api/v1/environments"): "read", ("POST", "/api/v1/graph/rescan"): "repo_write", ("POST", "/api/v1/graph/neo4j-sync"): "repo_write", ("POST", "/api/v1/graph/kf-links"): "repo_write", ("GET", "/api/v1/graph/ontology"): "read", ("GET", "/api/v1/kf/customers"): "config_write", ("POST", "/api/v1/kf/relink"): "repo_write", ("GET", "/api/v1/kf/links"): "read", ("GET", "/api/v1/kf/gaps"): "read", ("GET", "/api/v1/kf/rule-proposals"): "read", ("POST", "/api/v1/kf/rule-proposals/{proposal_id}"): "repo_write", ("POST", "/api/v1/graph/registry-match"): "read", ("GET", "/api/v1/graph/flows"): "read", ("POST", "/api/v1/automation/script"): "read",
+    ("GET", "/api/v1/evidence"): "read", ("DELETE", "/api/v1/evidence/{rid}"): "evidence_write", ("GET", "/api/v1/environments"): "read", ("POST", "/api/v1/graph/rescan"): "repo_write", ("POST", "/api/v1/graph/neo4j-sync"): "repo_write", ("POST", "/api/v1/graph/kf-links"): "repo_write", ("GET", "/api/v1/graph/ontology"): "read", ("GET", "/api/v1/kf/customers"): "config_write", ("POST", "/api/v1/kf/relink"): "repo_write", ("GET", "/api/v1/kf/links"): "read", ("GET", "/api/v1/kf/gaps"): "read", ("GET", "/api/v1/kf/status"): "read", ("PATCH", "/api/v1/kf/settings"): "config_write", ("GET", "/api/v1/kf/overlay"): "read", ("GET", "/api/v1/kf/node"): "read", ("GET", "/api/v1/kf/decisions"): "read", ("GET", "/api/v1/kf/review-measures"): "read",("DELETE", "/api/v1/kf/links"): "config_write",("GET", "/api/v1/kf/rule-proposals"): "read", ("POST", "/api/v1/kf/rule-proposals/{proposal_id}"): "repo_write", ("GET", "/api/v1/kf/catalog"): "read", ("GET", "/api/v1/kf/products"): "read", ("PUT", "/api/v1/kf/products/{repository}"): "config_write", ("GET", "/api/v1/kf/reviews"): "read", ("GET", "/api/v1/kf/reviews/{item_id}"): "read", ("GET", "/api/v1/kf/reviews/{item_id}/history"): "read", ("POST", "/api/v1/kf/reviews/{item_id}/decision"): "kf_review", ("POST", "/api/v1/kf/reviews/decisions"): "kf_review", ("POST", "/api/v1/graph/registry-match"): "read", ("GET", "/api/v1/graph/flows"): "read", ("POST", "/api/v1/automation/script"): "read",
     # analyses
     ("POST", "/api/v1/impact-analyses"): "analyze", ("GET", "/api/v1/jobs/{job_id}"): "read", ("DELETE", "/api/v1/jobs/{job_id}"): "analyze",
     ("GET", "/api/v1/impact-analyses/{aid}"): "read", ("GET", "/analyses/{aid}"): "read",

@@ -25,13 +25,15 @@ from fastapi import FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-from . import authapi, kfadapter, kflinks, kfontology, neo4jgraph
+from . import authapi, kfadapter, kfinbox, kflinks, kfontology, kfreview, neo4jgraph, rbac
 from .airgap import AirGapError
 from .identity import current_principal
 from .graphview import LEVELS, build_view, impact_overlay, landscape_stats, restrict
-from .analysis_service import (KfBridgeError, kf_bridge_run, kf_decide, kf_enqueue, kf_last_run, kf_next_poll, kf_settings,
+from .analysis_service import (KF_JOB_KINDS, KfBridgeError, ReviewConflict, VersionConflict, kf_bridge_run, kf_decide, kf_decision_list,
+                               kf_enqueue, kf_inbox_receive, kf_last_run, kf_next_poll, kf_node, kf_overlay, kf_review_decide, kf_review_get,
+                               kf_review_history, kf_review_measures, kf_reviews, kf_settings, kf_settings_patch, kf_status, kf_unlink,
                                coordination_status, execute, notify_owners, group_key, job_key, landscape_extracts, pr_event_group_key, pr_event_job_key,
                                refresh_landscape, reproduce, rescan_landscape, resolve)
 from .graphstore import LANDSCAPE, get_or_build
@@ -190,9 +192,76 @@ KF_LABELS = {"System", "TestCase", "Requirement", "Rule", "FormCapture", "DataEn
 
 
 class KfDecisionIn(BaseModel):
-    """POST /api/v1/kf/rule-proposals/{id}: a person's decision on a proposed (code rule, Knowledge Fabric Rule) pair."""
-    decision: Literal["confirm", "reject"]
+    """POST /api/v1/kf/rule-proposals/{id}: a person's decision on a proposed (code rule, Knowledge Fabric Rule) pair; reset undoes one."""
+    decision: Literal["confirm", "reject", "reset"]
     comment: Optional[str] = Field(None, max_length=1000)
+
+
+class KfAliasIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    setting: Literal["system_aliases", "screen_aliases", "data_aliases"]
+    from_: str = Field(..., alias="from", min_length=1, max_length=500, description="the TIA side: a service, a screen route or component, an entity or table")
+    to: list[str] = Field(..., min_length=1, max_length=20, description="Knowledge Fabric names, or id:<64-hex entity id> to name one node exactly")
+
+
+class KfSettingsPatchIn(BaseModel):
+    """PATCH /api/v1/kf/settings: a partial change to the knowledge_fabric setting, saved as a new configuration version."""
+    model_config = ConfigDict(extra="forbid")
+    set: dict[str, Any] = Field(default_factory=dict, description="settings to replace (enabled, customer_id, domains, poll_minutes, ...)")
+    add_aliases: list[KfAliasIn] = Field(default_factory=list, max_length=500)
+    remove_aliases: list[KfAliasIn] = Field(default_factory=list, max_length=500)
+    expected_version: Optional[int] = Field(None, description="the configuration version you edited; a newer one answers 409")
+    comment: Optional[str] = Field(None, max_length=500)
+
+
+class PlaceIn(BaseModel):
+    """A place in Knowledge Fabric's business tree: domain > product line > function > sub-function (docs/KF-BRIDGE.md section 11)."""
+    model_config = ConfigDict(extra="forbid")
+    domain: str = Field(..., min_length=1, max_length=200)
+    product_line: str = Field(..., min_length=1, max_length=200)
+    function: Optional[str] = Field(None, min_length=1, max_length=200)
+    sub_function: Optional[str] = Field(None, min_length=1, max_length=200)
+
+
+class KfProductsIn(BaseModel):
+    """PUT /api/v1/kf/products/{repository}: where the repository (and, optionally, each of its services) sits. An empty list removes it."""
+    model_config = ConfigDict(extra="forbid")
+    places: list[PlaceIn] = Field(default_factory=list, max_length=5)
+    services: dict[str, list[PlaceIn]] = Field(default_factory=dict, description="per-service places for services of this repository")
+    expected_version: Optional[int] = Field(None, description="the configuration version you edited; a newer one answers 409")
+    comment: Optional[str] = Field(None, max_length=500)
+
+
+class KfReviewDecisionIn(BaseModel):
+    """POST /api/v1/kf/reviews/{item_id}/decision (docs/KF-BRIDGE.md section 12)."""
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["confirm", "choose", "confirm_with_alias", "reject", "defer", "reset"]
+    kf_entity_id: Optional[str] = Field(None, max_length=200, description="the chosen candidate (choose, confirm_with_alias)")
+    place: Optional[PlaceIn] = Field(None, description="another place (product_suggestion choose, product_conflict choose)")
+    comment: Optional[str] = Field(None, max_length=1000)
+
+
+class KfReviewBulkItem(KfReviewDecisionIn):
+    item_id: str = Field(..., min_length=1, max_length=40)
+
+
+class KfReviewBulkIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    decisions: list[KfReviewBulkItem] = Field(..., min_length=1, max_length=200)
+
+
+class ResolveAnchor(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["issue_key", "pull_request", "commit", "repository", "service", "endpoint", "test_case"]
+    value: str = Field(..., min_length=1, max_length=300)
+    repository: Optional[str] = Field(None, max_length=200, description="narrows a pull request or commit to one repository")
+
+
+class ResolveIn(BaseModel):
+    """POST /query/tia/resolve: structured anchors only. Free text is refused: TIA never guesses a change from a question."""
+    model_config = ConfigDict(extra="forbid")
+    anchors: list[ResolveAnchor] = Field(..., min_length=1, max_length=50)
+    customer_id: Optional[str] = Field(None, max_length=300)
 
 
 class KfLinksIn(BaseModel):
@@ -999,16 +1068,18 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
             raise HTTPException(403, f"{what} uses every repository of the tenant: only a principal who may read all of them can do it")
 
     @app.get("/api/v1/graph/ontology")
-    def graph_ontology(format: str = "json"):
+    def graph_ontology(format: str = "json", download: bool = False):
         """TIA's software ontology and the TIA <-> Knowledge Fabric bridge ontology, in Knowledge Fabric's canonical shape
-        (node_types with a layer, relationship_types with allowed_triples). format=yaml returns YAML text."""
+        (node_types with a layer, relationship_types with allowed_triples). format=yaml returns YAML text; download=true asks the browser
+        to save it as a file."""
         docs = kfontology.ontologies()
+        if format not in ("json", "yaml"):
+            raise HTTPException(400, "format must be json or yaml")
+        hdr = {"Content-Disposition": f'attachment; filename="tia-ontologies.{format}"'} if download else None
         if format == "yaml":
             return PlainTextResponse(kfontology.to_yaml(docs["software"]) + "---\n" + kfontology.to_yaml(docs["bridge"]),
-                                     media_type="application/yaml")
-        if format != "json":
-            raise HTTPException(400, "format must be json or yaml")
-        return docs
+                                     media_type="application/yaml", headers=hdr)
+        return JSONResponse(docs, headers=hdr) if download else docs
 
     @app.get("/api/v1/kf/customers")
     def kf_customers():
@@ -1052,15 +1123,111 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
                 "links_total": last["links_total"], "links": last["links"][: min(max(limit, 1), 5000)]}
 
     @app.get("/api/v1/kf/gaps")
-    def kf_gaps():
+    def kf_gaps(suggest: bool = False):
         """What the latest bridge run could not link: services without a System, Systems without code, declared names not found, ambiguous
-        names, test cases on one side only, domains the customer does not have."""
+        names, test cases on one side only, domains the customer does not have. suggest=true adds, to each unlinked TIA item, up to three
+        close Knowledge Fabric names (shared words), and to each unclaimed Knowledge Fabric node the TIA items it was suggested for: a
+        person links one by saving an alias; nothing is linked by a suggestion."""
         require_all_repos("The Knowledge Fabric bridge")
         last = kf_last_run(store)
         if not last:
             raise HTTPException(404, "the Knowledge Fabric bridge has not run for this tenant")
-        return {"at": last["at"], "customer_id": last["customer_id"], "domains": last["domains"], "gaps": last["gaps"],
+        gaps = last["gaps"]
+        if suggest:
+            sug = {s["tia_id"]: s["candidates"] for s in last.get("link_suggestions") or []}
+            back: dict = {}
+            for s in last.get("link_suggestions") or []:
+                for c in s["candidates"]:
+                    back.setdefault(c["entity_id"], []).append({"tia_id": s["tia_id"], "kind": s["kind"], "name": s.get("name"),
+                                                                "service": s.get("service"), "score": c.get("score")})
+            gaps = {k: [dict(g) for g in v] for k, v in gaps.items()}
+            for k in ("unmapped_service", "unlinked_screens", "unlinked_data"):
+                for g in gaps.get(k) or []:
+                    g["suggestions"] = sug.get(g.get("tia_id") or g.get("item"), [])
+            for k in ("systems_without_code", "forms_without_screen", "data_entities_without_code"):
+                for g in gaps.get(k) or []:
+                    g["suggestions"] = sorted(back.get(g.get("entity_id"), []), key=lambda x: -(x["score"] or 0))[:3]
+        return {"at": last["at"], "customer_id": last["customer_id"], "domains": last["domains"], "gaps": gaps,
                 "warnings": last.get("warnings", [])}
+
+    # ---- the Knowledge Fabric section of the web UI (docs/plans/KF-UI-PLAN.md section 7) -------------------------------------------
+    def all_readable() -> bool:
+        allowed = readable(current_principal.get())
+        return allowed is None or {r.name for r in svc.list()} <= set(allowed)
+
+    def readable_set() -> Optional[set]:
+        allowed = readable(current_principal.get())
+        return None if allowed is None else set(allowed)
+
+    @app.get("/api/v1/kf/status")
+    def kf_status_view():
+        """The state of the bridge for the status strip: off, never_run, running, failed or connected; the last run (when, why, how long,
+        what was added, kept and removed), the counts of links, gaps and items to review, the bridge job being followed and the next poll.
+        Names, warnings and the failure text only for a principal who may read every repository; others get the counts."""
+        return kf_status(store, jobs, all_readable(), neo4jgraph.config_from_env() is not None)
+
+    @app.patch("/api/v1/kf/settings")
+    def kf_settings_update(body: KfSettingsPatchIn, x_tia_actor: Optional[str] = Header(None)):
+        """Change part of the knowledge_fabric setting (turn on, customer, domains, options) and add or remove single aliases, as a new
+        configuration version with your comment. expected_version protects against two people editing at once (409 with the current
+        version). The bridge relinks when auto_relink is on."""
+        actor = actor_of(x_tia_actor)
+        try:
+            out = kf_settings_patch(store, body.set, [a.model_dump(by_alias=True) for a in body.add_aliases],
+                                    [a.model_dump(by_alias=True) for a in body.remove_aliases], actor, body.comment, body.expected_version)
+        except VersionConflict as e:
+            raise HTTPException(409, {"message": str(e), "version": e.version})
+        except ConfigError as e:
+            raise HTTPException(422, {"message": "invalid Knowledge Fabric settings", "problems": e.problems})
+        if out["created"]:
+            kf_trigger("settings")
+        return out
+
+    @app.get("/api/v1/kf/overlay")
+    def kf_overlay_view():
+        """The latest run's links for the code graph view (tia_id = the graph's node id): only those whose code is in a repository you may read."""
+        last = kf_last_run(store)
+        if not last:
+            raise HTTPException(404, "the Knowledge Fabric bridge has not run for this tenant")
+        return kf_overlay(last, readable_set())
+
+    @app.get("/api/v1/kf/node")
+    def kf_node_view(id: str = Query(..., min_length=1, max_length=1000)):
+        """One graph node's Knowledge Fabric links with the business context the latest run captured: requirements, processes, defects,
+        incidents and the test cases covering them (with the TIA test case ids they are the same as)."""
+        last = kf_last_run(store)
+        out = kf_node(store, last, id, readable_set()) if last else None
+        if out is None:
+            raise HTTPException(404, "this node has no Knowledge Fabric link in the latest bridge run")
+        return out
+
+    @app.get("/api/v1/kf/decisions")
+    def kf_decisions_view(kind: Optional[str] = None, limit: int = 200):
+        """Every decision people made on the bridge (links, business-rule pairs, product places, issue keys), newest first, with who, when
+        and why; only those about code in repositories you may read."""
+        if kind and kind not in ("link", "rule", "product", "story"):
+            raise HTTPException(400, "kind must be link, rule, product or story")
+        rows = kf_decision_list(store, readable_set(), kind, min(max(limit, 1), 2000))
+        return {"decisions": rows, "total": len(rows)}
+
+    @app.get("/api/v1/kf/review-measures")
+    def kf_review_measures_view():
+        """How the review is going: open items by kind and age, hours to a decision (median, 90th percentile), the share of links confirmed
+        versus guessed, and the rejection rate of links found by name (with advice when most are rejected). Only your repositories count."""
+        return kf_review_measures(store, readable_set())
+
+    @app.delete("/api/v1/kf/links")
+    def kf_links_remove():
+        """Remove every link TIA wrote into Knowledge Fabric's graph for this tenant's customer (used when turning the bridge off). Knowledge
+        Fabric's nodes and TIA's mirror stay. Needs Neo4j."""
+        require_all_repos("Removing the Knowledge Fabric links")
+        drv, database = kf_driver()
+        try:
+            return kf_unlink(store, drv, database)
+        except KfBridgeError as e:
+            raise HTTPException(409, str(e))
+        finally:
+            drv.close()
 
     @app.get("/api/v1/kf/rule-proposals")
     def kf_rule_proposals(status: Optional[str] = None):
@@ -1089,9 +1256,164 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
         prop = next((p for p in (last or {}).get("rule_proposals") or [] if p["id"] == proposal_id), None)
         if prop is None:
             raise HTTPException(404, "no such proposal in the latest bridge run (run POST /api/v1/kf/relink to refresh the proposals)")
-        out = kf_decide(store, prop, body.decision, actor_of(x_tia_actor), body.comment)
+        try:
+            out = kf_decide(store, prop, body.decision, actor_of(x_tia_actor), body.comment)
+        except ReviewConflict as e:
+            raise HTTPException(409, str(e))
+        except (kfreview.ReviewError, ValueError) as e:
+            raise HTTPException(400, str(e))
         kf_trigger("rule decision")
         return out
+
+    # ---- product mapping (docs/KF-BRIDGE.md section 11) -----------------------------------------------------------------------------
+    @app.get("/api/v1/kf/catalog")
+    def kf_catalog_view():
+        """The Knowledge Fabric customer's business tree (domains > product lines > functions > sub-functions) as the latest bridge run read
+        it: the places a repository can be mapped to."""
+        last = kf_last_run(store)
+        if not last:
+            raise HTTPException(404, "the Knowledge Fabric bridge has not run for this tenant")
+        return {"at": last["at"], "customer_id": last["customer_id"], "catalog": last.get("catalog") or {"domains": [], "functions_present": False}}
+
+    @app.get("/api/v1/kf/products")
+    def kf_products_view():
+        """Every repository's place in the business tree: the setting, what the latest bridge run resolved (declared, or inherited through a
+        linked System and therefore inferred), suggestions to review and the problems (places not found, conflicts, unmapped repositories)."""
+        s = kf_settings(store)
+        cfg = store.effective_config()
+        last = kf_last_run(store) or {}
+        allowed = readable(current_principal.get())
+        ok = (lambda r: allowed is None or r in allowed)
+        repo_of = last.get("service_repos") or {}
+        placed = last.get("products") or {}
+        rows = []
+        for r in sorted(x.name for x in svc.list() if ok(x.name)):
+            svcs = sorted(sv for sv, rr in repo_of.items() if rr == r)
+            rows.append({"repo": r, "setting": s["repository_products"].get(r) or [],
+                         "services": [{"service": sv, "setting": s["service_products"].get(sv) or [], "places": placed.get(sv) or []} for sv in svcs]})
+        gaps = last.get("gaps") or {}
+        return {"at": last.get("at"), "version": cfg.version or 0, "repositories": rows,
+                "suggestions": [x for x in last.get("product_suggestions") or [] if ok(x.get("repo"))],
+                "gaps": {k: [g for g in gaps.get(k) or [] if not g.get("repo") or ok(g["repo"])]
+                         for k in ("product_not_found", "unmapped_repositories", "product_conflicts")}}
+
+    @app.put("/api/v1/kf/products/{repository}")
+    def kf_products_put(repository: str, body: KfProductsIn, x_tia_actor: Optional[str] = Header(None)):
+        """Map a repository (and, optionally, its services) to places in the business tree, as a new configuration version. A place that
+        the next bridge run does not find in the tree is reported as a product_not_found gap."""
+        if repository not in {r.name for r in svc.list()} or not visible(repository):
+            raise HTTPException(404, f"repository '{repository}' is not registered")
+        cfg = store.effective_config()
+        if body.expected_version is not None and body.expected_version != (cfg.version or 0):
+            raise HTTPException(409, {"message": "the configuration changed since you read it: reload and apply your change again",
+                                      "version": cfg.version or 0})
+        repo_of = (kf_last_run(store) or {}).get("service_repos") or {}
+        wrong = sorted(sv for sv in body.services if sv in repo_of and repo_of[sv] != repository)
+        if wrong:
+            raise HTTPException(400, f"not services of {repository}: {', '.join(wrong)}")
+        raw = cfg.to_dict()
+        kf = raw.setdefault("knowledge_fabric", {})
+        rp, sp = dict(kf.get("repository_products") or {}), dict(kf.get("service_products") or {})
+        places = [x.model_dump(exclude_none=True) for x in body.places]
+        if places:
+            rp[repository] = places
+        else:
+            rp.pop(repository, None)
+        for sv, ps in body.services.items():
+            if ps:
+                sp[sv] = [x.model_dump(exclude_none=True) for x in ps]
+            else:
+                sp.pop(sv, None)
+        kf["repository_products"], kf["service_products"] = rp, sp
+        actor = actor_of(x_tia_actor)
+        try:
+            r = store.put_config(raw, body.comment or f"product mapping of {repository}", actor)
+        except ConfigError as e:
+            raise HTTPException(422, {"message": "invalid product mapping", "problems": e.problems})
+        if r["created"]:
+            store.audit("tenant_config_changed", version=r["version"], id=r["id"], actor=actor, comment=body.comment,
+                        changes=[c["path"] for c in r["changes"]])
+            store.audit("kf_product_mapped", repo=repository, places=places, services=sorted(body.services), actor=actor, version=r["version"])
+            kf_trigger("product mapping changed")
+        return {"repository": repository, "places": places, "services": {k: [x.model_dump(exclude_none=True) for x in v] for k, v in body.services.items()},
+                "version": r["version"], "created": r["created"]}
+
+    # ---- review of uncertain links (docs/KF-BRIDGE.md section 12) ----------------------------------------------------------------------
+    def review_visible(row: dict) -> bool:
+        allowed = readable(current_principal.get())
+        return allowed is None or not row.get("repo") or row["repo"] in allowed
+
+    @app.get("/api/v1/kf/reviews")
+    def kf_reviews_view(status: str = "open", kind: Optional[str] = None, domain: Optional[str] = None, product_line: Optional[str] = None,
+                        repo: Optional[str] = None, limit: int = 100, offset: int = 0):
+        """The review queue: what the bridge is not sure of, for a person to decide. status: open (default), awaiting_second, deferred,
+        decided, superseded or all; filters by kind, domain, product line (name or id) and repository."""
+        if status not in kfreview.STATUSES + ("all",):
+            raise HTTPException(400, f"status must be one of: {', '.join(kfreview.STATUSES + ('all',))}")
+        if kind and kind not in kfreview.KINDS:
+            raise HTTPException(400, f"kind must be one of: {', '.join(kfreview.KINDS)}")
+        allowed = readable(current_principal.get())
+        return kf_reviews(store, status, kind, domain, product_line, repo, set(allowed) if allowed is not None else None,
+                          min(max(limit, 1), 500), max(offset, 0))
+
+    @app.get("/api/v1/kf/reviews/{item_id}")
+    def kf_review_view(item_id: str):
+        """One item: the question, both sides of the evidence, every candidate and why, the allowed actions and any decision."""
+        row = kf_review_get(store, item_id)
+        if row is None or not review_visible(row):
+            raise HTTPException(404, "no such review item")
+        return row
+
+    @app.get("/api/v1/kf/reviews/{item_id}/history")
+    def kf_review_history_view(item_id: str):
+        row = kf_review_get(store, item_id)
+        if row is None or not review_visible(row):
+            raise HTTPException(404, "no such review item")
+        return {"item_id": item_id, "decisions": kf_review_history(store, item_id)}
+
+    def decide_one(item_id: str, body: KfReviewDecisionIn, actor: str) -> dict:
+        row = kf_review_get(store, item_id)
+        if row is None or not review_visible(row):
+            raise HTTPException(404, "no such review item")
+        p = current_principal.get()
+        can_cfg = p is None or p.kind == "system" or rbac.allows(p.roles, "config_write")
+        try:
+            return kf_review_decide(store, item_id, body.action, actor, body.comment, body.kf_entity_id,
+                                    body.place.model_dump(exclude_none=True) if body.place else None, can_change_config=can_cfg)
+        except LookupError:
+            raise HTTPException(404, "no such review item")
+        except ReviewConflict as e:
+            raise HTTPException(409, str(e))
+        except kfreview.ReviewError as e:
+            raise HTTPException(400, str(e))
+        except PermissionError as e:
+            raise HTTPException(403, str(e))
+        except ConfigError as e:
+            raise HTTPException(422, {"message": "the decision's configuration change is invalid", "problems": e.problems})
+
+    @app.post("/api/v1/kf/reviews/{item_id}/decision")
+    def kf_review_decision(item_id: str, body: KfReviewDecisionIn, x_tia_actor: Optional[str] = Header(None)):
+        """Decide one item: confirm, choose (a candidate or a place), confirm_with_alias (also needs config_write), reject, defer, or reset a
+        decided one. Recorded as evidence (kf_link_decision) and audited; the bridge relinks when auto_relink is on. With review_policy
+        two_person a positive decision waits for a second, different person (status awaiting_second)."""
+        out = decide_one(item_id, body, actor_of(x_tia_actor))
+        if out["status"] in ("decided", "open"):
+            kf_trigger("review decision")
+        return out
+
+    @app.post("/api/v1/kf/reviews/decisions")
+    def kf_review_decisions(body: KfReviewBulkIn, x_tia_actor: Optional[str] = Header(None)):
+        """Up to 200 decisions at once (for example, confirm every guessed link a person checked in the list). Each is recorded and audited
+        on its own; one that fails does not stop the others."""
+        actor, results = actor_of(x_tia_actor), []
+        for d in body.decisions:
+            try:
+                results.append({"ok": True, **decide_one(d.item_id, d, actor)})
+            except HTTPException as e:
+                results.append({"ok": False, "item_id": d.item_id, "status_code": e.status_code, "error": e.detail})
+        if any(r["ok"] and r["status"] in ("decided", "open") for r in results):
+            kf_trigger("review decisions")
+        return {"decided": sum(1 for r in results if r["ok"]), "failed": sum(1 for r in results if not r["ok"]), "results": results}
 
     @app.post("/api/v1/graph/neo4j-sync")
     def graph_neo4j_sync():
@@ -1966,24 +2288,144 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
         """A finished Change Impact Report in Knowledge Fabric's QueryResponse shape. The analysis is named (analysis_id, or repository plus
         pull_request/revision for the newest such report); the question text is never parsed and no analysis is started here."""
         t0 = time.perf_counter()
-        if body.intent != kfadapter.INTENT:
-            return kfadapter.empty(body, [f"intent '{body.intent}' is not served by TIA; use intent '{kfadapter.INTENT}'"], t0)
-        rep = None
+        if body.intent not in kfadapter.INTENTS:
+            return kfadapter.empty(body, [f"intent '{body.intent}' is not served by TIA; use one of: {', '.join(kfadapter.INTENTS)}"], t0)
+        s = kf_settings(store)
+        if body.customer_id and body.customer_id != s["customer_id"]:
+            return kfadapter.empty(body, ["this TIA tenant is not linked to that Knowledge Fabric customer"], t0)
+        rep, notes = None, []
         if body.analysis_id:
             rep = store.get_analysis(body.analysis_id)
+        elif body.issue_key:
+            found = [a for a in store.find_by_issue_key(body.issue_key.strip(), 20) if visible(a["change"]["repository"])]
+            rep = found[0] if found else None
+            if len(found) > 1:
+                notes.append(f"note: {len(found)} analyses name {body.issue_key.strip()}; the newest ({rep['analysis_id']}) is answered; the "
+                             f"others: {', '.join(a['analysis_id'] for a in found[1:6])}")
         elif body.repository:
             if not visible(body.repository):
                 return kfadapter.empty(body, ["no analysis found for that selection"], t0)
             found = store.find_analyses(body.repository, body.pull_request, body.revision.lower() if body.revision else None)
             rep = found[0] if found else None
         else:
-            return kfadapter.empty(body, ["name the analysis: analysis_id, or repository with pull_request or revision "
+            return kfadapter.empty(body, ["name the analysis: analysis_id, issue_key, or repository with pull_request or revision "
                                           "(TIA does not infer a repository or a change from the question text)"], t0)
         if rep is None or not visible(rep["change"]["repository"]):
             return kfadapter.empty(body, ["no analysis found for that selection"], t0)
         red = redact(rep, audience(x_tia_readable_repos))
         pack = tester_pack_of(red, x_tia_readable_repos) if body.include_tester_pack and red.get("status") != "failed" else None
-        return kfadapter.to_query_response(red, body, t0, pack)
+        out = kfadapter.to_query_response(red, body, t0, pack)
+        out.metadata.errors += notes
+        return out
+
+    @app.post("/query/tia/resolve")
+    def kf_query_resolve(body: ResolveIn):
+        """Exact lookup of the anchors a router found in a question (docs/KF-BRIDGE.md section 13): issue keys and pull requests and commits
+        to the analyses that name them, repository, service, endpoint (METHOD /route) and written test case names to what TIA knows. Nothing
+        fuzzy; an anchor that matches nothing is listed under unresolved. Only what the caller may read is returned."""
+        s = kf_settings(store)
+        out = {"analyses": [], "repositories": [], "services": [], "endpoints": [], "test_cases": [], "unresolved": []}
+        if body.customer_id and body.customer_id != s["customer_id"]:
+            return {**out, "unresolved": [a.model_dump(exclude_none=True) for a in body.anchors],
+                    "errors": ["this TIA tenant is not linked to that Knowledge Fabric customer"]}
+        allowed = readable(current_principal.get())
+        names = sorted(r.name for r in svc.list() if allowed is None or r.name in allowed)
+        lookup: dict = {}
+
+        def graph_side():
+            if "g" not in lookup:
+                ex = landscape()
+                lookup["ex"], lookup["g"] = ex, current_graph(ex)[0] if ex else None
+            return lookup["ex"], lookup["g"]
+
+        def add_analysis(a: dict, anchor: dict) -> None:
+            cur = next((x for x in out["analyses"] if x["analysis_id"] == a["analysis_id"]), None)
+            if cur is None:
+                ch = a.get("change") or {}
+                cur = {"analysis_id": a["analysis_id"], "repository": ch.get("repository"), "service": ch.get("service"),
+                       "pull_request": ch.get("pull_request"), "proposed_revision": ch.get("proposed_revision"), "status": a.get("status"),
+                       "generated_at": a.get("generated_at"), "issue_keys": ch.get("issue_keys") or [], "matched": []}
+                out["analyses"].append(cur)
+            cur["matched"].append(anchor)
+        for a in body.anchors:
+            anchor, v, hit = a.model_dump(exclude_none=True), a.value.strip(), False
+            repos = [a.repository] if a.repository and a.repository in names else ([] if a.repository else names)
+            if a.type == "issue_key":
+                for rep in store.find_by_issue_key(v, 10):
+                    if rep["change"]["repository"] in names:
+                        add_analysis(rep, anchor)
+                        hit = True
+            elif a.type == "pull_request" and v.isdigit():
+                for r in repos[:200]:
+                    for rep in store.find_analyses(r, int(v), None, 3):
+                        add_analysis(rep, anchor)
+                        hit = True
+            elif a.type == "commit" and re.fullmatch(r"[0-9a-fA-F]{7,40}", v):
+                for r in repos[:200]:
+                    for rep in store.find_analyses(r, None, v.lower(), 3):
+                        add_analysis(rep, anchor)
+                        hit = True
+            elif a.type == "repository":
+                for r in names:
+                    if r.lower() == v.lower():
+                        out["repositories"].append({"repository": r, "matched": anchor})
+                        hit = True
+            elif a.type in ("service", "endpoint", "test_case"):
+                ex, g = graph_side()
+                if a.type == "test_case":
+                    for r, e in sorted((ex or {}).items()):
+                        for tc in e.manual_tests if r in names else []:
+                            if str(tc.get("id") or "").lower() == v.lower():
+                                out["test_cases"].append({"test_case": tc["id"], "repo": r, "entry_point": tc.get("entry_point"), "matched": anchor})
+                                hit = True
+                elif g is not None:
+                    method, _, path = v.partition(" ")
+                    for nid, n in sorted(g.nodes.items()):
+                        if n.get("repo") not in names:
+                            continue
+                        if a.type == "service" and n.get("type") == "service" and str(n.get("name") or n.get("service") or "").lower() == v.lower():
+                            out["services"].append({"service": n.get("name") or n.get("service"), "repo": n.get("repo"), "node": nid, "matched": anchor})
+                            hit = True
+                        if a.type == "endpoint" and n.get("type") == "endpoint" and str(n.get("method") or "").upper() == method.upper() \
+                                and path.strip() in {n.get("route"), n.get("path")}:
+                            out["endpoints"].append({"endpoint": v, "service": n.get("service"), "repo": n.get("repo"), "node": nid, "matched": anchor})
+                            hit = True
+            if not hit:
+                out["unresolved"].append(anchor)
+        out["analyses"].sort(key=lambda x: x.get("generated_at") or "", reverse=True)
+        return out
+
+    # ---- Knowledge Fabric's review screen calls back (docs/KF-BRIDGE.md section 12, phase 2) ------------------------------------------------
+    @app.post("/api/v1/webhooks/kf-review")
+    async def kf_review_webhook(request: Request, x_kf_signature: Optional[str] = Header(None)):
+        """A decision made on a TIA item in Knowledge Fabric's review screen. Authenticated by an HMAC-SHA256 signature of the body
+        (X-KF-Signature: sha256=..., secret TIA_KF_REVIEW_WEBHOOK_SECRET); the item's batch names the TIA tenant, whose knowledge_fabric
+        customer must match. The first decision recorded in TIA wins: a later one answers 409."""
+        secret = kfinbox.webhook_secret()
+        if not secret:
+            raise HTTPException(503, "Knowledge Fabric's review callbacks are not configured (TIA_KF_REVIEW_WEBHOOK_SECRET)")
+        try:
+            raw = await authapi.read_capped(request, 1024 * 1024)
+        except authapi.AuthError:
+            raise HTTPException(413, "payload too large")
+        if not kfinbox.verify(secret, raw, x_kf_signature):
+            raise HTTPException(401, "invalid signature")
+        try:
+            ev = kfinbox.parse_callback(raw)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        authapi.current_tenant.set(kfinbox.scope_of(ev["batch"])[0])
+        try:
+            out = await run_in_threadpool(kf_inbox_receive, store, ev)
+        except LookupError:
+            raise HTTPException(404, "no such review item for this tenant and customer")
+        except ReviewConflict as e:
+            raise HTTPException(409, str(e))
+        except kfreview.ReviewError as e:
+            raise HTTPException(400, str(e))
+        if out["status"] == "decided":
+            await run_in_threadpool(kf_trigger, "review decision in Knowledge Fabric")
+        return out
 
     # ---- SCM webhooks (authenticated by signature, not by session) ------------------------------------------------
     @app.post("/api/v1/webhooks/github")
@@ -2030,6 +2472,7 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
                    "head_sha": ev["head_sha"], "base_ref": ev["base_ref"]}
         tp = tracing.current_traceparent()
         job = jobs.enqueue(tid(), "github_pull_request", {**payload, **({"installation_id": ev["installation_id"]} if ev.get("installation_id") else {}),
+                                                          **{k: ev[k] for k in ("title", "head_ref") if ev.get(k)},
                                                           **({"_traceparent": tp} if tp else {})},
                            pr_event_job_key(payload, store.effective_config()), pr_event_group_key(payload))
         store.audit("webhook_accepted", provider="github", delivery=x_github_delivery, repo=ev["full_name"], pr=ev["pr"],
@@ -2157,11 +2600,18 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
         response.status_code = 202
         return {**job, "repository": repo.name, "pr": ev["pr"]}
 
+    def job_visible(j: dict, pl: Optional[dict]) -> bool:
+        """A job names its repository in the payload; a Knowledge Fabric bridge job names none and covers every repository of the tenant,
+        so it is visible to a principal who may read all of them."""
+        if j["kind"] in KF_JOB_KINDS:
+            return all_readable()
+        return not pl or visible(pl.get("target") or pl.get("repo") or "")
+
     @app.get("/api/v1/jobs/{job_id}")
     def job_status(job_id: str):
         j = jobs.get(tid(), job_id, with_payload=True)
         pl = j.pop("payload", None) if j else None
-        if not j or (pl and not visible(pl.get("target") or pl.get("repo") or "")):
+        if not j or not job_visible(j, pl):
             raise HTTPException(404, "unknown job")
         return {**j, "is_latest": jobs.is_latest(tid(), job_id)}
 
@@ -2169,7 +2619,7 @@ def create_app(db: Database, tenant_id: str, workspace: str = ".tia-data/repos",
     def job_cancel(job_id: str):
         j = jobs.get(tid(), job_id, with_payload=True)
         pl = (j or {}).get("payload") or {}
-        if j and not visible(pl.get("target") or pl.get("repo") or ""):
+        if j and not job_visible(j, pl):
             raise HTTPException(404, "unknown job")
         r = jobs.cancel(tid(), job_id)
         if not r:

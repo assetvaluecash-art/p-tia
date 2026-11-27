@@ -376,6 +376,14 @@ def _business_md(bi: dict | None, max_rows: int) -> list:
     L = [f"**{_md(s['headline'])}**", ""]
     if not (bi["systems"] or bi.get("items") or bi.get("user_stories")):
         return L
+    if bi.get("products"):
+        L += ["| Product affected | Services | Entry points to test | Business test cases |", "|---|---|---|---|"]
+        for row in bi["products"][:max_rows]:
+            svcs = ", ".join(f"`{_md(x['service'])}`" + (f" (via {_md(', '.join(x['via']))}, inferred)" if x.get("via") else "")
+                             for x in row["services"])
+            fn = f" > {_md(', '.join(row['functions']))}" if row["functions"] else ""
+            L.append(f"| **{_md(row['product_line'])}**{fn} ({_md(row['domain'])}) | {svcs} | {row['entry_points']} | {len(row['test_cases'])} |")
+        L.append("")
     L += ["<details><summary>Business impact (Knowledge Fabric)</summary>", ""]
     if bi["test_cases"]:
         L += ["| Business test case | Reached through | Evidence |", "|---|---|---|"]
@@ -400,9 +408,10 @@ def _business_md(bi: dict | None, max_rows: int) -> list:
         L.append(f"- {it['kind']} `{_md(it['tia_name'])}` ({_md(it['service'])}) {it['rel'].lower()} {ITEM_LABEL.get(it['kf_label'], it['kf_label'])} "
                  f"**{_md(it['kf_name'])}** ({_md(it['domain'])}, {it['link']['status']}): " + "; ".join(bits))
     for st in bi.get("user_stories") or []:
-        commits = ", ".join("`" + c[:7] + "`" for c in st["commits"][:3])
+        named = ", ".join((["commit " + ", ".join("`" + c[:7] + "`" for c in st["commits"][:3])] if st["commits"] else [])
+                          + [str(x).replace("_", " ") for x in st.get("named_in") or []])
         title = _md(st["story"]) if st["story"] != st["key"] else ""
-        L.append(f"- user story **{_md(st['key'])}** {title} (commit {commits}): {len(st.get('requirements', []))} requirement(s), "
+        L.append(f"- user story **{_md(st['key'])}** {title} ({named}): {len(st.get('requirements', []))} requirement(s), "
                  f"{len(st.get('test_cases', []))} test case(s)")
     L += ["", f"_{_md(bi['limits'][0])}_", "", "</details>", ""]
     return L

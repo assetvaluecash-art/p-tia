@@ -52,6 +52,16 @@
   .behaviour_change{color:var(--warn);border-color:var(--warn)} .compatible_change,.no_functional_change{color:var(--mut)}
   details{border:1px solid var(--line);border-radius:6px;padding:6px 10px;margin:6px 0} summary{cursor:pointer} .wrapx{overflow-x:auto}
   .gap{padding:8px 12px;border-radius:6px;border:1px solid var(--bad);margin:8px 0} .gap.moved{border-color:var(--ok)}
+  #kfsec a,#gside a,#result a[data-kfa]{color:var(--acc)}
+  .kfstrip{border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin:6px 0 10px;display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center}
+  .kfstate{font-weight:600} .kfstate.off,.kfstate.never_run{color:var(--mut);border-color:var(--mut)} .kfstate.connected{color:var(--ok);border-color:var(--ok)}
+  .kfstate.running{color:var(--acc);border-color:var(--acc)} .kfstate.failed{color:var(--bad);border-color:var(--bad)}
+  .ev-source_confirmed{color:var(--ok);border-color:var(--ok)} .ev-contract_confirmed{color:#1565c0;border-color:#1565c0} .ev-inferred{color:var(--warn);border-color:var(--warn);border-style:dashed}
+  @media (prefers-color-scheme:dark){.ev-contract_confirmed{color:#8ab4ff;border-color:#8ab4ff}}
+  a.btnlink{display:inline-block;padding:6px 12px;border:1px solid var(--acc);color:var(--acc);border-radius:6px;text-decoration:none}
+  kbd{font:11px ui-monospace,Consolas,monospace;border:1px solid var(--line);border-radius:3px;padding:0 4px}
+  .kfcard{border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin:8px 0} .kfcard h4{margin:0 0 4px;font-size:13px}
+  #kfqtable tr:focus{outline:2px solid var(--acc);outline-offset:-2px} dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;margin:6px 0} dl.kv dt{color:var(--mut)} dl.kv dd{margin:0;overflow-wrap:anywhere}
   textarea.json{width:100%;height:200px;font:12px ui-monospace,Consolas,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px}
 </style>
 </head>
@@ -127,9 +137,11 @@
   <div class="ctl">
     <div><label>Level of detail</label><select id="glevel"><option value="service">Services</option><option value="endpoint">Endpoints &amp; schemas</option><option value="function">Functions, call sites, tests</option></select></div>
     <div><label>Repositories (none selected = all)</label><select id="grepos" multiple size="3"></select></div>
+    <div id="gprodwrap" class="hidden"><label for="gprod">Product (Knowledge Fabric)</label><select id="gprod"><option value="">all products</option></select></div>
     <div><label>Search</label><input id="gq" placeholder="name, path, file"></div>
     <div><label>Layout</label><select id="glayout"><option>cose</option><option>breadthfirst</option><option>concentric</option><option>circle</option><option>grid</option></select></div>
     <div><button id="gload">Load graph</button> <button class="sec" id="gimpact" disabled title="Run an analysis in section 3 first">Show impact of last analysis</button> <button class="sec" id="gfit">Fit</button></div>
+    <div id="gkfwrap" class="hidden"><label class="roles" style="margin:0"><input type="checkbox" id="gkf" style="width:auto"> Show Knowledge Fabric links</label></div>
   </div>
   <div id="ginfo" class="mut" style="margin-top:6px"></div>
   <div id="gwrap"><div id="cy"></div><div id="gside"><span class="mut">Click a node or edge.</span></div></div>
@@ -144,6 +156,7 @@
     <span><i style="border-color:#0b6e4f"></i>table</span>
     <span><i style="border-color:#c2410c"></i>inheritance (subclass &rarr; base class)</span>
     <span><i style="border-color:#ef6c00;border-top-style:dashed"></i>ambiguous call: one dashed line per candidate</span>
+    <span id="legkf" class="hidden"><i style="border-color:#7b1fa2;border-top-style:dashed"></i>Knowledge Fabric link (solid = confirmed, dashed = inferred); purple boxes are business items</span>
     <span id="legimpact" class="hidden">Impact view: red outline = changed; fill = severity (critical dark red, high red, medium amber, low grey)</span>
   </div>
   <h3 style="font-size:13px;margin:14px 0 4px">Ask the graph</h3>
@@ -324,7 +337,58 @@
   <div id="trout"></div><div id="calout"></div>
 </section>
 <section id="kfsec">
-  <h2>5c. Knowledge Fabric: business rules to review</h2>
+  <h2>5c. Knowledge Fabric</h2>
+  <p class="mut" style="margin:0 0 6px">The bridge links TIA's code graph to Knowledge Fabric's business graph: a service to the business system it realises, a screen to a form, an entity or table to a data entity, a code rule to a business rule, a test case to the same business test case. Every view here comes from the latest bridge run that TIA stored; only connecting, relinking and turning off reach Knowledge Fabric.</p>
+  <div id="kfstatus" class="kfstrip" aria-live="polite"><span class="mut">Loading the bridge status...</span></div>
+  <div class="ttabs" role="tablist" aria-label="Knowledge Fabric views" id="kftabs">
+    <button role="tab" data-kftab="status" id="kft-status" aria-controls="kftab-status" class="on" aria-selected="true">Status</button>
+    <button role="tab" data-kftab="connect" id="kft-connect" aria-controls="kftab-connect" aria-selected="false" tabindex="-1">Connect &amp; settings</button>
+    <button role="tab" data-kftab="links" id="kft-links" aria-controls="kftab-links" aria-selected="false" tabindex="-1">Links</button>
+    <button role="tab" data-kftab="gaps" id="kft-gaps" aria-controls="kftab-gaps" aria-selected="false" tabindex="-1">Gaps</button>
+    <button role="tab" data-kftab="review" id="kft-review" aria-controls="kftab-review" aria-selected="false" tabindex="-1">Review</button>
+    <button role="tab" data-kftab="products" id="kft-products" aria-controls="kftab-products" aria-selected="false" tabindex="-1">Products</button>
+    <button role="tab" data-kftab="ontology" id="kft-ontology" aria-controls="kftab-ontology" aria-selected="false" tabindex="-1">Ontology</button>
+  </div>
+  <div id="kftab-status" role="tabpanel" aria-labelledby="kft-status"><div id="kfstatusout"></div></div>
+  <div id="kftab-connect" role="tabpanel" aria-labelledby="kft-connect" class="hidden">
+    <span id="kfcmsg" class="mut" aria-live="polite"></span>
+    <div id="kfconnectout"></div>
+    <h3 style="font-size:13px;margin-top:16px">Aliases: tell the bridge which business item a piece of code is</h3>
+    <p class="mut">An alias links a code name to a Knowledge Fabric name exactly as written (evidence: contract-confirmed). Write <code>id:&lt;entity id&gt;</code> instead of a name when a name matches two business items.</p>
+    <span id="kfamsg" class="mut" aria-live="polite"></span>
+    <div id="kfaliasout"></div>
+  </div>
+  <div id="kftab-links" role="tabpanel" aria-labelledby="kft-links" class="hidden">
+    <div class="ctl">
+      <div><label for="kflkind">Kind</label><select id="kflkind"><option value="">all kinds</option><option value="REALIZES|System">service &rarr; business system</option><option value="SAME_AS|TestCase">test case &rarr; test case</option><option value="REALIZES|FormCapture">screen &rarr; form</option><option value="STORES|DataEntity">entity or table &rarr; data entity</option><option value="ENFORCES|Rule">code rule &rarr; business rule</option><option value="PLACED_IN|">service &rarr; product</option></select></div>
+      <div><label for="kflstatus">Evidence</label><select id="kflstatus"><option value="">all evidence</option><option value="source_confirmed">source-confirmed</option><option value="contract_confirmed">contract-confirmed</option><option value="inferred">inferred (to confirm)</option></select></div>
+      <div><label for="kflsource">Found by</label><select id="kflsource"><option value="">any way</option><option value="tenant_config">tenant settings alias</option><option value="tia-services.yaml">tia-services.yaml</option><option value="name">name</option><option value="test_case_id">same test case id</option><option value="review">a person's review</option></select></div>
+      <div><label for="kfldomain">Domain</label><select id="kfldomain"><option value="">all domains</option></select></div>
+      <div style="flex:1;min-width:180px"><label for="kflq">Search both names</label><input id="kflq" placeholder="payments"></div>
+      <div><button class="sec" id="kflcsv" type="button">Export CSV</button></div>
+    </div>
+    <span id="kflmsg" class="mut" aria-live="polite"></span>
+    <div id="kflout" class="wrapx"></div>
+    <p id="kflpager"></p>
+  </div>
+  <div id="kftab-gaps" role="tabpanel" aria-labelledby="kft-gaps" class="hidden">
+    <span id="kfgmsg" class="mut" aria-live="polite"></span>
+    <div id="kfgout"></div>
+  </div>
+  <div id="kftab-review" role="tabpanel" aria-labelledby="kft-review" class="hidden">
+  <p class="mut">The links between the code and Knowledge Fabric's business graph that TIA is not sure of wait here for a person: links found by name, names that match several business items, close-name suggestions, business-rule pairs, product places, issue keys without a user story, and decisions whose business item disappeared. Every decision is recorded with who made it and is applied on the next bridge run. Keyboard: <kbd>j</kbd>/<kbd>k</kbd> next/previous item, <kbd>c</kbd> confirm, <kbd>r</kbd> reject, <kbd>l</kbd> later, <kbd>x</kbd> tick for bulk.</p>
+  <div class="ctl">
+    <div><button class="sec" id="kfqgo" type="button">Show items to review</button></div>
+    <div><label for="kfqstatus">Show</label><select id="kfqstatus"><option value="open">to review</option><option value="awaiting_second">waiting for a second person</option><option value="deferred">later</option><option value="decided">decided</option><option value="all">all</option></select></div>
+    <div><label for="kfqkind">Kind</label><select id="kfqkind"><option value="">all kinds</option><option value="guessed_link">link found by name</option><option value="ambiguous">name matches several</option><option value="suggested_link">suggestion</option><option value="rule_pair">business rule pair</option><option value="product_suggestion">product suggestion</option><option value="product_conflict">product conflict</option><option value="story_not_found">issue key without a story</option><option value="stale_decision">decision to move</option></select></div>
+    <div><button class="sec" id="kfqbulk" type="button" disabled>Confirm ticked (0)</button></div>
+    <span id="kfqmsg" class="mut" aria-live="polite"></span>
+  </div>
+  <div id="kfqout"></div>
+  <h3 style="font-size:13px;margin-top:16px">Decided</h3>
+  <div class="ctl"><div><button class="sec" id="kfdgo" type="button">Show decisions</button></div><span id="kfdmsg" class="mut" aria-live="polite"></span></div>
+  <div id="kfdout" class="wrapx"></div>
+  <details style="margin-top:14px"><summary>Business rule pairs only (the older view)</summary>
   <p class="mut">Rules found in code (conditions such as <code>not p['disputed']</code>) and Knowledge Fabric business rules (sentences) are never linked by name. TIA proposes pairs that share field names or words; confirm the right ones and they become links, so a change to that code shows the business rule and its test cases. Rejected pairs are not proposed again.</p>
   <div class="ctl">
     <div><button class="sec" id="kfrgo" type="button">Show pairs to review</button></div>
@@ -332,6 +396,22 @@
     <span id="kfrmsg" class="mut" aria-live="polite"></span>
   </div>
   <div id="kfrout"></div>
+  </details>
+  </div>
+  <div id="kftab-products" role="tabpanel" aria-labelledby="kft-products" class="hidden">
+  <h3 style="margin-top:0">Products: where each repository sits in the business tree</h3>
+  <p class="mut">Choose the domain, product line and (optionally) function each repository serves, from the Knowledge Fabric customer's own tree. A change then reports the products it affects ("Affects Retail Cards"), and the repository's services are linked only inside that domain. TIA never guesses a product from code; suggestions from the business systems a service is linked to wait in the Review tab.</p>
+  <div class="ctl">
+    <div><button class="sec" id="kfpgo" type="button">Show product mapping</button></div>
+    <span id="kfpmsg" class="mut" aria-live="polite"></span>
+  </div>
+  <div id="kfpout"></div>
+  </div>
+  <div id="kftab-ontology" role="tabpanel" aria-labelledby="kft-ontology" class="hidden">
+    <p class="mut">The two vocabularies the bridge speaks: TIA's software ontology (what the code graph holds) and the bridge ontology (each link, how it is decided and whether it is written to Knowledge Fabric's graph). Both use Knowledge Fabric's canonical ontology shape.</p>
+    <p><a class="btnlink" id="kfoyaml" href="/api/v1/graph/ontology?format=yaml&amp;download=true">Download YAML</a> <a class="btnlink" id="kfojson" href="/api/v1/graph/ontology?format=json&amp;download=true">Download JSON</a> <span id="kfomsg" class="mut" aria-live="polite"></span></p>
+    <div id="kfoout"></div>
+  </div>
 </section>
 <section id="cfgsec">
   <h2>6. Configuration <span id="cfgid" class="pill"></span></h2>
@@ -472,6 +552,728 @@ $("kfrout").addEventListener("click", async ev => {
   } catch (e) { $("kfrmsg").textContent = String(e.message || e); busy(b, false); }
 });
 
+// ---- Knowledge Fabric review queue and product mapping (docs/KF-BRIDGE.md sections 11 and 12) ----
+const KFACT = {confirm: "Confirm", choose: "Choose", confirm_with_alias: "Confirm + keep alias", reject: "Reject", defer: "Later"};
+const KFKIND = {guessed_link: "link found by name", ambiguous: "name matches several", suggested_link: "suggestion", rule_pair: "business rule pair",
+  product_suggestion: "product suggestion", product_conflict: "product conflict", story_not_found: "issue key without a story", stale_decision: "decision to move"};
+function kfCand(r, c, pick) {
+  const where = [c.domain || "", (c.product_lines || []).join(", "), c.why || ""].filter(Boolean).map(esc).join(" &middot; ");
+  return `<li>${pick ? `<label><input type="radio" name="kfc-${esc(r.item_id)}" value="${esc(c.id)}"> ` : ""}<b>${esc(c.name || c.id)}</b>${where ? ` <span class="mut">${where}</span>` : ""}${pick ? "</label>" : ""}</li>`;
+}
+function kfQRow(r) {
+  const it = r.item, open = r.status !== "decided" && r.status !== "superseded";
+  const acts = it.actions.filter(a => !(r.kind === "product_suggestion" && a === "choose"));
+  const pick = open && (acts.includes("choose") || (acts.includes("confirm_with_alias") && r.kind === "suggested_link"));
+  const cands = (it.candidates || []).map(c => kfCand(r, c, pick)).join("") || `<li class="mut">none</li>`;
+  const d = r.decision || {};
+  const btns = !open ? (r.status === "decided" ? `<span class="pill">${esc(d.action)}</span> <span class="mut">${esc(d.by || "")}${d.source === "kf" ? " (in Knowledge Fabric)" : ""}</span> <button class="sec" data-kfq="${esc(r.item_id)}" data-a="reset">Undo</button>` : `<span class="pill">${esc(r.status)}</span>`)
+    : acts.map(a => `<button class="sec" data-kfq="${esc(r.item_id)}" data-k="${esc(r.kind)}" data-a="${a}">${KFACT[a]}</button>`).join(" ") +
+      (r.status === "awaiting_second" ? `<br><span class="mut">approved by ${(d.approvals || []).map(esc).join(", ")}: a second, different person must approve</span>` : "");
+  const places = {};
+  if (r.kind === "product_conflict") for (const c of it.candidates || []) if ((c.product_lines || []).length) places[c.id] = {domain: c.domain, product_line: c.product_lines[0], ...((c.functions || []).length === 1 ? {function: c.functions[0]} : {})};
+  const tick = open && r.status !== "awaiting_second" && acts.includes("confirm") && can("kf_review") ? `<input type="checkbox" data-kftick="${esc(r.item_id)}" aria-label="tick for bulk confirm" style="width:auto"> ` : "";
+  return `<tr tabindex="0" data-item="${esc(r.item_id)}"${r.kind === "product_conflict" ? ` data-c="${esc(JSON.stringify(places))}"` : ""}><td>${tick}<b>${esc(it.title)}</b><br><span class="mut">${esc(it.question)}</span><br><span class="pill">${esc(KFKIND[r.kind] || r.kind)}</span>${r.priority === "high" ? ' <span class="pill">recent change</span>' : ""}${r.kf_review_id ? ' <span class="pill">also in Knowledge Fabric</span>' : ""}</td><td><ul>${cands}</ul></td><td>${btns}</td></tr>`;
+}
+async function kfQueue() {
+  const st = $("kfqstatus").value, kd = $("kfqkind").value;
+  $("kfqmsg").textContent = "Loading...";
+  try {
+    const j = await api("/api/v1/kf/reviews?status=" + encodeURIComponent(st) + (kd ? "&kind=" + encodeURIComponent(kd) : ""));
+    const b = j.by_status || {};
+    $("kfqmsg").textContent = `${j.total} item(s) shown; to review ${b.open || 0}, waiting for a second person ${b.awaiting_second || 0}, later ${b.deferred || 0}, decided ${b.decided || 0}.`;
+    $("kfqout").innerHTML = j.items.length ? `<table id="kfqtable"><thead><tr><th style="width:38%">Question</th><th>Candidates</th><th style="width:26%">Decide</th></tr></thead><tbody>${j.items.map(kfQRow).join("")}</tbody></table>`
+      : `<p class="mut">Nothing to show. Items appear after a bridge run (Relink now, above).</p>`;
+    kfBulkLabel();
+  } catch (e) { $("kfqmsg").textContent = String(e.message || e); $("kfqout").innerHTML = ""; }
+}
+$("kfqgo").onclick = kfQueue;
+$("kfqout").addEventListener("click", async ev => {
+  const b = ev.target.closest("button[data-kfq]");
+  if (!b) return;
+  const id = b.dataset.kfq, a = b.dataset.a, body = {action: a};
+  const sel = document.querySelector(`input[name="kfc-${CSS.escape(id)}"]:checked`);
+  if (a === "choose" || (a === "confirm_with_alias" && b.dataset.k === "suggested_link")) {
+    if (!sel) { $("kfqmsg").textContent = "Pick one of the candidates first."; return; }
+    if (b.dataset.k === "product_conflict") {
+      const row = sel.closest("tr");
+      const c = JSON.parse(row.dataset.c || "null");
+      body.place = c ? c[sel.value] : null;
+      if (!body.place) { $("kfqmsg").textContent = "This business system sits under no product line: map the repository in Products below."; return; }
+    } else body.kf_entity_id = sel.value;
+  }
+  busy(b, true);
+  try {
+    const out = await api(`/api/v1/kf/reviews/${encodeURIComponent(id)}/decision`, {method: "POST", body});
+    $("kfqmsg").textContent = out.status === "awaiting_second" ? "Recorded: a second, different person must approve it." :
+      out.status === "decided" ? "Decided: applied on the next bridge run." + (out.config_version ? ` Configuration version ${out.config_version} saved.` : "") : `The item is now ${out.status}.`;
+    kfQueue();
+  } catch (e) { $("kfqmsg").textContent = String(e.message || e); busy(b, false); }
+});
+let KFCAT = {domains: []}, KFVER = 0;
+function kfOpts(xs, cur, label) { return `<option value="">${label}</option>` + xs.map(x => `<option ${x === cur ? "selected" : ""}>${esc(x)}</option>`).join(""); }
+function kfPick(repo, cur) {
+  cur = cur || {};
+  const dom = KFCAT.domains.find(d => d.domain === cur.domain) || {product_lines: []};
+  const pl = dom.product_lines.find(x => x.name === cur.product_line) || {functions: []};
+  return `<select data-kfp="${esc(repo)}" data-l="domain" aria-label="domain of ${esc(repo)}">${kfOpts(KFCAT.domains.map(d => d.domain), cur.domain, "domain")}</select>
+    <select data-kfp="${esc(repo)}" data-l="product_line" aria-label="product line of ${esc(repo)}">${kfOpts(dom.product_lines.map(x => x.name), cur.product_line, "product line")}</select>
+    <select data-kfp="${esc(repo)}" data-l="function" aria-label="function of ${esc(repo)}">${kfOpts(pl.functions.map(x => x.name), cur.function, "function (optional)")}</select>
+    <button class="sec" data-kfps="${esc(repo)}">Save</button> <button class="sec" data-kfpr="${esc(repo)}">Remove</button>`;
+}
+async function kfProducts() {
+  $("kfpmsg").textContent = "Loading...";
+  try {
+    const p = await api("/api/v1/kf/products");
+    let cat = null;
+    try { cat = await api("/api/v1/kf/catalog"); } catch (e) { cat = null; }
+    KFCAT = cat ? cat.catalog : {domains: []};
+    KFVER = p.version;
+    const placeTxt = r => { const xs = [...new Set(r.services.flatMap(sv => sv.places.map(x => `${esc(x.product_line)}${x.function ? " &gt; " + esc(x.function) : ""} <span class="mut">(${esc(x.domain)}, ${esc(x.source)})</span>`)))]; return xs.length ? xs.join("<br>") : '<span class="mut">not mapped</span>'; };
+    const g = p.gaps || {};
+    $("kfpmsg").textContent = `${p.repositories.length} repositories; ${p.suggestions.length} suggestion(s) in the review list; ${(g.product_not_found || []).length} place(s) not found in the tree` + (p.at ? `; as of the bridge run of ${p.at}.` : ".") + (KFCAT.domains.length ? "" : " The business tree is read by the bridge: run it first.");
+    $("kfpout").innerHTML = `<table id="kfptable"><thead><tr><th style="width:18%">Repository</th><th style="width:28%">Place now</th><th>Map to</th></tr></thead><tbody>` +
+      p.repositories.map(r => `<tr><td><b>${esc(r.repo)}</b></td><td>${placeTxt(r)}</td><td>${kfPick(r.repo, r.setting[0])}</td></tr>`).join("") + `</tbody></table>` +
+      ((g.product_not_found || []).length ? `<div class="banner"><b>Places not found in Knowledge Fabric's tree</b><ul>${g.product_not_found.map(x => `<li>${esc(x.repo || x.service)}: ${esc(x.place)} (${esc(x.missing)} not found${x.hint ? `; did you mean ${esc(x.hint)}?` : ""})</li>`).join("")}</ul></div>` : "");
+  } catch (e) { $("kfpmsg").textContent = String(e.message || e); $("kfpout").innerHTML = ""; }
+}
+$("kfpgo").onclick = kfProducts;
+$("kfpout").addEventListener("change", ev => {
+  const sel = ev.target.closest("select[data-kfp]");
+  if (!sel || sel.dataset.l === "function") return;
+  const td = sel.closest("td"), get = l => td.querySelector(`select[data-l="${l}"]`).value;
+  const cur = {domain: get("domain"), product_line: sel.dataset.l === "domain" ? "" : get("product_line")};
+  td.innerHTML = kfPick(sel.dataset.kfp, cur);
+});
+$("kfpout").addEventListener("click", async ev => {
+  const b = ev.target.closest("button[data-kfps],button[data-kfpr]");
+  if (!b) return;
+  const repo = b.dataset.kfps || b.dataset.kfpr, td = b.closest("td"), get = l => td.querySelector(`select[data-l="${l}"]`).value;
+  let places = [];
+  if (b.dataset.kfps) {
+    if (!get("domain") || !get("product_line")) { $("kfpmsg").textContent = "Choose a domain and a product line."; return; }
+    places = [{domain: get("domain"), product_line: get("product_line"), ...(get("function") ? {function: get("function")} : {})}];
+  }
+  busy(b, true);
+  try {
+    const out = await api(`/api/v1/kf/products/${encodeURIComponent(repo)}`, {method: "PUT", body: {places, expected_version: KFVER}});
+    $("kfpmsg").textContent = out.created ? `Saved as configuration version ${out.version}; the bridge relinks.` : "No change.";
+    kfProducts(); kfProductFilter();
+  } catch (e) { $("kfpmsg").textContent = String(e.message || e); busy(b, false); }
+});
+
+// ---- Knowledge Fabric section: status strip, tabs, setup, links, gaps, decisions, ontology, graph overlay (docs/plans/KF-UI-PLAN.md) ----
+// Knowledge Fabric names come from customer documents: every value goes through esc(), in text and in attributes.
+const KF = {status: null, tab: "status", loaded: {}, links: null, items: {}, page: 0, job: null, overlay: null, names: null, customers: []};
+const KFSTATE = {off: "Off", never_run: "Never run", running: "Running", failed: "Failed", connected: "Connected"};
+const KFEV = {source_confirmed: "source-confirmed", contract_confirmed: "contract-confirmed", inferred: "inferred: please confirm"};
+const KFLABEL = {System: "Business system", TestCase: "Test case", FormCapture: "Form", DataEntity: "Data entity", Rule: "Business rule",
+  ProductLine: "Product line", Function: "Function", SubFunction: "Sub-function"};
+const KFSRC = {tenant_config: "tenant settings alias", "tia-services.yaml": "tia-services.yaml", name: "name match", test_case_id: "same test case id",
+  review: "a person's review", declared: "product mapping", inherited: "inherited"};
+const KFNEED = {config_write: "needs the release manager or administrator role", repo_write: "needs the engineer role", kf_review: "needs the engineer role"};
+const KFALIAS = {system_aliases: ["service", "Business system"], screen_aliases: ["screen (route or component)", "Form"], data_aliases: ["entity or table", "Data entity"]};
+const kfEv = s => `<span class="pill ev-${esc(s)}">${esc(KFEV[s] || s || "")}</span>`;
+const kfWhen = d => d ? new Date(d).toLocaleString() : "";
+async function kfCall(path, method, body) {
+  const r = await tfetch(path, method ? {method, headers: {"Content-Type": "application/json", "X-TIA-Actor": "ui"}, body: body === undefined ? undefined : JSON.stringify(body)} : undefined);
+  let j = {}; try { j = await r.json() } catch {}
+  return {ok: r.ok, status: r.status, j};
+}
+function kfDetail(r) {
+  const d = r.j && r.j.detail;
+  if (r.status === 503) return "Neo4j is not configured on the TIA server. Set NEO4J_URI, NEO4J_USER and NEO4J_PASSWORD on the API and the worker (Knowledge Fabric's database); see ADMIN-GUIDE section 18e.";
+  if (r.status === 403 && typeof d === "string" && /every repository|all of them/.test(d)) return "This view covers every repository of the tenant; your access is limited to some of them.";
+  if (d == null) return `The server answered ${r.status}. Try again.`;
+  return typeof d === "string" ? d : (d.message || "") + (d.problems ? ": " + d.problems.join("; ") : "");
+}
+function kfErr(e) {
+  const m = String((e && e.message) || e);
+  if (/has not run/.test(m)) return "Not linked yet: the bridge has not run for this tenant." + (can("repo_write") ? " Use Relink now above." : "");
+  if (/every repository|all of them/.test(m)) return "This view covers every repository of the tenant; your access is limited to some of them.";
+  return m;
+}
+function kfOffMsg() {
+  return `<p class="banner">The Knowledge Fabric bridge is off. ${can("config_write") ? '<button class="sec" type="button" data-kfa="goto" data-to="connect">Connect</button>' : "Ask a release manager or administrator to connect it."}</p>`;
+}
+function kfCsv(rows, cols, name) {
+  const q = v => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const text = [cols.map(c => q(c[0])).join(",")].concat(rows.map(r => cols.map(c => q(c[1](r))).join(","))).join("\r\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type: "text/csv"})); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+// -- status strip and Status tab
+async function kfStatus() {
+  try { KF.status = await api("/api/v1/kf/status"); }
+  catch (e) { $("kfstatus").innerHTML = `<span class="err">${esc(kfErr(e))}</span> <button class="sec" type="button" data-kfa="status">Retry</button>`; return null; }
+  const s = KF.status, lr = s.last_run || {}, sm = lr.summary || {}, st = s.settings || {};
+  const gapN = Object.entries(s.gaps || {}).filter(([k]) => k !== "rejected_by_review").reduce((a, [, n]) => a + n, 0);
+  const counts = [["realizes", "service→system"], ["same_as", "test case"], ["screens", "form"], ["data", "data"], ["rules", "rule"], ["products", "product"]]
+    .filter(([k]) => sm[k]).map(([k, l]) => `${esc(sm[k])} ${l}`).join(" · ");
+  const doms = st.domains === "auto" ? `all${lr.domains ? " (" + esc(lr.domains.length) + ")" : ""}, auto` : (st.domains || []).map(esc).join(", ");
+  const running = s.state === "running";
+  const relink = s.enabled ? (can("repo_write") ? `<button class="sec" type="button" data-kfa="relink" id="kfrelink" ${running ? "disabled" : ""}>${s.state === "failed" ? "Retry" : s.state === "never_run" ? "Run the first link" : "Relink now"}</button>` : `<span class="mut">relink ${KFNEED.repo_write}</span>`)
+    : (can("config_write") ? '<button class="sec" type="button" data-kfa="goto" data-to="connect">Connect</button>' : '<span class="mut">ask a release manager or administrator to connect it</span>');
+  $("kfstatus").innerHTML = `<span class="pill kfstate ${esc(s.state)}">${esc(KFSTATE[s.state] || s.state)}</span>` +
+    (s.enabled ? `<span>customer <b>${esc(st.customer_id)}</b></span><span>domains: ${doms}</span>` : "") +
+    (s.last_run ? `<span class="mut">last run ${esc(kfWhen(lr.at))} (${esc(lr.reason)})</span>` : "") +
+    (counts ? `<span>${counts}</span>` : "") +
+    (s.to_review.total ? `<span><a href="#kfsec" data-kfa="goto" data-to="review">${esc(s.to_review.total)} to review</a></span>` : "") +
+    (gapN ? `<span><a href="#kfsec" data-kfa="goto" data-to="gaps">${esc(gapN)} gaps</a></span>` : "") +
+    (s.state === "failed" && s.last_failure ? `<span class="err">${esc(s.last_failure.reason || "the last run failed")}</span>` : "") +
+    `<span style="margin-left:auto">${relink}</span><span id="kfsmsg" class="mut" aria-live="polite"></span>`;
+  $("kft-gaps").textContent = gapN ? `Gaps (${gapN})` : "Gaps";
+  $("kft-review").textContent = s.to_review.total ? `Review (${s.to_review.total})` : "Review";
+  $("gkfwrap").classList.toggle("hidden", !s.last_run);
+  if (s.last_run && !KF.prodLoaded) { KF.prodLoaded = true; kfProductFilter(); }
+  if (KF.tab === "status") kfStatusTab();
+  if (running && s.job) kfFollowJob(s.job.id);
+  return s;
+}
+function kfStatusTab() {
+  const s = KF.status, out = $("kfstatusout");
+  if (!s) { kfStatus(); return; }
+  if (!s.enabled) { out.innerHTML = kfOffMsg() + `<p class="mut">Neo4j configured on this server: ${s.neo4j_configured ? "yes" : "no"}.</p>`; return; }
+  const lr = s.last_run, w = lr && lr.written;
+  if (!lr) { out.innerHTML = `<p>Not linked yet. ${can("repo_write") ? 'Use <b>Run the first link</b> above.' : "An engineer can run the first link."}</p><p class="mut">Neo4j configured on this server: ${s.neo4j_configured ? "yes" : "no"}.</p>`; return; }
+  const warn = Array.isArray(lr.warnings) ? (lr.warnings.length ? lr.warnings.map(esc).join("<br>") : "none") : `${esc(lr.warnings)} (shown to people who can read every repository)`;
+  out.innerHTML = `<dl class="kv">
+    <dt>Last run</dt><dd>${esc(kfWhen(lr.at))} (${esc(lr.reason)}) · ${esc(lr.duration_s ?? "?")} s${w ? ` · ${esc(w.added)} added · ${esc(w.kept)} kept · ${esc(w.removed)} removed` : ""}</dd>
+    <dt>Customer</dt><dd>${esc(lr.customer_id)}${lr.kf_tenant_id ? ` <span class="mut">(Knowledge Fabric tenant ${esc(lr.kf_tenant_id)})</span>` : ""}</dd>
+    <dt>Domains</dt><dd>${(lr.domains || []).map(esc).join(", ") || "none"} <span class="mut">(${lr.domain_mode === "auto" ? "all of the customer's" : "restricted"})</span></dd>
+    <dt>Links</dt><dd>${esc(lr.links_total)} in all${lr.summary && lr.summary.by_status ? " · " + Object.entries(lr.summary.by_status).map(([k, n]) => `${esc(n)} ${esc(KFEV[k] || k)}`).join(" · ") : ""}</dd>
+    <dt>Next poll</dt><dd>${s.next_poll_at ? esc(kfWhen(s.next_poll_at)) : '<span class="mut">no automatic relink (auto_relink is off)</span>'}</dd>
+    <dt>Mirror restored</dt><dd>${lr.mirror_restored ? "yes: TIA's graph was missing in Neo4j and was written again" : "no"}</dd>
+    <dt>Neo4j</dt><dd>configured on this server: ${s.neo4j_configured ? "yes" : "no"}</dd>
+    <dt>Warnings</dt><dd>${warn}</dd>
+    ${s.last_failure ? `<dt>Last failure</dt><dd class="err">${esc(kfWhen(s.last_failure.at))}: ${esc(s.last_failure.reason || "details are shown to people who can read every repository")}</dd>` : ""}
+    ${s.job ? `<dt>Bridge job</dt><dd>${esc(s.job.kind)} ${esc(s.job.status)} <span class="mut">(${esc(kfWhen(s.job.updated_at))})</span>${s.job.error ? ` <span class="err">${esc(s.job.error)}</span>` : ""}</dd>` : ""}
+  </dl>
+  <details><summary>Technical details</summary><dl class="kv"><dt>TIA graph version</dt><dd><code>${esc(lr.graph_version)}</code></dd>
+    <dt>Knowledge Fabric fingerprint</dt><dd><code>${esc(lr.kf_fingerprint)}</code></dd><dt>Bridge version</dt><dd><code>${esc(lr.bridge_version)}</code></dd>
+    <dt>Run record</dt><dd>evidence ${esc(lr.run_evidence_id)}</dd><dt>Configuration version</dt><dd>${esc(s.config_version)}</dd></dl></details>` +
+    (s.details_withheld ? '<p class="mut">Names, warnings and failure text are shown to people who can read every repository.</p>' : "") +
+    '<h3 style="font-size:13px;margin-top:14px">How the review is going</h3><div id="kfmeasures" class="mut">Loading...</div>';
+  kfMeasures();
+}
+async function kfMeasures() {
+  try {
+    const m = await api("/api/v1/kf/review-measures"), h = m.hours_to_decision, l = m.links, nm = m.name_matches;
+    const AGE = {under_1_day: "under a day", "1_to_7_days": "1-7 days", over_7_days: "over 7 days"};
+    $("kfmeasures").className = "";
+    $("kfmeasures").innerHTML = `<dl class="kv">
+      <dt>Links</dt><dd>${l.total ? `${esc(l.confirmed)} confirmed, ${esc(l.guessed)} guessed (${esc(Math.round(l.confirmed_share * 100))}% confirmed)` : "none yet"}</dd>
+      <dt>Open items</dt><dd>${m.open_total ? Object.entries(m.open_by_kind_and_age).map(([k, a]) => `${esc(KFKIND[k] || k)}: ` + Object.entries(a).filter(([, n]) => n).map(([b, n]) => `${esc(n)} ${esc(AGE[b])}`).join(", ")).join("<br>") : "none"}</dd>
+      <dt>Time to a decision</dt><dd>${h.decided ? `median ${esc(h.median)} h, 90% within ${esc(h.p90)} h (${esc(h.decided)} decided)` : "no decision yet"}</dd>
+      <dt>Links found by name</dt><dd>${nm.decided ? `${esc(nm.rejected)} of ${esc(nm.decided)} rejected (${esc(Math.round(nm.rejection_rate * 100))}%)` : "none decided yet"}${nm.advice ? `<br><span class="err">${esc(nm.advice)}</span>` : ""}</dd></dl>`;
+  } catch (e) { $("kfmeasures").textContent = kfErr(e); }
+}
+async function kfFollowJob(id) {
+  if (!id || KF.job === id) return;
+  KF.job = id;
+  const t0 = Date.now();
+  let last = null;
+  while (KF.job === id && Date.now() - t0 < 300000) {
+    await new Promise(r => setTimeout(r, 3000));
+    try { last = await api("/api/v1/jobs/" + encodeURIComponent(id)); } catch (e) { last = null; break; }
+    if (!["queued", "running"].includes(last.status)) break;
+  }
+  if (KF.job !== id) return;
+  KF.job = null; KF.overlay = null; KF.names = null;
+  await kfStatus();
+  if (last && last.status === "failed" && $("kfsmsg")) msg("kfsmsg", "The bridge job failed: " + (last.error || "see the Status tab"), "err");
+  for (const t of Object.keys(KF.loaded)) if (t !== KF.tab) delete KF.loaded[t];
+  KF.loaded[KF.tab] = false; kfOpen(KF.tab);
+}
+async function kfRelink(btn) {
+  if (btn) busy(btn, true);
+  const r = await kfCall("/api/v1/kf/relink?async=true", "POST");
+  if (!r.ok) { if (btn) busy(btn, false); msg("kfsmsg", kfDetail(r), "err"); return false; }
+  msg("kfsmsg", "Linking: the page follows the job.", "mut");
+  await kfStatus();
+  kfFollowJob(r.j.queued && r.j.queued.job_id);
+  return true;
+}
+// -- tabs (keyboard: arrow keys move between tabs)
+function kfOpen(tab, focus) {
+  KF.tab = tab;
+  try { localStorage.setItem("tia.kftab", tab) } catch {}
+  document.querySelectorAll("[data-kftab]").forEach(b => { const on = b.dataset.kftab === tab; b.classList.toggle("on", on); b.setAttribute("aria-selected", on ? "true" : "false"); b.tabIndex = on ? 0 : -1; if (on && focus) b.focus(); });
+  document.querySelectorAll('#kfsec [role="tabpanel"]').forEach(p => p.classList.toggle("hidden", p.id !== "kftab-" + tab));
+  if (KF.loaded[tab]) return;
+  KF.loaded[tab] = true;
+  ({status: kfStatusTab, connect: kfConnect, links: kfLinks, gaps: kfGaps, review: () => { kfQueue(); kfDecisions(); }, products: kfProducts, ontology: kfOntology})[tab]();
+}
+$("kftabs").addEventListener("click", ev => { const b = ev.target.closest("[data-kftab]"); if (b) kfOpen(b.dataset.kftab); });
+$("kftabs").addEventListener("keydown", ev => {
+  const tabs = [...document.querySelectorAll("[data-kftab]")], i = tabs.findIndex(b => b.dataset.kftab === KF.tab);
+  const to = {ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1}[ev.key];
+  if (to === undefined) return;
+  ev.preventDefault(); kfOpen(tabs[(to + tabs.length) % tabs.length].dataset.kftab, true);
+});
+// -- Connect & settings (needs config_write; the server enforces it)
+function kfCustomerRows(list) {
+  const by = {};
+  for (const c of list) { const x = by[c.customer_id] = by[c.customer_id] || {customer_id: c.customer_id, tenant_ids: [], industry: c.industry_id, domains: []};
+    if (c.tenant_id && !x.tenant_ids.includes(c.tenant_id)) x.tenant_ids.push(c.tenant_id);
+    for (const d of c.domains || []) if (!x.domains.includes(d)) x.domains.push(d); }
+  return Object.values(by).sort((a, b) => String(a.customer_id).localeCompare(String(b.customer_id)));
+}
+function kfDomainBoxes(cust, cur) {
+  const list = (KF.customers.find(c => c.customer_id === cust) || {}).domains || ((KF.status.last_run || {}).available_domains) || [];
+  const picked = Array.isArray(cur) ? cur : [];
+  return list.length ? list.map(d => `<label class="roles"><input type="checkbox" name="kfdom" value="${esc(d)}" ${picked.includes(d) ? "checked" : ""}> ${esc(d)}</label>`).join("")
+    : '<span class="mut">The customer\'s domains appear when Knowledge Fabric can be reached.</span>';
+}
+async function kfConnect() {
+  const out = $("kfconnectout");
+  if (!KF.status && !(await kfStatus())) { out.innerHTML = ""; return; }
+  const s = KF.status, cur = s.settings || {};
+  if (!can("config_write")) {
+    out.innerHTML = `<p class="mut">Connecting and changing the bridge ${KFNEED.config_write}. The bridge is ${s.enabled ? `on, linked to customer <b>${esc(cur.customer_id)}</b>` : "off"}.</p>`;
+    kfAliases(); return;
+  }
+  out.innerHTML = '<p class="mut">Step 1: checking the connection to Knowledge Fabric...</p>';
+  const r = await kfCall("/api/v1/kf/customers");
+  let step1, step2;
+  KF.customers = r.ok ? kfCustomerRows(r.j.customers || []) : [];
+  if (r.ok && KF.customers.length) {
+    step1 = `<p class="ok">Connected: Knowledge Fabric has ${esc(KF.customers.length)} customer(s).</p>`;
+    step2 = `<table id="kfcusttable"><thead><tr><th scope="col"></th><th scope="col">Customer</th><th scope="col">Knowledge Fabric tenant</th><th scope="col">Industry</th><th scope="col">Domains</th></tr></thead><tbody>` +
+      KF.customers.map(c => `<tr><td><input type="radio" name="kfcust" value="${esc(c.customer_id)}" aria-label="choose ${esc(c.customer_id)}" style="width:auto" ${c.customer_id === cur.customer_id ? "checked" : ""}></td><td><b>${esc(c.customer_id)}</b></td>
+        <td>${c.tenant_ids.map(esc).join("<br>")}${c.tenant_ids.length > 1 ? '<br><span class="err">several: choose one below</span>' : ""}</td><td>${esc(c.industry || "")}</td><td>${c.domains.map(esc).join(", ")}</td></tr>`).join("") + "</tbody></table>";
+  } else {
+    step1 = r.ok ? '<p class="banner">Knowledge Fabric has no customers yet (no CustomerRoot node): ingest a customer in Knowledge Fabric first.</p>' : `<p class="banner">${esc(kfDetail(r))}</p>`;
+    step2 = `<label for="kfcustid">Customer id (type it when Knowledge Fabric cannot be listed)</label><input id="kfcustid" value="${esc(cur.customer_id || "")}">`;
+  }
+  const auto = cur.domains === "auto" || !cur.domains;
+  out.innerHTML = `<h3 style="font-size:13px">1. Check the connection</h3>${step1}
+    <h3 style="font-size:13px">2. Choose the customer</h3>${step2}
+    <div class="row"><div><label for="kfktid">Knowledge Fabric tenant id (only when the customer has several)</label><input id="kfktid" value="${esc(cur.kf_tenant_id || "")}"></div></div>
+    <h3 style="font-size:13px">3. Choose the domains</h3>
+    <label class="roles"><input type="radio" name="kfdmode" value="auto" style="width:auto" ${auto ? "checked" : ""}> All domains of this customer (recommended: code has no business domain)</label>
+    <label class="roles"><input type="radio" name="kfdmode" value="list" style="width:auto" ${auto ? "" : "checked"}> Only these:</label>
+    <div id="kfdoms">${kfDomainBoxes(cur.customer_id, cur.domains)}</div>
+    <h3 style="font-size:13px">4. Options</h3>
+    <div class="roles">
+      <label><input type="checkbox" id="kfo-link_name_matches" ${cur.link_name_matches ? "checked" : ""}> link by exact name (inferred: shown for confirmation)</label>
+      <label><input type="checkbox" id="kfo-propose_rules" ${cur.propose_rules ? "checked" : ""}> propose business-rule pairs</label>
+      <label><input type="checkbox" id="kfo-link_issue_keys" ${cur.link_issue_keys ? "checked" : ""}> link issue keys in commit messages to user stories</label>
+      <label><input type="checkbox" id="kfo-auto_relink" ${cur.auto_relink ? "checked" : ""}> relink automatically</label></div>
+    <div class="row"><div><label for="kfo-poll_minutes">Check Knowledge Fabric for changes every (minutes, 5-1440)</label><input id="kfo-poll_minutes" type="number" min="5" max="1440" value="${esc(cur.poll_minutes)}"></div>
+      <div><label for="kfo-review_policy">Review decisions</label><select id="kfo-review_policy"><option value="single" ${cur.review_policy === "single" ? "selected" : ""}>one person decides</option><option value="two_person" ${cur.review_policy === "two_person" ? "selected" : ""}>two different people must agree</option></select></div></div>
+    <details><summary>Advanced</summary><div class="row"><div><label for="kfo-max_context_items">Business context kept per item (10-500)</label><input id="kfo-max_context_items" type="number" min="10" max="500" value="${esc(cur.max_context_items)}"></div></div></details>
+    <div class="row"><div><label for="kfccomment">Comment for this configuration version</label><input id="kfccomment" maxlength="500" placeholder="why this change"></div></div>
+    <div id="kfcprev" class="mut" aria-live="polite"></div>
+    <p><button type="button" data-kfa="save-settings" id="kfcsave">${s.enabled ? "Save settings" : "Save and run the first link"}</button></p>
+    <ul id="kfcproblems" class="err"></ul>` +
+    (s.enabled ? `<h3 style="font-size:13px;margin-top:16px">Turn off</h3><p class="mut">Analyses stop showing business impact. TIA's decisions and settings stay, so turning it on again restores the same links.</p>
+      <label class="roles"><input type="checkbox" id="kfoffrm" checked> Also remove TIA's links from Knowledge Fabric's graph</label>
+      <p><button class="sec" type="button" data-kfa="turn-off" id="kfoff">Turn the bridge off</button></p>` : "");
+  kfPreview();
+  kfAliases();
+}
+function kfFormSet() {
+  const v = id => $(id).value, cust = (document.querySelector('input[name="kfcust"]:checked') || $("kfcustid") || {}).value || "";
+  const mode = (document.querySelector('input[name="kfdmode"]:checked') || {}).value;
+  const set = {enabled: true, customer_id: cust.trim() || null, kf_tenant_id: v("kfktid").trim() || null,
+    domains: mode === "list" ? [...document.querySelectorAll('input[name="kfdom"]:checked')].map(x => x.value) : "auto",
+    poll_minutes: Number(v("kfo-poll_minutes")), max_context_items: Number(v("kfo-max_context_items")), review_policy: v("kfo-review_policy")};
+  for (const k of ["link_name_matches", "propose_rules", "link_issue_keys", "auto_relink"]) set[k] = $("kfo-" + k).checked;
+  return set;
+}
+function kfPreview() {
+  if (!$("kfcprev") || !KF.status) return;
+  const cur = KF.status.settings || {}, set = kfFormSet();
+  const ch = Object.entries(set).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(cur[k] ?? null));
+  $("kfcprev").innerHTML = ch.length ? "Will change: " + ch.map(([k, v]) => `<code>${esc(k)}</code> ${esc(JSON.stringify(cur[k] ?? null))} &rarr; ${esc(JSON.stringify(v))}`).join("; ") : "No change yet.";
+}
+$("kfconnectout").addEventListener("change", ev => {
+  if (ev.target.name === "kfcust") $("kfdoms").innerHTML = kfDomainBoxes(ev.target.value, []);
+  kfPreview();
+});
+$("kfconnectout").addEventListener("input", kfPreview);
+async function kfSaveSettings(btn) {
+  const was = KF.status.enabled, before = (KF.status.settings || {}).customer_id, set = kfFormSet();
+  if (!set.customer_id) { $("kfcproblems").innerHTML = "<li>Choose a customer.</li>"; return; }
+  if (Array.isArray(set.domains) && !set.domains.length) { $("kfcproblems").innerHTML = "<li>Tick at least one domain, or choose all domains.</li>"; return; }
+  busy(btn, true); $("kfcproblems").innerHTML = "";
+  const r = await kfCall("/api/v1/kf/settings", "PATCH", {set, expected_version: KF.status.config_version, comment: $("kfccomment").value || (was ? "Knowledge Fabric settings" : "connect Knowledge Fabric")});
+  busy(btn, false);
+  if (r.status === 409) {
+    await kfStatus(); KF.loaded.connect = false; await kfConnect();
+    msg("kfcmsg", `Someone saved the configuration (now version ${r.j.detail && r.j.detail.version}) while you were editing. The form shows their values; your change was not saved: ${JSON.stringify(set)}`, "err");
+    return;
+  }
+  if (!r.ok) { const d = r.j.detail || {}; $("kfcproblems").innerHTML = (d.problems || [kfDetail(r)]).map(p => `<li>${esc(p)}</li>`).join(""); msg("kfcmsg", "Not saved.", "err"); return; }
+  msg("kfcmsg", r.j.created ? `Saved as configuration version ${r.j.version}.` : "No change: identical to the current settings.", "ok");
+  await kfStatus();
+  if (r.j.created && (!was || before !== set.customer_id) && can("repo_write")) { kfOpen("status"); await kfRelink(); }
+  else { KF.loaded.connect = false; kfConnect(); }
+}
+async function kfTurnOff(btn) {
+  if (!confirm("Turn the Knowledge Fabric bridge off? Analyses will stop showing business impact.")) return;
+  busy(btn, true);
+  if ($("kfoffrm").checked) {
+    const d = await kfCall("/api/v1/kf/links", "DELETE");
+    if (!d.ok && !confirm("TIA could not remove its links from Knowledge Fabric's graph: " + kfDetail(d) + "\n\nTurn the bridge off anyway?")) { busy(btn, false); return; }
+    if (d.ok) msg("kfcmsg", `Removed ${d.j.removed} link(s) from Knowledge Fabric's graph.`, "ok");
+  }
+  const r = await kfCall("/api/v1/kf/settings", "PATCH", {set: {enabled: false}, expected_version: KF.status.config_version, comment: "turn the Knowledge Fabric bridge off"});
+  busy(btn, false);
+  if (!r.ok) { msg("kfcmsg", kfDetail(r), "err"); return; }
+  await kfStatus(); KF.loaded = {}; kfOpen("connect");
+}
+// -- aliases: one entry added or removed at a time, with the version the page loaded (409 when someone saved in between)
+async function kfNames() {
+  if (KF.names) return KF.names;
+  const n = {tia: {system_aliases: new Set(), screen_aliases: new Set(), data_aliases: new Set()}, kf: {system_aliases: new Set(), screen_aliases: new Set(), data_aliases: new Set()}};
+  const set = {System: "system_aliases", FormCapture: "screen_aliases", DataEntity: "data_aliases"};
+  try { const l = await api("/api/v1/kf/links?limit=5000");
+    for (const x of l.links) { const s = set[x.to_label]; if (!s) continue; n.kf[s].add(x.to_name); n.tia[s].add(x.rel === "REALIZES" && x.to_label === "System" ? x.service : x.tia_name); } } catch {}
+  try { const g = (await api("/api/v1/kf/gaps")).gaps;
+    (g.unmapped_service || []).forEach(x => n.tia.system_aliases.add(x.service)); (g.systems_without_code || []).forEach(x => n.kf.system_aliases.add(x.system));
+    (g.unlinked_screens || []).forEach(x => n.tia.screen_aliases.add(x.name)); (g.forms_without_screen || []).forEach(x => n.kf.screen_aliases.add(x.name));
+    (g.unlinked_data || []).forEach(x => n.tia.data_aliases.add(x.name)); (g.data_entities_without_code || []).forEach(x => n.kf.data_aliases.add(x.name)); } catch {}
+  return KF.names = n;
+}
+async function kfAliases() {
+  const out = $("kfaliasout"), st = (KF.status || {}).settings || {};
+  if (!("system_aliases" in st)) { out.innerHTML = '<p class="mut">Aliases are shown to people who can read every repository.</p>'; return; }
+  const edit = can("config_write"), n = await kfNames();
+  out.innerHTML = Object.entries(KFALIAS).map(([setting, [from, to]]) => {
+    const rows = Object.entries(st[setting] || {});
+    return `<h4 style="font-size:12px;margin:10px 0 2px">${esc(from)} &rarr; ${esc(to)} <span class="mut">(${esc(setting)})</span></h4>
+      <table><thead><tr><th scope="col" style="width:35%">Code: ${esc(from)}</th><th scope="col">Knowledge Fabric: ${esc(to)}</th></tr></thead><tbody>` +
+      (rows.map(([f, ts]) => `<tr><td><code>${esc(f)}</code></td><td>${ts.map(t => `<span class="pill">${esc(t)}${edit ? ` <button class="sec" style="padding:0 5px" type="button" data-kfa="alias-rm" data-s="${esc(setting)}" data-f="${esc(f)}" data-t="${esc(t)}" aria-label="remove alias ${esc(f)} to ${esc(t)}">&times;</button>` : ""}</span>`).join(" ")}</td></tr>`).join("") || '<tr><td colspan="2" class="mut">none</td></tr>') +
+      `</tbody></table>` + (edit ? `<div class="ctl"><div><label for="kfaf-${setting}">${esc(from)}</label><input id="kfaf-${setting}" list="kfal-t-${setting}"></div>
+        <div><label for="kfat-${setting}">${esc(to)} name, or id:&lt;entity id&gt;</label><input id="kfat-${setting}" list="kfal-k-${setting}"></div>
+        <div><button class="sec" type="button" data-kfa="alias-add-form" data-s="${esc(setting)}">Add alias</button></div></div>
+        <datalist id="kfal-t-${setting}">${[...n.tia[setting]].filter(Boolean).sort().map(x => `<option value="${esc(x)}">`).join("")}</datalist>
+        <datalist id="kfal-k-${setting}">${[...n.kf[setting]].filter(Boolean).sort().map(x => `<option value="${esc(x)}">`).join("")}</datalist>` : "");
+  }).join("") + (edit ? "" : `<p class="mut">Changing aliases ${KFNEED.config_write}.</p>`);
+}
+async function kfAlias(op, setting, from, to, comment, msgId) {
+  const body = {[op === "add" ? "add_aliases" : "remove_aliases"]: [{setting, from, to: [to]}], expected_version: KF.status.config_version,
+    comment: comment || `${op === "add" ? "add" : "remove"} alias ${from} -> ${to}`};
+  const r = await kfCall("/api/v1/kf/settings", "PATCH", body);
+  await kfStatus(); KF.names = null;
+  if (r.status === 409) { msg(msgId, "Someone saved the configuration while you were working: the page has the current settings now; try again.", "err"); return false; }
+  if (!r.ok) { msg(msgId, kfDetail(r), "err"); return false; }
+  msg(msgId, `${op === "add" ? "Added" : "Removed"}: saved as configuration version ${r.j.version}.` + ((KF.status.settings || {}).auto_relink ? " The bridge relinks now." : " Relink to apply it."), "ok");
+  if (KF.status.state === "running" && KF.status.job) kfFollowJob(KF.status.job.id);
+  if (KF.tab === "connect") kfAliases();
+  return true;
+}
+// -- Links tab
+const kfTiaName = l => l.rel === "REALIZES" && l.to_label === "System" ? l.service : (l.test_case || l.tia_name || l.from.split("|").pop());
+const kfTiaKind = l => l.rel === "REALIZES" && l.to_label === "System" ? "service" : l.rel === "SAME_AS" ? "test case" : l.rel === "ENFORCES" ? "rule" : l.rel === "PLACED_IN" ? "service" : (l.item_kind || "item");
+const kfTid = l => l.from.split("|").pop();
+async function kfLinks() {
+  if (KF.status && !KF.status.enabled) { $("kflout").innerHTML = kfOffMsg(); $("kflmsg").textContent = ""; return; }
+  $("kflmsg").textContent = "Loading...";
+  try {
+    const [j, rv] = await Promise.all([api("/api/v1/kf/links?limit=5000"), api("/api/v1/kf/reviews?status=all&limit=500").catch(() => ({items: []}))]);
+    KF.links = j; KF.items = {};
+    for (const r of rv.items) for (const c of (r.item.candidates || [])) KF.items[r.tia_id + "|" + c.id] = r;
+    const doms = [...new Set(j.links.map(l => l.domain).filter(Boolean))].sort();
+    $("kfldomain").innerHTML = '<option value="">all domains</option>' + doms.map(d => `<option>${esc(d)}</option>`).join("");
+    KF.page = 0; kfLinkRows();
+  } catch (e) { $("kflmsg").textContent = kfErr(e); $("kflout").innerHTML = ""; }
+}
+function kfFiltered() {
+  const [rel, lab] = ($("kflkind").value || "|").split("|"), ev = $("kflstatus").value, src = $("kflsource").value, dom = $("kfldomain").value, q = $("kflq").value.trim().toLowerCase();
+  return ((KF.links || {}).links || []).filter(l => (!rel || (l.rel === rel && (!lab || l.to_label === lab))) && (!ev || l.status === ev) && (!src || l.source === src) &&
+    (!dom || l.domain === dom) && (!q || `${kfTiaName(l)} ${l.to_name} ${l.service || ""}`.toLowerCase().includes(q)));
+}
+function kfLinkActions(l) {
+  const it = KF.items[kfTid(l) + "|" + l.to];
+  if (l.status === "inferred" && it && ["open", "deferred", "awaiting_second"].includes(it.status))
+    return can("kf_review") ? `<button class="sec" type="button" data-kfa="link-decide" data-item="${esc(it.item_id)}" data-a="confirm">Confirm</button> <button class="sec" type="button" data-kfa="link-decide" data-item="${esc(it.item_id)}" data-a="reject">Reject</button>` : `<span class="mut">to confirm (${KFNEED.kf_review})</span>`;
+  if (l.source === "review") return it && it.status === "decided" && can("kf_review") ? `<button class="sec" type="button" data-kfa="link-decide" data-item="${esc(it.item_id)}" data-a="reset">Undo</button>` : '<span class="mut">reviewed</span>';
+  if (l.source === "tenant_config" && l.rel === "REALIZES" && l.to_label === "System") {
+    const vals = (((KF.status || {}).settings || {}).system_aliases || {})[l.service] || [];
+    const v = vals.find(x => x.toLowerCase() === String(l.to_name || "").toLowerCase() || x === "id:" + l.to);
+    if (v && can("config_write")) return `<button class="sec" type="button" data-kfa="alias-rm" data-s="system_aliases" data-f="${esc(l.service)}" data-t="${esc(v)}">Remove alias</button>`;
+  }
+  if (l.source === "tia-services.yaml") return `<span class="mut">declared in tia-services.yaml of ${esc(l.service || "the repository")}: its owner changes it there</span>`;
+  return "";
+}
+function kfLinkRows() {
+  const rows = kfFiltered(), n = rows.length, per = 100, pages = Math.max(1, Math.ceil(n / per));
+  KF.page = Math.min(KF.page, pages - 1);
+  const page = rows.slice(KF.page * per, KF.page * per + per), j = KF.links;
+  $("kflmsg").textContent = `${n} of ${j.links.length} link(s) shown${j.links_total > j.links.length ? ` (the run kept ${j.links.length} of ${j.links_total})` : ""}; from the bridge run of ${kfWhen(j.at)}.`;
+  $("kflout").innerHTML = n ? `<table id="kfltable"><thead><tr><th scope="col" style="width:26%">Code</th><th scope="col">Knowledge Fabric</th><th scope="col" style="width:16%">Evidence</th><th scope="col" style="width:16%">How</th><th scope="col" style="width:14%"></th></tr></thead><tbody>` +
+    page.map(l => `<tr><td>${esc(kfTiaKind(l))} <b>${esc(kfTiaName(l))}</b>${l.service && kfTiaKind(l) !== "service" ? ` <span class="mut">(${esc(l.service)})</span>` : ""}</td>
+      <td>${esc(KFLABEL[l.to_label] || l.to_label)} <b>${esc(l.to_name)}</b> <span class="mut">(${esc(l.domain)})</span>
+        <details><summary>details</summary><dl class="kv"><dt>entity id</dt><dd><code>${esc(l.to)}</code></dd><dt>id check</dt><dd>${esc(l.id_check)}</dd><dt>rule</dt><dd>${esc(l.rule || "none")}</dd>
+        <dt>strategy</dt><dd>${esc(l.strategy)}</dd><dt>code node</dt><dd><code>${esc(kfTid(l))}</code></dd>${l.product_line ? `<dt>product line</dt><dd>${esc(l.product_line)}</dd>` : ""}
+        ${l.decided_by ? `<dt>decided</dt><dd>${esc(l.decided_by)}, ${esc(kfWhen(l.decided_at))}</dd>` : ""}</dl></details></td>
+      <td>${kfEv(l.status)}</td><td>${esc(KFSRC[l.source] || l.source)}${l.decided_by ? `<br><span class="mut">by ${esc(l.decided_by)}</span>` : ""}</td><td>${kfLinkActions(l)}</td></tr>`).join("") + "</tbody></table>"
+    : '<p class="mut">No link matches these filters.</p>';
+  $("kflpager").innerHTML = pages > 1 ? `<button class="sec" type="button" data-kfa="page" data-p="${KF.page - 1}" ${KF.page ? "" : "disabled"}>Previous</button> page ${KF.page + 1} of ${pages} <button class="sec" type="button" data-kfa="page" data-p="${KF.page + 1}" ${KF.page + 1 < pages ? "" : "disabled"}>Next</button>` : "";
+}
+["kflkind", "kflstatus", "kflsource", "kfldomain"].forEach(id => $(id).onchange = () => { KF.page = 0; if (KF.links) kfLinkRows(); });
+$("kflq").oninput = () => { KF.page = 0; if (KF.links) kfLinkRows(); };
+$("kflcsv").onclick = () => kfCsv(kfFiltered(), [["code kind", kfTiaKind], ["code", kfTiaName], ["code node", kfTid], ["service", l => l.service], ["relationship", l => l.rel],
+  ["Knowledge Fabric label", l => l.to_label], ["Knowledge Fabric name", l => l.to_name], ["entity id", l => l.to], ["domain", l => l.domain], ["evidence", l => l.status],
+  ["found by", l => l.source], ["decided by", l => l.decided_by]], "tia-knowledge-fabric-links.csv");
+// -- Gaps tab: one card per kind, with the fix next to each row
+const KFGAP = {
+  unmapped_service: ["Services without a business system", "These services are not linked to any business system."],
+  systems_without_code: ["Business systems without code", "No code service realises these business systems."],
+  unlinked_screens: ["Screens without a form", "These screens found no Knowledge Fabric form."],
+  forms_without_screen: ["Forms without a screen", "No screen in the code realises these forms."],
+  unlinked_data: ["Entities and tables without a data entity", "These entities and tables found no Knowledge Fabric data entity."],
+  data_entities_without_code: ["Data entities without code", "No entity or table in the code stores these data entities."],
+  declared_not_found: ["Declared names not found", "A declared name does not exist in Knowledge Fabric."],
+  ambiguous: ["Names that match more than one business item", "Choose the right one: TIA keeps your choice as an alias by entity id."],
+  test_cases_only_in_tia: ["Test cases only in TIA", "These test case ids are in the repositories but not in Knowledge Fabric. Check that both sides write ids the same way (NW-11 vs NW 11)."],
+  test_cases_only_in_kf: ["Test cases only in Knowledge Fabric", "These test case ids are in Knowledge Fabric but in no repository."],
+  unknown_domains: ["Domains the customer does not have", "A listed domain does not exist for this customer."],
+  unmapped_repositories: ["Repositories without a product", "These repositories have no place in the business tree yet."],
+  product_not_found: ["Product places not found", "A mapped place does not exist in the customer's business tree."],
+  product_conflicts: ["Product places that disagree", "The services' business systems sit under another product line than the one mapped."],
+  rejected_by_review: ["Pairs a person rejected", "Kept out of the links on purpose. Undo the decision in the Review tab to link them again."],
+  stale_decisions: ["Decisions whose business item disappeared", "Knowledge Fabric re-ingested or renamed the item: move the decision in the Review tab."]};
+const KFGAPSET = {unmapped_service: "system_aliases", systems_without_code: "system_aliases", unlinked_screens: "screen_aliases", forms_without_screen: "screen_aliases", unlinked_data: "data_aliases", data_entities_without_code: "data_aliases"};
+const KFSET_OF_LABEL = {System: "system_aliases", FormCapture: "screen_aliases", DataEntity: "data_aliases"};
+function kfFix(setting, from, to, text) {
+  if (!can("config_write")) return `<span class="mut">ask a release manager or administrator to add</span> <code>${esc(setting)}: {"${esc(from)}": ["${esc(to)}"]}</code>`;
+  return `<button class="sec" type="button" data-kfa="alias-add" data-s="${esc(setting)}" data-f="${esc(from)}" data-t="${esc(to)}">${text}</button>`;
+}
+function kfTyped(setting, from, what) {
+  return can("config_write") ? `<span style="white-space:nowrap"><input style="width:180px" aria-label="${esc(what)} for ${esc(from)}" data-kftyped placeholder="${esc(what)}"> <button class="sec" type="button" data-kfa="alias-typed" data-s="${esc(setting)}" data-f="${esc(from)}">Link</button></span>` : "";
+}
+function kfGapRow(k, g) {
+  const sug = g.suggestions || [], S = KFGAPSET[k];
+  switch (k) {
+    case "unmapped_service": case "unlinked_screens": case "unlinked_data": {
+      const from = k === "unmapped_service" ? g.service : g.name;
+      return `<li><b>${esc(from)}</b> <span class="mut">${esc(g.repo || g.service || "")}</span><br>` +
+        sug.map(c => kfFix(S, from, c.name, `Link to ${esc(c.name)} <span class="mut">(${esc(c.domain)}, ${esc(Math.round((c.score || 0) * 100))}% words in common)</span>`)).join(" ") + " " +
+        kfTyped(S, from, k === "unmapped_service" ? "business system name" : k === "unlinked_screens" ? "form name" : "data entity name") + "</li>"; }
+    case "systems_without_code": case "forms_without_screen": case "data_entities_without_code": {
+      const name = g.system || g.name;
+      return `<li><b>${esc(name)}</b> <span class="mut">(${esc(g.domain)})</span><br>` +
+        sug.map(c => kfFix(S, c.kind === "service" ? c.service : c.name, name, `Link to ${esc(c.kind)} ${esc(c.kind === "service" ? c.service : c.name)}`)).join(" ") + "</li>"; }
+    case "ambiguous": {
+      const from = g.item ? g.name : g.service, S2 = KFSET_OF_LABEL[g.label];
+      return `<li><b>${esc(g.name)}</b> <span class="mut">(${esc(g.service || "")}, ${esc(g.domain)})</span> matches:<ul>` +
+        (g.options || []).map(o => `<li>${esc(o.name)} <span class="mut">${esc(o.domain)} · ${esc((o.product_lines || []).join(", "))} · <code>${esc(String(o.entity_id).slice(0, 10))}</code></span> ${S2 ? kfFix(S2, from, "id:" + o.entity_id, "Use this one") : ""}</li>`).join("") + "</ul></li>"; }
+    case "declared_not_found":
+      return `<li><b>${esc(g.name)}</b> for ${esc(g.service || g.item)} <span class="mut">(${esc(KFSRC[g.source] || g.source)})</span> ` +
+        (g.source === "tenant_config" ? (can("config_write") ? '<button class="sec" type="button" data-kfa="goto" data-to="connect">Fix alias</button>' : '<span class="mut">ask an administrator to fix the alias</span>') : `<span class="mut">ask the owner of the repository to fix <code>business_systems</code> in tia-services.yaml</span>`) + "</li>";
+    case "test_cases_only_in_tia": case "test_cases_only_in_kf":
+      return `<li><code>${esc(g.id)}</code> <span class="mut">${esc(g.repo || g.domain || "")}</span></li>`;
+    case "unknown_domains":
+      return `<li><b>${esc(g.domain)}</b> ${can("config_write") ? '<button class="sec" type="button" data-kfa="goto" data-to="connect">Fix domains</button>' : ""}</li>`;
+    case "unmapped_repositories": case "product_not_found": case "product_conflicts":
+      return `<li>${esc(g.repo || g.service || "")} ${esc(g.place || (g.places || []).join(", "))} <button class="sec" type="button" data-kfa="goto" data-to="products">Products</button></li>`;
+    default:
+      return `<li>${esc(g.name || g.kf_name || g.tia_id || JSON.stringify(g))} <span class="mut">${esc(g.tia_id || "")}</span></li>`;
+  }
+}
+async function kfGaps() {
+  if (KF.status && !KF.status.enabled) { $("kfgout").innerHTML = kfOffMsg(); $("kfgmsg").textContent = ""; return; }
+  $("kfgmsg").textContent = "Loading...";
+  try {
+    const j = await api("/api/v1/kf/gaps?suggest=true");
+    KF.gaps = j.gaps;
+    const kinds = Object.keys(KFGAP).filter(k => (j.gaps[k] || []).length);
+    $("kfgmsg").textContent = kinds.length ? `From the bridge run of ${kfWhen(j.at)}.` + (can("config_write") ? " A fix saves an alias as a new configuration version; the bridge relinks when automatic relink is on." : " Fixes need the release manager or administrator role.") : "";
+    $("kfgout").innerHTML = (kinds.length ? kinds.map(k => `<div class="kfcard" id="kfgap-${k}"><h4>${esc(KFGAP[k][0])} (${esc(j.gaps[k].length)})</h4><p class="mut" style="margin:0 0 4px">${esc(KFGAP[k][1])}</p>
+        ${k.startsWith("test_cases_only") ? `<button class="sec" type="button" data-kfa="gap-csv" data-k="${k}">Export CSV</button>` : ""}<ul>${j.gaps[k].slice(0, 200).map(g => kfGapRow(k, g)).join("")}</ul>${j.gaps[k].length > 200 ? `<p class="mut">and ${esc(j.gaps[k].length - 200)} more (export the links or use the API)</p>` : ""}</div>`).join("")
+      : '<p class="ok">No gaps: everything the bridge looked at is linked.</p>') + ((j.warnings || []).length ? `<div class="banner">${j.warnings.map(esc).join("<br>")}</div>` : "");
+  } catch (e) { $("kfgmsg").textContent = kfErr(e); $("kfgout").innerHTML = ""; }
+}
+// -- Review tab additions: decided list (with undo), bulk confirm, keyboard
+async function kfDecisions() {
+  $("kfdmsg").textContent = "Loading...";
+  try {
+    const j = await api("/api/v1/kf/decisions?limit=200");
+    $("kfdmsg").textContent = `${j.total} decision(s), newest first.`;
+    $("kfdout").innerHTML = j.decisions.length ? `<table id="kfdtable"><thead><tr><th scope="col" style="width:15%">When</th><th scope="col" style="width:12%">Who</th><th scope="col" style="width:10%">Decision</th><th scope="col">About</th><th scope="col" style="width:20%">Comment</th><th scope="col" style="width:8%"></th></tr></thead><tbody>` +
+      j.decisions.map(d => `<tr><td>${esc(kfWhen(d.at))}</td><td>${esc(d.actor || "")}${d.source === "kf" ? '<br><span class="mut">in Knowledge Fabric</span>' : ""}</td><td><span class="pill">${esc(d.decision)}</span></td>
+        <td>${esc(d.kind)} <code>${esc(d.tia_id || "")}</code>${d.kf_name ? ` &rarr; ${esc(KFLABEL[d.label] || d.label || "")} <b>${esc(d.kf_name)}</b>` : ""}${d.place ? ` &rarr; ${esc([d.place.product_line, d.place.function].filter(Boolean).join(" > "))}` : ""}</td>
+        <td>${esc(d.comment || "")}</td><td>${d.item_id && d.decision !== "reset" && can("kf_review") ? `<button class="sec" type="button" data-kfa="link-decide" data-item="${esc(d.item_id)}" data-a="reset">Undo</button>` : ""}</td></tr>`).join("") + "</tbody></table>"
+      : '<p class="mut">No decisions yet.</p>';
+  } catch (e) { $("kfdmsg").textContent = kfErr(e); }
+}
+$("kfdgo").onclick = kfDecisions;
+function kfTicked() { return [...document.querySelectorAll("#kfqout input[data-kftick]:checked")]; }
+function kfBulkLabel() { const n = kfTicked().length; $("kfqbulk").textContent = `Confirm ticked (${n})`; $("kfqbulk").disabled = !n || !can("kf_review"); }
+$("kfqout").addEventListener("change", ev => { if (ev.target.matches("input[data-kftick]")) kfBulkLabel(); });
+$("kfqbulk").onclick = async () => {
+  const ids = kfTicked().map(x => x.dataset.kftick);
+  if (!ids.length) return;
+  busy($("kfqbulk"), true);
+  try {
+    const out = await api("/api/v1/kf/reviews/decisions", {method: "POST", body: {decisions: ids.map(item_id => ({item_id, action: "confirm"}))}});
+    $("kfqmsg").textContent = `${out.decided} confirmed` + (out.failed ? `, ${out.failed} not: ` + out.results.filter(r => !r.ok).map(r => `${r.item_id} (${typeof r.error === "string" ? r.error : r.status_code})`).join("; ") : ".");
+    kfQueue(); kfDecisions(); kfStatus();
+  } catch (e) { $("kfqmsg").textContent = String(e.message || e); }
+  busy($("kfqbulk"), false); kfBulkLabel();
+};
+$("kfqout").addEventListener("keydown", ev => {
+  const tr = ev.target.closest("tr[data-item]");
+  if (!tr || ev.target.matches("input:not([type=checkbox]),select,textarea") || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+  const rows = [...document.querySelectorAll("#kfqtable tbody tr[data-item]")], i = rows.indexOf(tr);
+  const click = a => { const b = tr.querySelector(`button[data-a="${a}"]`); if (b && !b.disabled) b.click(); };
+  const k = ev.key.toLowerCase();
+  if (k === "j" || k === "arrowdown") { ev.preventDefault(); (rows[i + 1] || tr).focus(); }
+  else if (k === "k" || k === "arrowup") { ev.preventDefault(); (rows[i - 1] || tr).focus(); }
+  else if (k === "c") click("confirm");
+  else if (k === "r") click("reject");
+  else if (k === "l") click("defer");
+  else if (k === "x") { const t = tr.querySelector("input[data-kftick]"); if (t) { t.checked = !t.checked; kfBulkLabel(); } }
+});
+// -- Ontology tab
+async function kfOntology() {
+  $("kfomsg").textContent = "Loading...";
+  try {
+    const o = await api("/api/v1/graph/ontology"), sw = o.software, br = o.bridge;
+    const layers = {};
+    for (const t of sw.node_types) (layers[t.layer] = layers[t.layer] || []).push(t);
+    const trip = r => (r.allowed_triples || []).map(t => `${esc(t.from)} &rarr; ${esc(t.to)}`).join("<br>");
+    $("kfomsg").textContent = `${sw.name} ${sw.version} and ${br.name} ${br.version}`;
+    $("kfoout").innerHTML = `<h3 style="font-size:13px">TIA's software ontology: ${esc(sw.node_types.length)} node types</h3>` +
+      Object.entries(layers).map(([l, ts]) => `<details><summary>${esc(l.replace(/_/g, " "))} (${esc(ts.length)})</summary><table><thead><tr><th scope="col" style="width:20%">Node type</th><th scope="col">What it is</th><th scope="col" style="width:30%">Properties</th></tr></thead><tbody>` +
+        ts.map(t => `<tr><td><code>${esc(t.name)}</code></td><td>${esc(t.description)}</td><td class="mut">${(t.properties || []).map(esc).join(", ")}</td></tr>`).join("") + "</tbody></table></details>").join("") +
+      `<details><summary>Relationship types (${esc(sw.relationship_types.length)})</summary><table><thead><tr><th scope="col" style="width:20%">Relationship</th><th scope="col" style="width:32%">From &rarr; to</th><th scope="col">Meaning</th></tr></thead><tbody>` +
+        sw.relationship_types.map(r => `<tr><td><code>${esc(r.name)}</code></td><td>${trip(r)}</td><td>${esc(r.description)}</td></tr>`).join("") + "</tbody></table></details>" +
+      `<h3 style="font-size:13px;margin-top:14px">The bridge ontology (${esc(br.version)})</h3><table id="kfobridge"><thead><tr><th scope="col" style="width:14%">Relationship</th><th scope="col" style="width:20%">From &rarr; to</th><th scope="col">How it is decided</th><th scope="col" style="width:18%">Evidence</th><th scope="col" style="width:12%">In Knowledge Fabric's graph</th></tr></thead><tbody>` +
+        br.relationship_types.map(r => `<tr><td><code>${esc(r.name)}</code></td><td>${trip(r)}</td><td>${esc(r.decided_by || r.description || "")}</td>
+          <td>${r.evidence && typeof r.evidence === "object" ? Object.entries(r.evidence).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join("<br>") : esc(r.evidence || "")}</td><td>${r.written ? "written" : "report only"}</td></tr>`).join("") + "</tbody></table>";
+  } catch (e) { $("kfomsg").textContent = kfErr(e); }
+}
+// -- one handler for every Knowledge Fabric action button or link (data-kfa)
+document.addEventListener("click", async ev => {
+  const el = ev.target.closest("[data-kfa]");
+  if (!el) return;
+  const a = el.dataset.kfa;
+  if (el.tagName === "A") ev.preventDefault();
+  try {
+    if (a === "status") kfStatus();
+    else if (a === "relink") kfRelink(el);
+    else if (a === "goto") { kfOpen(el.dataset.to); $("kfsec").scrollIntoView({behavior: "smooth", block: "start"}); }
+    else if (a === "map-product") {
+      kfOpen("products"); await kfProducts();
+      const sel = document.querySelector(`#kfpout select[data-kfp="${CSS.escape(el.dataset.repo)}"]`);
+      if (sel) { sel.closest("tr").scrollIntoView({behavior: "smooth", block: "center"}); sel.focus(); }
+    }
+    else if (a === "links-filter") { kfOpen("links"); $("kflq").value = el.dataset.q || ""; KF.page = 0; if (KF.links) kfLinkRows(); $("kfsec").scrollIntoView({behavior: "smooth", block: "start"}); }
+    else if (a === "save-settings") kfSaveSettings(el);
+    else if (a === "turn-off") kfTurnOff(el);
+    else if (a === "page") { KF.page = Number(el.dataset.p); kfLinkRows(); }
+    else if (a === "alias-rm") {
+      busy(el, true);
+      const where = KF.tab === "links" ? "kflmsg" : "kfamsg";
+      if (!(await kfAlias("remove", el.dataset.s, el.dataset.f, el.dataset.t, null, where))) busy(el, false);
+      else if (KF.tab === "links") { const m = $("kflmsg").textContent; await kfLinks(); $("kflmsg").textContent = m + " " + $("kflmsg").textContent; }
+    }
+    else if (a === "alias-add-form") {
+      const s = el.dataset.s, f = $("kfaf-" + s).value.trim(), t = $("kfat-" + s).value.trim();
+      if (!f || !t) { msg("kfamsg", "Fill in both names.", "err"); return; }
+      busy(el, true); await kfAlias("add", s, f, t, null, "kfamsg"); busy(el, false);
+    } else if (a === "alias-add" || a === "alias-typed") {
+      const t = a === "alias-typed" ? (el.parentElement.querySelector("input[data-kftyped]").value || "").trim() : el.dataset.t;
+      if (!t) { msg("kfgmsg", "Type a Knowledge Fabric name first.", "err"); return; }
+      busy(el, true);
+      if (await kfAlias("add", el.dataset.s, el.dataset.f, t, `link ${el.dataset.f} -> ${t} (from the Gaps tab)`, "kfgmsg")) {
+        const li = el.closest("li"); if (li) li.innerHTML = `<span class="ok">${esc(el.dataset.f)} &rarr; ${esc(t)}: alias saved; it moves to Links after the next run.</span>`;
+      } else busy(el, false);
+    } else if (a === "gap-csv") kfCsv(KF.gaps[el.dataset.k] || [], [["test case id", g => g.id], ["repository or domain", g => g.repo || g.domain]], `tia-${el.dataset.k}.csv`);
+    else if (a === "link-decide") {
+      busy(el, true);
+      const out = await api(`/api/v1/kf/reviews/${encodeURIComponent(el.dataset.item)}/decision`, {method: "POST", body: {action: el.dataset.a}});
+      const m = out.status === "awaiting_second" ? "Recorded: a second, different person must approve it." : out.status === "decided" ? "Decided: applied on the next bridge run." : `The item is now ${out.status}.`;
+      if (KF.tab === "links") { await kfLinks(); $("kflmsg").textContent = m + " " + $("kflmsg").textContent; } else { await kfDecisions(); $("kfdmsg").textContent = m; kfQueue(); }
+      kfStatus();
+    }
+  } catch (e) { const t = KF.tab === "links" ? "kflmsg" : KF.tab === "gaps" ? "kfgmsg" : KF.tab === "review" ? "kfdmsg" : "kfsmsg"; if ($(t)) msg(t, String(e.message || e), "err"); busy(el, false); }
+});
+// -- Knowledge Fabric in the code graph (section 2): overlay and the side-panel block
+const KFCOLOR = {System: "#7b1fa2", FormCapture: "#ad1457", DataEntity: "#6a1b9a", Rule: "#4a148c", TestCase: "#8e24aa", summary: "#9575cd"};
+async function kfOverlay(on) {
+  try { localStorage.setItem("tia.kfoverlay", on ? "1" : "0") } catch {}
+  $("legkf").classList.toggle("hidden", !on);
+  if (!cy) return;
+  cy.remove(".kfo");
+  if (!on) return;
+  const runId = KF.status && KF.status.last_run && KF.status.last_run.run_evidence_id;
+  if (!KF.overlay || KF.overlay.run_evidence_id !== runId) {
+    try { KF.overlay = await api("/api/v1/kf/overlay"); } catch (e) { msg("ginfo", kfErr(e), "err"); return; }
+  }
+  const by = {}, els = [], added = new Set();
+  for (const l of KF.overlay.links) if (cy.getElementById(l.tia_id).nonempty()) (by[l.tia_id] = by[l.tia_id] || []).push(l);
+  let kfn = 0;
+  for (const [tid, ls] of Object.entries(by)) {
+    const show = ls.length > 5 ? ls.slice(0, 4) : ls;
+    for (const l of show) {
+      const id = "kf:" + l.entity_id;
+      if (!added.has(id)) { if (kfn >= 1000) break; added.add(id); kfn++;
+        els.push({group: "nodes", data: {id, label: `${KFLABEL[l.kf_label] || l.kf_label} · ${l.kf_name || ""}${l.domain ? " (" + l.domain + ")" : ""}`, kf: l.kf_label, kfcolor: KFCOLOR[l.kf_label] || KFCOLOR.System, type: "knowledge_fabric", entity_id: l.entity_id, domain: l.domain}, classes: "kfo"}); }
+      els.push({group: "edges", data: {id: `kfe:${tid}>${l.entity_id}:${l.rel}`, source: tid, target: id, rel: l.rel, label: l.rel, kfstatus: l.status, evidence: KFEV[l.status] || l.status, found_by: KFSRC[l.source] || l.source}, classes: "kfo kfbridge" + (l.status === "inferred" ? " kfinf" : "")});
+    }
+    if (ls.length > 5) { const sid = "kfsum:" + tid;
+      els.push({group: "nodes", data: {id: sid, label: `+${ls.length - 4} in Knowledge Fabric`, kf: "summary", kfcolor: KFCOLOR.summary, type: "knowledge_fabric", of: tid}, classes: "kfo"});
+      els.push({group: "edges", data: {id: "kfse:" + tid, source: tid, target: sid, rel: "MORE"}, classes: "kfo kfbridge kfinf"}); }
+  }
+  cy.add(els);
+  // each code node's business items fan out below it, one row apart, so labels do not overlap
+  const slot = {};
+  cy.nodes(".kfo").forEach(n => { const src = n.incomers("node").first(); if (src.empty()) return;
+    const k = src.id(), i = slot[k] = (slot[k] ?? -1) + 1, p = src.position();
+    n.position({x: p.x + 40 + (i % 2) * 150, y: p.y + 55 + Math.floor(i / 2) * 42}); });
+  const nl = Object.keys(by).length;
+  msg("ginfo", ($("ginfo").textContent.split("  |  Knowledge Fabric")[0]) + `  |  Knowledge Fabric: ${nl ? `${KF.overlay.links.filter(l => by[l.tia_id]).length} link(s) on ${nl} node(s) shown` : "no node in this view has a link (services link at every level; entities and tables at Functions level)"}`);
+}
+$("gkf").onchange = () => kfOverlay($("gkf").checked);
+// the graph narrowed to the repositories of one product (their mapped place, or the place inherited through a linked system)
+let KFPROD = {};
+async function kfProductFilter() {
+  let p;
+  try { p = await api("/api/v1/kf/products"); } catch { return; }
+  KFPROD = {};
+  for (const r of p.repositories) {
+    const places = [...(r.setting || []), ...r.services.flatMap(s => [...(s.setting || []), ...(s.places || [])])];
+    for (const x of places) if (x.product_line) { const k = x.product_line + " (" + x.domain + ")";(KFPROD[k] = KFPROD[k] || new Set()).add(r.repo); }
+  }
+  const keys = Object.keys(KFPROD).sort(), cur = $("gprod").value;
+  $("gprod").innerHTML = '<option value="">all products</option>' + keys.map(k => `<option ${k === cur ? "selected" : ""}>${esc(k)}</option>`).join("");
+  $("gprodwrap").classList.toggle("hidden", !keys.length);
+}
+$("gprod").onchange = () => {
+  const want = KFPROD[$("gprod").value];
+  [...$("grepos").options].forEach(o => o.selected = !!want && want.has(o.value));
+  gload();
+};
+async function kfNodePanel(d) {
+  const box = $("gsidekf");
+  if (!box || !KF.status || !KF.status.last_run) return;
+  if (d.type === "knowledge_fabric") {
+    const ls = (KF.overlay ? KF.overlay.links : []).filter(l => d.of ? l.tia_id === d.of : l.entity_id === d.entity_id);
+    box.innerHTML = `<h4 style="margin:8px 0 2px;font-size:12px">Knowledge Fabric</h4><ul>${ls.map(l => `<li>${esc(l.tia_id)} ${esc(l.rel)} ${esc(KFLABEL[l.kf_label] || l.kf_label)} <b>${esc(l.kf_name)}</b> ${kfEv(l.status)}</li>`).join("")}</ul>` +
+      `<a href="#kfsec" data-kfa="links-filter" data-q="${esc(d.of ? "" : (ls[0] || {}).kf_name || "")}">Show in the Links tab</a>`;
+    return;
+  }
+  box.innerHTML = '<p class="mut">Knowledge Fabric: loading...</p>';
+  const r = await kfCall("/api/v1/kf/node?id=" + encodeURIComponent(d.id));
+  if ($("gsidekf") !== box) return;
+  if (!r.ok) { box.innerHTML = r.status === 404 ? '<p class="mut">No Knowledge Fabric link for this node in the latest bridge run.</p>' : `<p class="err">${esc(kfDetail(r))}</p>`; return; }
+  const n = r.j, names = xs => (xs || []).slice(0, 8).map(x => esc(x.name || "")).join(", ");
+  box.innerHTML = `<h4 style="margin:8px 0 2px;font-size:12px">Knowledge Fabric <span class="mut">(run of ${esc(kfWhen(n.at))})</span></h4>` +
+    n.links.map(l => `<p style="margin:4px 0">${esc(l.rel.toLowerCase())} ${esc(KFLABEL[l.kf_label] || l.kf_label)} <b>${esc(l.kf_name)}</b> <span class="mut">(${esc(l.domain)})</span> ${kfEv(l.status)}</p>`).join("") +
+    n.context.map(c => { const name = c.system || c.kf_name;
+      return `<details open><summary>${esc(name)}</summary><dl>` +
+        [["requirements", "Requirements"], ["processes", "Processes"], ["defects", "Open defects"], ["incidents", "Incidents"]].filter(([k]) => (c[k] || []).length)
+          .map(([k, l]) => `<dt>${l}</dt><dd>${names(c[k])}${c[k].length > 8 ? ` and ${esc(c[k].length - 8)} more` : ""}</dd>`).join("") +
+        ((c.test_cases || []).length ? `<dt>Test cases</dt><dd>${c.test_cases.slice(0, 12).map(t => `${esc(t.name)}${(t.tia_case_ids || []).length ? ' <span class="mut">(also in your repository suite)</span>' : ""}`).join("<br>")}</dd>` : "") +
+        `</dl></details>`; }).join("") +
+    `<a href="#kfsec" data-kfa="links-filter" data-q="${esc((n.links[0] || {}).kf_name || "")}">Show in the Links tab</a>`;
+}
+
 function msg(id, text, cls) { $(id).className = cls || "mut"; $(id).textContent = text; }
 
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
@@ -486,7 +1288,7 @@ async function loadRepos() {
     <td>${esc(r.provider)}</td><td>${esc(r.default_branch)}</td><td><code>${esc((r.last_commit||"").slice(0,8))}</code></td>
     <td>${esc((r.branches||[]).slice(0,6).join(", "))}${(r.branches||[]).length>6?" ...":""}</td>
     <td class="mut">${r.last_synced ? new Date(r.last_synced*1000).toLocaleString() : ""}</td>
-    <td>${r.kind === "upload" ? `<button class="sec" onclick="useUpload('${esc(r.name)}')">Analyse vs previous upload</button>` : `<button class="sec" onclick="syncRepo('${esc(r.name)}')">Sync</button>`} <button class="sec" onclick="delRepo('${esc(r.name)}')">Remove</button></td></tr>`).join("")
+    <td>${r.kind === "upload" ? `<button class="sec" onclick="useUpload('${esc(r.name)}')">Analyse vs previous upload</button>` : `<button class="sec" onclick="syncRepo('${esc(r.name)}')">Sync</button>`} <button class="sec" onclick="delRepo('${esc(r.name)}')">Remove</button>${KF.status && KF.status.last_run ? ` <button class="sec" type="button" data-kfa="map-product" data-repo="${esc(r.name)}" title="Choose the domain and product line this repository serves">Product&hellip;</button>` : ""}</td></tr>`).join("")
     || `<tr><td colspan="7" class="mut">No repositories yet.</td></tr>`;
   fillRepoFilter();
   const cur = $("target").value;
@@ -985,24 +1787,43 @@ function scopeHtml(ts) {
     (ts.config_checks || []).map(c => `<div class="banner"><b>Configuration</b>: ${esc(c.check)}${c.entry_points.length ? `<br>Entry points: ${c.entry_points.map(e => `<code>${esc(e.entry_point)}</code>`).join(", ")}` : ""}</div>`).join("");
 }
 // Knowledge Fabric: the business side of the change (docs/KF-BRIDGE.md)
+let LASTBI = null;
+const kfNameLink = n => `<a href="#kfsec" data-kfa="links-filter" data-q="${esc(n)}" title="Show in the Knowledge Fabric links">${esc(n)}</a>`;
 function businessHtml(bi) {
   if (!bi) return "";
+  LASTBI = bi;
   const tc = bi.test_cases.map(c => { const v = c.via[0];
-    return `<tr><td><code>${esc(c.id)}</code>${c.also_in_repository_suite ? ' <span class="mut">(also in your repository suite)</span>' : ""}</td>
-      <td>${esc(v.service)} &rarr; ${esc(v.system)} <span class="mut">(${esc(c.domain)})</span>${v.requirements.length ? ` &rarr; ${esc(v.requirements[0])}` : ""}</td>
+    return `<tr data-insuite="${c.also_in_repository_suite ? 1 : 0}"><td><code>${esc(c.id)}</code>${c.also_in_repository_suite ? ' <span class="mut">(also in your repository suite)</span>' : ""}</td>
+      <td>${esc(v.service)} &rarr; ${kfNameLink(v.system)} <span class="mut">(${esc(c.domain)})</span>${v.requirements.length ? ` &rarr; ${esc(v.requirements[0])}` : ""}</td>
       <td>${esc(c.evidence_status)}</td></tr>`; }).join("");
-  const sys = bi.systems.map(s => `<li><code>${esc(s.service)}</code> realises <b>${esc(s.system)}</b> <span class="mut">(${esc(s.domain)}, ${esc(s.link.status)})</span>` +
+  const sys = bi.systems.map(s => `<li><code>${esc(s.service)}</code> realises <b>${kfNameLink(s.system)}</b> <span class="mut">(${esc(s.domain)}, ${esc(s.link.status)})</span>` +
     [["requirements", "Requirements"], ["processes", "Processes"], ["defects", "Defects"], ["incidents", "Incidents"]]
       .filter(([k]) => s[k].length).map(([k, l]) => `<br><span class="mut">${l}: ${s[k].slice(0, 8).map(x => esc(x.name || "")).join(", ")}</span>`).join("") + `</li>`).join("");
   const what = {FormCapture: "form", DataEntity: "data entity", Rule: "business rule"};
+  const prods = (bi.products || []).map(r => `<tr><td><b>${esc(r.product_line)}</b>${r.functions.length ? ` <span class="mut">&gt; ${r.functions.map(esc).join(", ")}</span>` : ""} <span class="mut">(${esc(r.domain)})</span></td>
+      <td>${r.services.map(x => `<code>${esc(x.service)}</code>${x.via ? ` <span class="mut">(via ${x.via.map(esc).join(", ")}, inferred)</span>` : ""}`).join(", ")}</td>
+      <td>${esc(r.entry_points)}</td><td>${esc(r.test_cases.length)}</td></tr>`).join("");
   const reqLine = xs => (xs || []).length ? `<br><span class="mut">Requirements: ${xs.slice(0, 8).map(x => esc(x.name || "")).join(", ")}</span>` : "";
   const its = (bi.items || []).map(i => `<li>${esc(i.kind)} <code>${esc(i.tia_name)}</code> <span class="mut">(${esc(i.service)})</span> ${esc(i.rel.toLowerCase())} ${what[i.kf_label] || esc(i.kf_label)} <b>${esc(i.kf_name)}</b> <span class="mut">(${esc(i.domain)}, ${esc(i.link.status)})</span>${reqLine(i.requirements)}</li>`).join("") +
-    (bi.user_stories || []).map(s => `<li>implements user story <b>${esc(s.key)}</b> ${s.story !== s.key ? esc(s.story) : ""} <span class="mut">(commit ${s.commits.slice(0, 3).map(c => esc(c.slice(0, 7))).join(", ")})</span>${reqLine(s.requirements)}</li>`).join("");
+    (bi.user_stories || []).map(s => `<li>implements user story <b>${esc(s.key)}</b> ${s.story !== s.key ? esc(s.story) : ""} <span class="mut">(${[s.commits.length ? "commit " + s.commits.slice(0, 3).map(c => esc(c.slice(0, 7))).join(", ") : ""].concat((s.named_in || []).map(x => esc(x.replace("_", " ")))).filter(Boolean).join(", ")})</span>${reqLine(s.requirements)}</li>`).join("");
   return `<h2 style="margin-top:16px">${esc(bi.summary.headline)}</h2>` +
-    (tc ? `<table id="bizTable"><thead><tr><th style="width:24%">Business test case</th><th>Reached through</th><th style="width:16%">Evidence</th></tr></thead><tbody>${tc}</tbody></table>` : "") +
+    (prods ? `<table id="prodTable"><thead><tr><th style="width:34%">Product affected</th><th>Services</th><th style="width:12%">Entry points to test</th><th style="width:12%">Business test cases</th></tr></thead><tbody>${prods}</tbody></table>` : "") +
+    (tc ? `<p><label class="roles" style="display:inline"><input type="checkbox" id="bizonly" style="width:auto"> Only test cases not in your repository suite</label>
+      <button class="sec" type="button" id="bizcsv">Export business test cases (CSV)</button></p><table id="bizTable"><thead><tr><th style="width:24%">Business test case</th><th>Reached through</th><th style="width:16%">Evidence</th></tr></thead><tbody>${tc}</tbody></table>` : "") +
     (sys || its ? `<ul>${sys}${its}</ul>` : "") + bi.limits.map(l => `<p class="mut">${esc(l)}</p>`).join("") +
     (bi.withheld ? `<p class="mut">${esc(bi.withheld.note)}</p>` : "");
 }
+document.addEventListener("change", ev => {
+  if (ev.target.id !== "bizonly") return;
+  document.querySelectorAll('#bizTable tbody tr[data-insuite="1"]').forEach(tr => tr.classList.toggle("hidden", ev.target.checked));
+});
+document.addEventListener("click", ev => {
+  if (!ev.target.closest("#bizcsv") || !LASTBI) return;
+  const only = $("bizonly") && $("bizonly").checked;
+  kfCsv(LASTBI.test_cases.filter(c => !only || !c.also_in_repository_suite), [["test case", c => c.id], ["domain", c => c.domain],
+    ["service", c => c.via[0].service], ["business system", c => c.via[0].system], ["requirement", c => c.via[0].requirements[0] || ""],
+    ["evidence", c => c.evidence_status], ["also in the repository suite", c => c.also_in_repository_suite ? "yes" : "no"]], "business-test-cases.csv");
+});
 // the regression answer (docs/USER-GUIDE.md): which written test cases to run again because of this change
 function regressionHtml(reg) {
   if (!reg || !reg.summary || !reg.summary.test_cases) return "";
@@ -1280,6 +2101,10 @@ function gstyle() {
     {selector:'node[role="via"]', style:{opacity:.8}},
     {selector:"node[sevcolor]", style:{"background-color":"data(sevcolor)",width:26,height:26,"font-size":10}},
     {selector:"node:selected, edge:selected", style:{"overlay-color":"#1f4fd8","overlay-opacity":.18,"overlay-padding":6}},
+    // Knowledge Fabric overlay (docs/plans/KF-UI-PLAN.md 6.7): business items as purple rounded boxes, bridge links dashed when inferred
+    {selector:"node.kfo", style:{shape:"round-rectangle","background-color":"data(kfcolor)",width:34,height:18,"font-size":9,"text-wrap":"wrap","text-max-width":150}},
+    {selector:"edge.kfbridge", style:{width:2,"line-color":"#7b1fa2","target-arrow-color":"#7b1fa2","font-size":7}},
+    {selector:"edge.kfinf", style:{"line-style":"dashed"}},
   ];
 }
 function gelements(data, impact) {
@@ -1301,13 +2126,17 @@ function renderGraph(data, impact) {
   cy.on("tap", "node", e => showNode(e.target.data()));
   cy.on("tap", "edge", e => showEdge(e.target.data()));
   cy.on("tap", evt => { if (evt.target === cy) $("gside").innerHTML = '<span class="mut">Click a node or edge.</span>'; });
-  cy.on("dbltap", "node", e => { if (!impact) { $("gq").value = ""; gload(e.target.id()); } });
+  cy.on("dbltap", "node", e => { if (!impact && !e.target.hasClass("kfo")) { $("gq").value = ""; gload(e.target.id()); } });
+  if ($("gkf").checked) kfOverlay(true);
 }
 function dl(obj, skip) {
   return "<dl>" + Object.entries(obj).filter(([k, v]) => !skip.includes(k) && v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && !v.length))
     .map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(Array.isArray(v) ? v.join("\n") : v).replace(/\n/g, "<br>")}</dd>`).join("") + "</dl>";
 }
-function showNode(d) { $("gside").innerHTML = `<b>${esc(d.label)}</b> <span class="pill">${esc(d.type)}</span>${dl(d, ["label","sevcolor","type"])}<p class="mut">${gmode === "landscape" ? "Double-click to focus on neighbours." : ""}</p>`; }
+function showNode(d) {
+  $("gside").innerHTML = `<b>${esc(d.label)}</b> <span class="pill">${esc(d.type)}</span><div id="gsidekf"></div>${dl(d, ["label","sevcolor","type","kfcolor","tcolor"])}<p class="mut">${gmode === "landscape" && d.type !== "knowledge_fabric" ? "Double-click to focus on neighbours." : ""}</p>`;
+  kfNodePanel(d);
+}
 function showEdge(d) { $("gside").innerHTML = `<b>${esc(d.rel)}</b> <span class="pill">${esc(d.status || "")}</span>${dl(d, ["id","label","rel","status","source","target"])}<dl><dt>from</dt><dd>${esc(d.source)}</dd><dt>to</dt><dd>${esc(d.target)}</dd></dl>`; }
 
 async function gload(focus) {
@@ -1419,6 +2248,13 @@ async function boot() {
   applyPermissions();
   cfgLoad();
   if (can("admin")) adminLoad();
+  await kfStatus();                                   // before the graph, so the Knowledge Fabric overlay knows whether the bridge has run
+  try {
+    if (KF.status && KF.status.last_run && localStorage.getItem("tia.kfoverlay") === "1") $("gkf").checked = true;
+    const t = localStorage.getItem("tia.kftab");
+    if (t && $("kftab-" + t)) KF.tab = t;
+  } catch {}
+  kfOpen(KF.tab);
   await loadRepos();
   restoreRunForm();                                   // after the repositories are listed, so the saved target can be selected
   gload();

@@ -86,6 +86,7 @@ def parse_pull_request(payload: dict) -> Optional[dict]:
         pr, repo = payload["pull_request"], payload["repository"]
         return {"action": action, "pr": int(pr["number"]), "head_sha": pr["head"]["sha"], "base_ref": pr["base"]["ref"],
                 "full_name": repo["full_name"], "clone_url": repo["clone_url"], "draft": bool(pr.get("draft")),
+                "title": str(pr.get("title") or "")[:300] or None, "head_ref": str((pr.get("head") or {}).get("ref") or "")[:250] or None,
                 "installation_id": (payload.get("installation") or {}).get("id")}
     except (KeyError, TypeError, ValueError) as e:
         raise ValueError(f"malformed pull_request event: {e!r}")

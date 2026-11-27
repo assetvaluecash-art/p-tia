@@ -12,8 +12,17 @@ The native report (`GET /api/v1/impact-analyses/{id}`) remains the product deliv
  "analysis_id": "<id>"}
 ```
 
-Instead of `analysis_id`, give `repository` plus `pull_request` or `revision` (a commit or a 7+ character prefix): the newest such report is used.
-**The question text is never parsed**: without a selector the answer is an empty response with an explanation in `metadata.errors`. No analysis is
+Instead of `analysis_id`, give `repository` plus `pull_request` or `revision` (a commit or a 7+ character prefix), or `issue_key` (a key such as
+`PAY-4521` that a change named in its commit messages, pull request title or branch; every report records them as `change.issue_keys`): the
+newest such report is used, and when several name the key the others are listed in `metadata.errors` as a note.
+**The question text is never parsed**: without a selector the answer is an empty response with an explanation in `metadata.errors`. A router in
+front of both retrievers finds those tokens in the question and looks them up exactly with `POST /query/tia/resolve` (structured anchors only,
+free text refused): see [KF-BRIDGE.md section 13](KF-BRIDGE.md) and the reference router `tia/kfrouter.py`.
+
+`intent` may be `software_tia` or one of Knowledge Fabric's own pattern names for a change, `change_impact`, `regression_scope`,
+`test_coverage` or `any`; the first three order the answer for that question. Other intents are Knowledge Fabric's alone and get an empty
+answer. Optional: `customer_id` (Knowledge Fabric's customer; any other than the tenant's `knowledge_fabric.customer_id` gets an empty answer),
+`domain` (keeps that domain's business chunks only) and `product_line` (a product line's name or id: its services, systems and test cases only). No analysis is
 started by this route; queue one with `POST /api/v1/impact-analyses` first. Unknown request fields are refused (422). Needs the `read` permission and
 the usual credential; the report is redacted for the caller exactly as in the native API.
 
@@ -35,4 +44,4 @@ the usual credential; the report is redacted for the caller exactly as in the na
 
 Tested against the field lists printed in the integration document (`tests/test_kfadapter.py`), and **checked against Knowledge Fabric 2.5's own `retrieval/retriever_api.py`**: every field and type of `ChunkItem`, `EntityRef`, `PathItem`, `DetectedDomain`, `RetrievalMetadata` and `QueryResponse` is the same, and TIA's `QueryRequest` accepts every field of Knowledge Fabric's (`tests/test_kfbridge.py::test_the_agent_interface_matches_knowledge_fabrics_retriever`, run whenever the source is present in `development/reference/knowledge-fabric-2.5/`). KF's facade or agent wiring is not part of TIA.
 
-When the Knowledge Fabric bridge is enabled ([KF-BRIDGE.md](KF-BRIDGE.md)), the response also carries the business side of the change: one `business_summary` chunk, one `business_test_case` chunk per Knowledge Fabric test case and one `business_system` chunk per affected System, with the chain service → System → requirement → test case as a `PathItem`. For the intents `regression_scope`, `test_coverage` and `change_impact` they are ranked first.
+When the Knowledge Fabric bridge is enabled ([KF-BRIDGE.md](KF-BRIDGE.md)), the response also carries the business side of the change: one `business_summary` chunk, one `business_test_case` chunk per Knowledge Fabric test case and one `business_system` chunk per affected System, with the chain service → System → requirement → test case as a `PathItem`. For the intents `regression_scope`, `test_coverage` and `change_impact` they are ranked first. When repositories are mapped to products ([KF-BRIDGE.md section 11](KF-BRIDGE.md)), one `business_product` chunk per product line the change reaches (text starts `PRODUCT`), ranked first for `change_impact`.

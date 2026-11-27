@@ -124,6 +124,16 @@ def main(argv=None) -> int:
     kl.add_argument("--domain", action="append", default=[], help="restrict to these Knowledge Fabric domains (repeatable; default: all of the customer's)")
     kl.add_argument("--alias", action="append", default=[], metavar="SERVICE=SYSTEM", help="declare the Knowledge Fabric System a service realises (repeatable)")
     kl.add_argument("--no-name-matches", action="store_true", help="only declared and id links, no inferred exact-name links")
+    kl.add_argument("--product", action="append", default=[], metavar="REPO=DOMAIN/PRODUCT LINE[/FUNCTION[/SUB-FUNCTION]]",
+                    help="place a repository in the customer's business tree (repeatable; see tia kf-catalog): its services are linked only in "
+                         "that domain and a change rolls up to that product line")
+
+    kg = sub.add_parser("kf-catalog", help="the Knowledge Fabric customer's business tree (domains > product lines > functions > "
+                                           "sub-functions): the places a repository can be mapped to")
+    kg.add_argument("--customer", required=True, help="Knowledge Fabric customer_id (see tia kf-customers)")
+    kg.add_argument("--kf-tenant", help="Knowledge Fabric tenant id (default: read from the customer's CustomerRoot node)")
+    kg.add_argument("--sub-functions", action="store_true", help="also list the sub-functions")
+    kg.add_argument("--format", choices=["text", "json"], default="text")
     kl.add_argument("--format", choices=["text", "json"], default="text")
 
     kr = sub.add_parser("kf-registry", help="match an API registry (CSV or XLSX) to the endpoints in the code, without writing anything: "
@@ -174,7 +184,7 @@ def main(argv=None) -> int:
         for u in out["unknowns"]:
             print(f"TODO {u['screen']}: {u['what']} - {u['detail']}", file=sys.stderr)
         return 0
-    if args.cmd in ("kf-customers", "kf-link"):
+    if args.cmd in ("kf-customers", "kf-link", "kf-catalog"):
         from . import neo4jgraph
         try:
             cfg4j = neo4jgraph.config_from_env()
@@ -191,6 +201,26 @@ def main(argv=None) -> int:
                     or "Knowledge Fabric has no customers (no CustomerRoot node)."
                 sys.stdout.buffer.write((text + "\n").encode("utf-8"))
                 return 0
+            if args.cmd == "kf-catalog":
+                cust = neo4jgraph.kf_customer(drv, args.customer, cfg4j["database"])
+                if cust is None:
+                    raise SystemExit(f"Knowledge Fabric has no customer {args.customer!r} (see tia kf-customers)")
+                cat = neo4jgraph.kf_catalog(drv, args.customer, args.kf_tenant or cust.get("tenant_id"), cfg4j["database"])
+                if args.format == "json":
+                    sys.stdout.buffer.write((to_json(cat) + "\n").encode("utf-8"))
+                    return 0
+                lines = []
+                for d in cat["domains"]:
+                    lines.append(d["domain"])
+                    for pl in d["product_lines"]:
+                        lines.append(f"  {pl['name']}" + ("" if pl.get("entity_id") else "  (no entity id: placed by product_line_id)"))
+                        for fn in pl["functions"]:
+                            lines.append(f"    {fn['name']}")
+                            if args.sub_functions:
+                                lines += [f"      {sf['name']}" for sf in fn["sub_functions"]]
+                text = "\n".join(lines) or "The customer has no business tree in Knowledge Fabric (no DomainRoot / ProductLine nodes)."
+                sys.stdout.buffer.write((text + "\n").encode("utf-8"))
+                return 0
             from .analysis_service import KfBridgeError, kf_link
             from .graph import build_graph
             from .graphstore import graph_id, graph_inputs
@@ -202,10 +232,17 @@ def main(argv=None) -> int:
                     raise SystemExit(f"--alias expects SERVICE=SYSTEM, got '{a}'")
                 k, v = a.split("=", 1)
                 aliases.setdefault(k.strip(), []).append(v.strip())
+            products = {}
+            for a in args.product:
+                repo, _, where = a.partition("=")
+                parts = [x.strip() for x in where.split("/")]
+                if not repo.strip() or len(parts) < 2 or not all(parts):
+                    raise SystemExit(f"--product expects REPO=DOMAIN/PRODUCT LINE[/FUNCTION[/SUB-FUNCTION]], got '{a}'")
+                products.setdefault(repo.strip(), []).append(dict(zip(("domain", "product_line", "function", "sub_function"), parts)))
             problems = []
             setting = kf_validate({"enabled": True, "customer_id": args.customer, **({"kf_tenant_id": args.kf_tenant} if args.kf_tenant else {}),
-                                   "domains": args.domain or "auto", "system_aliases": aliases, "link_name_matches": not args.no_name_matches},
-                                  problems)
+                                   "domains": args.domain or "auto", "system_aliases": aliases, "link_name_matches": not args.no_name_matches,
+                                   "repository_products": products}, problems)
             if problems:
                 raise SystemExit("; ".join(problems))
             ex = {n: _extract(n, p, "HEAD", None, ()) for n, p in sorted(_repos(args.repo).items())}
@@ -219,7 +256,9 @@ def main(argv=None) -> int:
         if args.format == "json":
             sys.stdout.buffer.write((to_json({k: v for k, v in out.items() if k != "planned"} | {"links": out["planned"]["links"],
                                                                                                 "gaps": out["planned"]["gaps"],
-                                                                                                "rule_proposals": out["planned"]["proposals"]})
+                                                                                                "rule_proposals": out["planned"]["proposals"],
+                                                                                                "product_suggestions": out["planned"]["product_suggestions"],
+                                                                                                "review_items": out["review_items"]})
                                      + "\n").encode("utf-8"))
             return 0
         sm = out["summary"]
@@ -237,6 +276,18 @@ def main(argv=None) -> int:
             for k, v in gaps.items():
                 lines.append(f"  {k} ({len(v)}): " + "; ".join(str(x.get("service") or x.get("system") or x.get("id") or x.get("name") or x.get("domain"))
                                                               for x in v[:12]) + (" ..." if len(v) > 12 else ""))
+        placed = out["products"]
+        if placed:
+            lines += ["", "Products (where each service sits in the business tree):"]
+            for sv, ps in sorted(placed.items()):
+                for x in ps:
+                    lines.append(f"  {sv} -> {x['product_line']}" + (f" > {x['function']}" if x.get("function") else "") + f" ({x['domain']})  "
+                                 + (f"inherited via {', '.join(x.get('via') or [])}, inferred" if x["source"] == "inherited" else f"declared in {x['source']}"))
+        items = out["review_items"]
+        if items:
+            lines += ["", f"To review ({len(items)}; decide them in TIA: GET /api/v1/kf/reviews):"]
+            for it in items[:30]:
+                lines.append(f"  [{it['kind']}] {it['title']}")
         props = out["planned"]["proposals"]
         if props:
             lines += ["", f"Rule pairs to review ({len(props)}; confirm or reject them in TIA: GET /api/v1/kf/rule-proposals):"]

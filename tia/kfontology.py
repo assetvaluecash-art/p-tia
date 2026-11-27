@@ -6,13 +6,15 @@ Knowledge Fabric 2.5 describes its business graph in `config/canonical/model.yam
 
   software ontology   generated from tia.graphschema (schema gs-3) plus what the Neo4j mirror adds (written test cases, the derived IMPACTS
                       edges). Labels are the Neo4j mirror's: `Tia<Type>`, so they never collide with Knowledge Fabric's `System`, `TestCase`, ...
-  bridge ontology     the only relationships allowed between the two graphs (version kb-2). Each says how it is decided and what evidence
+  bridge ontology     the only relationships allowed between the two graphs (version kb-3). Each says how it is decided and what evidence
                       status it carries. A relationship with `written: false` is reported, not stored in Neo4j; the writer refuses any
                       triple not listed here as written.
 
 TIA's internal relationships run between `TiaNode`s only and are marked `tia: true`; two of them share a name with a Knowledge Fabric
 relationship (`IMPACTS`, `COVERS`) but never touch a Knowledge Fabric node. The bridge relationships use names Knowledge Fabric does not use
-(`REALIZES`, `SAME_AS`, `STORES`, `ENFORCES`) and carry `bridge: true, owner: "tia"`.
+(`REALIZES`, `SAME_AS`, `STORES`, `ENFORCES`, `PLACED_IN`) and carry `bridge: true, owner: "tia"`. `PLACED_IN` is not `PART_OF` on purpose:
+Knowledge Fabric walks `PART_OF` to build and use its own business tree, its path renderer hides `BELONGS_TO` as plumbing, and its vision
+ontology uses `SUPPORTS` between sub-functions.
 """
 from __future__ import annotations
 
@@ -20,7 +22,7 @@ import re
 
 from .graphschema import EDGE_TYPES, GRAPH_SCHEMA_VERSION, NODE_TYPES
 
-BRIDGE_VERSION = "kb-2"
+BRIDGE_VERSION = "kb-3"
 LAYERS = {"code": "software_code", "data": "software_data", "events": "software_events", "automation": "software_ui",
           "api": "software_api", "rules": "software_rules"}
 NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
@@ -61,6 +63,17 @@ BRIDGE = [
      "decided_by": "a person confirms a pair TIA proposed (shared field names, then word overlap); rule names are sentences, so names alone "
                    "never link", "evidence": {"confirmed": "contract_confirmed"},
      "description": "The rule found in code enforces the business rule."},
+]
+for _level in ("ProductLine", "Function", "SubFunction"):
+    BRIDGE.append(
+        {"name": "PLACED_IN", "from": "TiaService", "to": _level, "planned": False,
+         "decided_by": "a person: tenant setting knowledge_fabric.repository_products / service_products, business_products in "
+                       "tia-services.yaml, or a reviewer accepting a suggestion (a suggestion from the linked Systems is never applied by itself)",
+         "evidence": {"declared": "contract_confirmed", "reviewed": "contract_confirmed"},
+         "description": f"The service belongs to this {_level} of the customer's business tree (domain > product line > function > "
+                        "sub-function); every impact of the service rolls up the tree from here. Carries product_line_id, because one "
+                        "function can sit under two product lines."})
+BRIDGE += [
     {"name": "IMPLEMENTS_CHANGE", "from": "TiaChange", "to": "UserStory", "planned": False, "written": False,
      "decided_by": "an issue key (PAY-4521) in a commit message of the change that Knowledge Fabric keeps as the user story's name or alias",
      "evidence": {"issue_key": "source_confirmed"},
@@ -107,7 +120,8 @@ def bridge_ontology() -> dict:
                            "to a Knowledge Fabric node, confined to one Knowledge Fabric customer; carry bridge=true, owner=tia, the "
                            "evidence status and both sides' versions.",
             "edge_properties": ["bridge", "owner", "tenant", "kf_customer_id", "kf_tenant_id", "domain", "status", "strategy", "rule", "source",
-                                "id_check", "tia_graph_version", "kf_fingerprint", "bridge_version", "linked_at"],
+                                "id_check", "tia_graph_version", "kf_fingerprint", "bridge_version", "linked_at", "product_line",
+                                "product_line_id", "level", "decided_by", "decided_at"],
             "relationship_types": [{"name": b["name"], "allowed_triples": [{"from": b["from"], "to": b["to"]}], "planned": b["planned"],
                                     "written": b.get("written", True), "decided_by": b["decided_by"], "evidence": b["evidence"],
                                     "description": b["description"]}

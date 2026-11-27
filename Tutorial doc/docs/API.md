@@ -250,11 +250,12 @@ Request body:
 
 ### `GET /api/v1/graph/ontology`
 
-**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  TIA's software ontology and the TIA <-> Knowledge Fabric bridge ontology, in Knowledge Fabric's canonical shape (node_types with a layer, relationship_types with allowed_triples). format=yaml returns YAML text.
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  TIA's software ontology and the TIA <-> Knowledge Fabric bridge ontology, in Knowledge Fabric's canonical shape (node_types with a layer, relationship_types with allowed_triples). format=yaml returns YAML text; download=true asks the browser to save it as a file.
 
 | Parameter | In | Type | Required |
 |---|---|---|---|
 | `format` | query | string | no |
+| `download` | query | boolean | no |
 
 ### `GET /api/v1/graph/query`
 
@@ -704,13 +705,34 @@ Request body:
 | `since` | query | string|null | no |
 | `until` | query | string|null | no |
 
+### `GET /api/v1/kf/catalog`
+
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  The Knowledge Fabric customer's business tree (domains > product lines > functions > sub-functions) as the latest bridge run read it: the places a repository can be mapped to.
+
 ### `GET /api/v1/kf/customers`
 
 **Needs:** `config_write` (`release_manager`, `administrator`).  Knowledge Fabric's customers (its CustomerRoot nodes) with their tenant id, industry and domains: pick the one this TIA tenant maps to and save it as knowledge_fabric.customer_id.
 
+### `GET /api/v1/kf/decisions`
+
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  Every decision people made on the bridge (links, business-rule pairs, product places, issue keys), newest first, with who, when and why; only those about code in repositories you may read.
+
+| Parameter | In | Type | Required |
+|---|---|---|---|
+| `kind` | query | string|null | no |
+| `limit` | query | integer | no |
+
 ### `GET /api/v1/kf/gaps`
 
-**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  What the latest bridge run could not link: services without a System, Systems without code, declared names not found, ambiguous names, test cases on one side only, domains the customer does not have.
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  What the latest bridge run could not link: services without a System, Systems without code, declared names not found, ambiguous names, test cases on one side only, domains the customer does not have. suggest=true adds, to each unlinked TIA item, up to three close Knowledge Fabric names (shared words), and to each unclaimed Knowledge Fabric node the TIA items it was suggested for: a person links one by saving an alias; nothing is linked by a suggestion.
+
+| Parameter | In | Type | Required |
+|---|---|---|---|
+| `suggest` | query | boolean | no |
+
+### `DELETE /api/v1/kf/links`
+
+**Needs:** `config_write` (`release_manager`, `administrator`).  Remove every link TIA wrote into Knowledge Fabric's graph for this tenant's customer (used when turning the bridge off). Knowledge Fabric's nodes and TIA's mirror stay. Needs Neo4j.
 
 ### `GET /api/v1/kf/links`
 
@@ -720,6 +742,39 @@ Request body:
 |---|---|---|---|
 | `limit` | query | integer | no |
 
+### `GET /api/v1/kf/node`
+
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  One graph node's Knowledge Fabric links with the business context the latest run captured: requirements, processes, defects, incidents and the test cases covering them (with the TIA test case ids they are the same as).
+
+| Parameter | In | Type | Required |
+|---|---|---|---|
+| `id` | query | string | yes |
+
+### `GET /api/v1/kf/overlay`
+
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  The latest run's links for the code graph view (tia_id = the graph's node id): only those whose code is in a repository you may read.
+
+### `GET /api/v1/kf/products`
+
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  Every repository's place in the business tree: the setting, what the latest bridge run resolved (declared, or inherited through a linked System and therefore inferred), suggestions to review and the problems (places not found, conflicts, unmapped repositories).
+
+### `PUT /api/v1/kf/products/{repository}`
+
+**Needs:** `config_write` (`release_manager`, `administrator`).  Map a repository (and, optionally, its services) to places in the business tree, as a new configuration version. A place that the next bridge run does not find in the tree is reported as a product_not_found gap.
+
+| Parameter | In | Type | Required |
+|---|---|---|---|
+| `repository` | path | string | yes |
+
+Request body:
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `places` | array of PlaceIn | no |  |
+| `services` | object | no | per-service places for services of this repository |
+| `expected_version` | integer (optional) | no | the configuration version you edited; a newer one answers 409 |
+| `comment` | string (optional) | no |  |
+
 ### `POST /api/v1/kf/relink`
 
 **Needs:** `repo_write` (`engineer`, `release_manager`, `administrator`).  Link the software graph to the Knowledge Fabric customer now (or queue it with ?async=true): mirror check, links, gaps and the business context reports use. The result is also kept as the latest bridge run.
@@ -727,6 +782,67 @@ Request body:
 | Parameter | In | Type | Required |
 |---|---|---|---|
 | `async` | query | boolean | no |
+
+### `GET /api/v1/kf/review-measures`
+
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  How the review is going: open items by kind and age, hours to a decision (median, 90th percentile), the share of links confirmed versus guessed, and the rejection rate of links found by name (with advice when most are rejected). Only your repositories count.
+
+### `GET /api/v1/kf/reviews`
+
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  The review queue: what the bridge is not sure of, for a person to decide. status: open (default), awaiting_second, deferred, decided, superseded or all; filters by kind, domain, product line (name or id) and repository.
+
+| Parameter | In | Type | Required |
+|---|---|---|---|
+| `status` | query | string | no |
+| `kind` | query | string|null | no |
+| `domain` | query | string|null | no |
+| `product_line` | query | string|null | no |
+| `repo` | query | string|null | no |
+| `limit` | query | integer | no |
+| `offset` | query | integer | no |
+
+### `POST /api/v1/kf/reviews/decisions`
+
+**Needs:** `kf_review` (`engineer`, `release_manager`, `administrator`).  Up to 200 decisions at once (for example, confirm every guessed link a person checked in the list). Each is recorded and audited on its own; one that fails does not stop the others.
+
+Request body:
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `decisions` | array of KfReviewBulkItem | yes |  |
+
+### `GET /api/v1/kf/reviews/{item_id}`
+
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  One item: the question, both sides of the evidence, every candidate and why, the allowed actions and any decision.
+
+| Parameter | In | Type | Required |
+|---|---|---|---|
+| `item_id` | path | string | yes |
+
+### `POST /api/v1/kf/reviews/{item_id}/decision`
+
+**Needs:** `kf_review` (`engineer`, `release_manager`, `administrator`).  Decide one item: confirm, choose (a candidate or a place), confirm_with_alias (also needs config_write), reject, defer, or reset a decided one. Recorded as evidence (kf_link_decision) and audited; the bridge relinks when auto_relink is on. With review_policy two_person a positive decision waits for a second, different person (status awaiting_second).
+
+| Parameter | In | Type | Required |
+|---|---|---|---|
+| `item_id` | path | string | yes |
+
+Request body:
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `action` | string | yes |  |
+| `kf_entity_id` | string (optional) | no | the chosen candidate (choose, confirm_with_alias) |
+| `place` | PlaceIn (optional) | no | another place (product_suggestion choose, product_conflict choose) |
+| `comment` | string (optional) | no |  |
+
+### `GET /api/v1/kf/reviews/{item_id}/history`
+
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  
+
+| Parameter | In | Type | Required |
+|---|---|---|---|
+| `item_id` | path | string | yes |
 
 ### `GET /api/v1/kf/rule-proposals`
 
@@ -750,6 +866,24 @@ Request body:
 |---|---|---|---|
 | `decision` | string | yes |  |
 | `comment` | string (optional) | no |  |
+
+### `PATCH /api/v1/kf/settings`
+
+**Needs:** `config_write` (`release_manager`, `administrator`).  Change part of the knowledge_fabric setting (turn on, customer, domains, options) and add or remove single aliases, as a new configuration version with your comment. expected_version protects against two people editing at once (409 with the current version). The bridge relinks when auto_relink is on.
+
+Request body:
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `set` | object | no | settings to replace (enabled, customer_id, domains, poll_minutes, ...) |
+| `add_aliases` | array of KfAliasIn | no |  |
+| `remove_aliases` | array of KfAliasIn | no |  |
+| `expected_version` | integer (optional) | no | the configuration version you edited; a newer one answers 409 |
+| `comment` | string (optional) | no |  |
+
+### `GET /api/v1/kf/status`
+
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  The state of the bridge for the status strip: off, never_run, running, failed or connected; the last run (when, why, how long, what was added, kept and removed), the counts of links, gaps and items to review, the bridge job being followed and the next poll. Names, warnings and the failure text only for a principal who may read every repository; others get the counts.
 
 ### `GET /api/v1/trends`
 
@@ -783,7 +917,21 @@ Request body:
 | `repository` | string (optional) | no |  |
 | `pull_request` | integer (optional) | no |  |
 | `revision` | string (optional) | no |  |
+| `issue_key` | string (optional) | no | an issue key (PAY-4521) a change named: the newest such analysis |
+| `customer_id` | string (optional) | no | Knowledge Fabric's customer; must be this tenant's |
+| `product_line` | string (optional) | no | keep the business side of this product line only (name or id) |
 | `include_tester_pack` | boolean | no |  |
+
+### `POST /query/tia/resolve`
+
+**Needs:** `read` (`viewer`, `engineer`, `release_manager`, `auditor`, `administrator`).  Exact lookup of the anchors a router found in a question (docs/KF-BRIDGE.md section 13): issue keys and pull requests and commits to the analyses that name them, repository, service, endpoint (METHOD /route) and written test case names to what TIA knows. Nothing fuzzy; an anchor that matches nothing is listed under unresolved. Only what the caller may read is returned.
+
+Request body:
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `anchors` | array of ResolveAnchor | yes |  |
+| `customer_id` | string (optional) | no |  |
 
 
 ## Releases
@@ -1131,6 +1279,10 @@ Request body:
 ### `POST /api/v1/webhooks/gitlab`
 
 **Needs:** public.  GitLab merge request events (secret token). Answers at once; the analysis is queued.
+
+### `POST /api/v1/webhooks/kf-review`
+
+**Needs:** public.  A decision made on a TIA item in Knowledge Fabric's review screen. Authenticated by an HMAC-SHA256 signature of the body (X-KF-Signature: sha256=..., secret TIA_KF_REVIEW_WEBHOOK_SECRET); the item's batch names the TIA tenant, whose knowledge_fabric customer must match. The first decision recorded in TIA wins: a later one answers 409.
 
 
 ## Who am I

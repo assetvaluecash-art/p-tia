@@ -44,7 +44,11 @@ of the customer's domains the bridge links to:
 - `"auto"` (the default) links into every domain the customer has. A service whose System exists in two domains gets two links.
 - a list restricts linking to those domains. A listed domain the customer does not have is reported as an `unknown_domains` gap.
 
-Turning domains "off" therefore means leaving `domains: auto`: TIA never asks which business domain the code belongs to.
+Turning domains "off" therefore means leaving `domains: auto`.
+
+Since section 11, a person **may** place a repository (or a service) in the customer's business tree: domain > product line > function. The
+code graph stays domain-neutral (the same code builds the same graph, with or without Knowledge Fabric); the place is a fact of the bridge,
+chosen by a person or declared by the repository's owner, never guessed from code. A mapped repository is linked only in its domains.
 
 ## 3. How a link is decided
 
@@ -105,13 +109,20 @@ business_systems: [Statement Service]
 
 ## 5. Running it
 
+The usual way is the web UI, section **5c. Knowledge Fabric** ([USER-GUIDE.md](USER-GUIDE.md)): a status strip with *Relink now*, and the tabs Status, Connect & settings (setup, aliases, turn off), Links, Gaps (with fixes), Review, Products and Ontology; plus *Show Knowledge Fabric links* in the code graph. The API below does the same.
+
 | How | What |
 |---|---|
-| `POST /api/v1/kf/relink` | run now (`?async=true` queues a `kf_bridge` job) |
+| `GET /api/v1/kf/status` | state (`off`, `never_run`, `running`, `failed`, `connected`), the last run, counts of links, gaps and items to review, the bridge job and the next poll; names, warnings and the failure text only for a principal who can read every repository |
+| `PATCH /api/v1/kf/settings` | part of the setting, and single aliases added or removed, as a new configuration version (`expected_version` → 409 when someone saved since) |
+| `GET /api/v1/kf/overlay`, `GET /api/v1/kf/node?id=` | the latest run's links for the graph view, and one node's links with its business context; both filtered to the repositories you can read |
+| `GET /api/v1/kf/decisions`, `GET /api/v1/kf/review-measures` | every decision people made, newest first; the review measures |
+| `DELETE /api/v1/kf/links` | remove TIA's links from Knowledge Fabric's graph (turning off; `config_write`) |
+| `POST /api/v1/kf/relink` | run now (`?async=true` queues a `kf_bridge` job, which `GET /api/v1/jobs/{id}` shows to a principal who can read every repository) |
 | automatically | after every graph-head move and every change to the `knowledge_fabric` setting (`auto_relink`), and by the `kf_poll` job every `poll_minutes` |
-| `GET /api/v1/kf/links`, `GET /api/v1/kf/gaps` | the latest run's links (with evidence) and gaps |
+| `GET /api/v1/kf/links`, `GET /api/v1/kf/gaps` | the latest run's links (with evidence) and gaps (`?suggest=true`: up to three close names per unlinked item, never linked by themselves) |
 | `GET /api/v1/kf/rule-proposals`, `POST /api/v1/kf/rule-proposals/{id}` | rule pairs to review, and a person's decision (web UI section 5c) |
-| `GET /api/v1/graph/ontology` (`?format=yaml`) | TIA's software ontology and the bridge ontology (also in `docs/kf/`) |
+| `GET /api/v1/graph/ontology` (`?format=yaml`, `&download=true`) | TIA's software ontology and the bridge ontology (also in `docs/kf/`) |
 | `tia kf-customers`, `tia kf-link --repo … --customer …` | the same from the command line, without TIA's database (`NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`) |
 | SDK | `kf_customers()`, `kf_relink()`, `kf_bridge_links()`, `kf_gaps()`, `kf_rule_proposals()`, `kf_decide_rule(id, decision)`, `ontology()`, `business_impact(id)` |
 | MCP | `get_business_impact` |
@@ -141,7 +152,7 @@ Every run records two pieces of evidence:
 - `kf_context`: the business context per service (the System with its requirements, user stories, processes, defects, incidents,
   integrations and test cases). It carries the customer, the Knowledge Fabric fingerprint and TIA's graph version.
 
-Audit events are `kf_bridge_completed`, `kf_bridge_failed` and `kf_mirror_restored`.
+Audit events are `kf_bridge_completed`, `kf_bridge_failed`, `kf_mirror_restored`, `kf_settings_changed` and `kf_links_removed`.
 
 ## 6. In an analysis
 
@@ -199,6 +210,10 @@ The same answer is available in a single Cypher query over both graphs, for Know
 | `tia/neo4jgraph.py` | connectors | Knowledge Fabric reads (customers, domains, index, fingerprint, context), the bridge writer, the business Cypher |
 | `tia/analysis_service.py` | orchestration | `kf_link`, `kf_bridge_run`, the `kf_bridge` and `kf_poll` jobs |
 | `migrations/0020_kf_bridge_evidence.sql` | | the two new evidence kinds |
+| `tia/kfreview.py` | graph | review items, their actions and what a decision records (section 12) |
+| `tia/kfrouter.py` | surface | the reference router: one question, both retrievers (section 13) |
+| `tia/kfinbox.py` | connectors | TIA's items in Knowledge Fabric's review screen: the client, the signed callback (section 12) |
+| `migrations/0022_kf_review_items.sql`, `0023_change_issue_keys.sql` | | the review queue; the index for analyses by issue key |
 
 Tests:
 - `tests/test_kfbridge.py` runs without a server: identity examples, the contract with Knowledge Fabric's source and with its
@@ -284,3 +299,147 @@ Keys a commit names that Knowledge Fabric does not have are listed in the unknow
 
 Verification level: as for the rest of the bridge, these run against a simulated Knowledge Fabric graph. They have not been run against
 real ingestion.
+
+## 11. Product mapping: domain > product line > function
+
+Knowledge Fabric keeps one business tree per customer: `CustomerRoot <- DomainRoot <- ProductLine <- Function <- SubFunction`, joined by
+`PART_OF`, from the industry ontology adjusted per customer. Its ingestion runs are frozen to one domain and product line, chosen from the
+customer's configuration, never from the content. TIA follows the same rule for code.
+
+**The catalogue.** Each bridge run reads the tree from the `PART_OF` edges (`neo4jgraph.kf_catalog`; never from a function's
+`product_line_id` property, which keeps only the last of its product lines) and keeps it with the run: `GET /api/v1/kf/catalog`,
+`tia kf-catalog --customer <id>`. A product line Knowledge Fabric's review writer created has a `product_line_id` but no `entity_id`; TIA
+links to it by that id.
+
+**Where a place comes from**, first match wins per service:
+
+| Source | Who | Applied |
+|---|---|---|
+| `knowledge_fabric.service_products` | an administrator | yes, `contract_confirmed` |
+| `knowledge_fabric.repository_products` (`PUT /api/v1/kf/products/{repository}`, the *Products* panel of section 5c) | an administrator | yes, `contract_confirmed` |
+| `business_products` in the repository's `tia-services.yaml` | the repository's owner | yes, `contract_confirmed` |
+| a reviewer accepting a suggestion (section 12) | a reviewer | yes, `contract_confirmed`, source `review` |
+| the places of the Systems the service is linked to | TIA | **no**: a `product_suggestion` to review, never applied by itself |
+
+```yaml
+# tia-services.yaml
+service: payments-api
+business_products:
+  - {domain: consumer_retail, product_line: Retail Cards, function: Payment Processing}
+```
+
+**What a place changes.**
+- *Domain scope.* A mapped repository's services, screens, data entities and test cases are linked only in the mapped domains (a place wins over
+  `domains`). Unmapped repositories keep the `domains` rule.
+- *Ties.* When a name finds several nodes in one domain, the one under the mapped product line wins: status `inferred`, rule `INF-KF-PRODUCT`.
+- *The edge.* `(:TiaService)-[:PLACED_IN {product_line_id, level, source, status}]->(:ProductLine | :Function | :SubFunction)`, a bridge edge
+  like the others (bridge version `kb-3`). Not `PART_OF` (Knowledge Fabric's own tree walks), not `BELONGS_TO` (its path renderer hides that
+  name), not `SUPPORTS` (its vision ontology uses it between sub-functions). It carries the product line, because one function can sit under
+  two product lines of a domain (Delinquency Management under Lending and Supply Chain Finance in the banking ontology).
+- *The roll-up.* Every report's business impact gains `products`: one row per product line the change reaches, the changed service's first,
+  with the services and how each got there (declared, or inherited through a linked System and therefore `inferred`), the functions, the entry
+  points to test, the business test cases and the user stories. The headline starts with them ("Affects Retail Cards (consumer_retail)."),
+  so the pull-request comment does too. `POST /query/tia` answers them as `business_product` chunks and filters by `domain` and `product_line`.
+
+**Problems are gaps**, never silent: `product_not_found` (a named place that is not in the tree, with a hint when a name is close, e.g. a
+rename), `unmapped_repositories` (when mapping is in use), `product_conflicts` (none of the Systems the service's names find sits in its
+mapped place; it becomes a review item), `unknown_domains`.
+
+## 12. Review of uncertain links (human in the loop)
+
+Every bridge run turns what it is not sure of into review items, kept in the table `kf_review_items`:
+
+| Kind | Asked when | Actions |
+|---|---|---|
+| `guessed_link` | a link found by name (`inferred`) | confirm, confirm_with_alias, reject |
+| `ambiguous` | a name matches several nodes in one domain | choose, reject (none of them) |
+| `suggested_link` | an unlinked service, screen, entity or table has close Knowledge Fabric names (shared words) | choose, confirm_with_alias, reject |
+| `rule_pair` | a rule in code and a Knowledge Fabric Rule share fields or words | confirm, reject |
+| `product_suggestion` | a service without a place; its Systems' place | confirm (accept), choose (another place), reject |
+| `product_conflict` | a declared place disagrees with where the Systems sit | confirm (keep), choose (change the place) |
+| `story_not_found` | a recent change names an issue key with no user story, or several | choose (one of several), reject (ignore) |
+| `stale_decision` | a decided Knowledge Fabric node disappeared (re-ingestion, rename) | choose (move the decision), reject (drop it) |
+
+Every item can also be deferred (`defer`: open again on the next run) and, once decided, undone (`reset`). The actions are Knowledge
+Fabric's review vocabulary (`APPROVE_REUSE`, `APPROVE_REUSE_WITH_ALIAS`, `REJECT`, `LEAVE_UNRESOLVED`); `APPROVE_AS_NEW` has no TIA meaning,
+because TIA never creates business nodes.
+
+- **Identity.** An item's id is a hash of (kind, TIA item, sorted candidates): each run finds the same item again; a different set of
+  candidates is a new question. Items no longer asked are `superseded`; decided items stay decided.
+- **Decisions are evidence** (`kf_link_decision`, append-only, with actor, time and comment), newest per pair wins. A decision is keyed on
+  (TIA item, Knowledge Fabric `entity_id`); Knowledge Fabric's ids are deterministic, so decisions survive a wipe and re-ingestion, and an id
+  that changes comes back as `stale_decision`. A confirmed or chosen pair is linked as `contract_confirmed`, source `review`, strategy
+  `reviewed`, and settles that domain; a rejected pair is never linked (gap `rejected_by_review`).
+- **Who.** Permission `kf_review` (engineer, release manager, administrator) and read access to the item's repository. `confirm_with_alias`
+  (it adds the Knowledge Fabric name to `system_aliases`, `screen_aliases` or `data_aliases`) and a product change also need `config_write`;
+  they are saved as a new configuration version. `review_policy: two_person`: a positive decision waits for a second, different person
+  (status `awaiting_second`); a rejection counts at once.
+- **API.** `GET /api/v1/kf/reviews` (filters: status, kind, domain, product line, repository), `GET /api/v1/kf/reviews/{id}` (the question,
+  both sides of the evidence, every candidate and why), `GET /api/v1/kf/reviews/{id}/history`, `POST /api/v1/kf/reviews/{id}/decision`
+  (`{action, kf_entity_id?, place?, comment?}`), `POST /api/v1/kf/reviews/decisions` (up to 200). The first decision wins: a later one answers
+  409. The older `POST /api/v1/kf/rule-proposals/{id}` decides the rule pair's item and also accepts `reset`. Web UI: section 5c.
+
+### Knowledge Fabric's review screen (phase 2)
+
+With `review_inbox: tia_and_kf` and `TIA_KF_REVIEW_URL` set, each bridge run and poll sends the open items of **mapped** services whose
+candidates are Knowledge Fabric nodes (guessed, ambiguous, suggested, rule pair, stale decision) to Knowledge Fabric's review screen, and
+closes the ones decided or no longer asked in TIA. Knowledge Fabric's review routes require a batch, a domain and a product line: TIA uses one
+stable batch per product line, `tia-links:<TIA tenant>:<product_line_id>`, and the place from section 11. Product and story items stay in TIA.
+
+**Knowledge Fabric 2.5 does not have what this needs.** Its review queue is filled only by its ingestion pipeline, its queue types are fixed
+by a database check, and an approval runs its graph writer, which refuses anything that is not one of its types. The contract TIA implements
+and asks of Knowledge Fabric (tested only against a stand-in service, `tests/test_kf_review.py`, `tests/test_kf_review_api.py`):
+
+| Direction | Call |
+|---|---|
+| TIA -> KF | `POST {TIA_KF_REVIEW_URL}/hitl/reviews`: a `SOFTWARE_LINK` item (`plan_id` = TIA's item id, idempotent; scope; candidates; the question; `allowed_actions`; an execution plan with no entity operations) -> `{review_id}` |
+| TIA -> KF | `POST {TIA_KF_REVIEW_URL}/hitl/reviews/{review_id}/external-decision?ingestion_batch_id=&domain_id=&product_line_id=`: `{action, selected_entity_id, reviewer_id: "tia:<actor>", notes, decided_at}`; `WITHDRAWN` when TIA no longer asks |
+| KF -> TIA | `POST /api/v1/webhooks/kf-review`, signed `X-KF-Signature: sha256=<HMAC-SHA256 of the body>` with `TIA_KF_REVIEW_WEBHOOK_SECRET`: `{event_id, review_id, plan_id, ingestion_batch_id, customer_id, action, selected_entity_id, reviewer_id, notes, decided_at}` |
+
+On Knowledge Fabric's side this means: a `SOFTWARE_LINK` queue type (enum and the check in `sql/hitl_review.sql`), the two routes above, no
+graph write for these items (`write_status = NOT_REQUIRED`) but the signed callback, and a *Software links* inbox in its review UI. TIA keeps
+the decision; the callback is recorded with the actor `kf:<reviewer>`, and the batch names the tenant, whose customer must match. An alias
+approved there is recorded as a confirmation: adding the alias changes TIA's configuration, so only TIA does it. `review_inbox_detail:
+minimal` (default) sends names, never file paths.
+
+## 13. One question, two retrievers
+
+Knowledge Fabric's `POST /query` takes the intent from its caller (one of nine pattern names; there is no classifier) and searches its
+documents and graph. TIA's `POST /query/tia` takes a named change and returns its finished analysis. Both answer in the same `QueryResponse`.
+The reference router `tia/kfrouter.py` is the step in front of them, for Knowledge Fabric's retriever to call or copy:
+
+1. **intent**: the agent's, or phrase rules (`TRIGGERS`); fallback `any`;
+2. **anchors**: exact identifiers only (issue key, pull request, commit, endpoint, test case id, and repository or service names the caller
+   knows); look-alikes such as `UTF-8` or `ISO-20022` are not issue keys; TIA resolves them exactly (`POST /query/tia/resolve`);
+3. **lanes**: `change_impact`, `regression_scope`, `test_coverage` and `any` ask TIA when a change TIA has analysed is named; the other
+   patterns are Knowledge Fabric's; `software_tia` is TIA's alone;
+4. **retrieve**: both lanes in parallel; the TIA lane has a time limit (3 s by default) and a failure is a note in `metadata.errors`, never an
+   error for the question;
+5. **merge**: chunks and paths of both, reranked with the caller's reranker (else the two lanes' rankings alternate, the lane that owns the
+   intent first); TIA's `unknown` chunks are added after the ranked list; content is never rewritten. `metadata.lanes` says who answered.
+
+`python tools/ask.py "What does user story PAY-4521 impact?" --tia <url> --kf <url>` runs it; `--kf-standin` answers the Knowledge Fabric
+lane from a Knowledge Fabric graph in Neo4j with a stand-in (story -> requirement -> test case), for demos on the simulated graph. The stand-in
+is not Knowledge Fabric's retrieval.
+
+**What Knowledge Fabric must change** before answers are mixed for a real customer: its graph search picks its starting nodes across the whole
+database, without a customer filter (`_expand_paths`); and its `any` pattern can already walk from a System across TIA's bridge edges into
+TIA's code nodes, which skips TIA's per-repository permissions (the older registry links default to `IMPLEMENTS`, which its `change_impact`
+pattern follows). Treat the bridge relationships (`REALIZES`, `SAME_AS`, `STORES`, `ENFORCES`, `PLACED_IN`) and every `Tia*` node as
+plumbing unless a pattern opts in.
+
+### Tests
+
+- `tests/test_kf_products.py`, `tests/test_kf_review.py` (no server): the setting, places in the tree, scope, ties, conflicts, suggestions,
+  decisions on every link kind, two-person review, the roll-up; review items and decisions; the router (intents, anchors, routing, merge, a
+  slow or failing lane); the inbox contract against a stand-in service.
+- `tests/test_kf_review_api.py` (PostgreSQL): the queue, permissions, the first decision winning, reset and defer, bulk decisions,
+  two-person review, alias decisions, product mapping with its version check, `/query/tia` by issue key and the customer check,
+  `/query/tia/resolve`, the signed callback and the inbox push.
+- `tests/test_kfbridge_live_products.py` (Neo4j): the tree from `PART_OF`, a mapped repository linked and placed (also through a
+  `product_line_id`), a place not found, a conflict, suggestions, a shared engine in two places, the tie-break in the graph, the roll-up in a
+  report, decisions surviving a wipe, and one question answered by both lanes (TIA through its API, Knowledge Fabric by the stand-in).
+
+Verification level: as for the rest of the bridge, against a simulated Knowledge Fabric graph; the review-screen contract against a stand-in
+service; the Knowledge Fabric lane of a question against a stand-in. Not yet against real Knowledge Fabric ingestion, its review service or
+its retriever.

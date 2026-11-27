@@ -54,6 +54,8 @@ class AnalysisRequest:
     revisions: dict = field(default_factory=dict)   # other repo -> rev (default HEAD)
     pull_request: Optional[int] = None
     change_record: Optional[str] = None
+    pr_title: Optional[str] = None                            # the pull request's title and source branch, when the host sent them: issue
+    pr_branch: Optional[str] = None                           # keys in them (PAY-4521) are recorded with those of the commit messages
     max_depth: int = 8
     max_results: int = 200
     time_budget_s: float = 60.0
@@ -880,11 +882,24 @@ def _analyze(req: AnalysisRequest, store: Optional[Store] = None, persist: bool 
     if change_type == "no_functional_change":
         summary["message"] = "Documentation-only change to the code (docstrings); no behaviour changed, so nothing needs retesting."
 
+    # issue keys (PAY-4521) the change names: its commit messages, then the pull request's title and branch (docs/KF-BRIDGE.md section 13).
+    # Recorded in every report as change.issue_keys, so a Knowledge Fabric question about a story finds its analyses.
+    issue_refs = []
+    if base_sha != head_sha:
+        try:
+            for sha, msg in gitutil.commit_messages(tpath, base_sha, head_sha):
+                issue_refs += [{"key": k, "commit": sha, "subject": msg.splitlines()[0][:200] if msg else ""} for k in kf_issue_keys(msg)]
+        except gitutil.GitError:
+            pass
+    for src, text in (("pull_request_title", req.pr_title), ("branch", req.pr_branch)):
+        issue_refs += [{"key": k, "commit": None, "source": src, "subject": (text or "")[:200]} for k in kf_issue_keys(text or "")]
     aid = (f"tia-pr-{req.pull_request}-{head_sha[:7]}" if req.pull_request is not None
            else "tia-" + hashlib.sha256(f"{req.target}|{base_sha}|{head_sha}|{snapshot_id}".encode()).hexdigest()[:12])
     report = {
         "analysis_id": aid, "status": status, "summary": summary,
         "change": {"repository": req.target, "service": target_service, "pull_request": req.pull_request,
+                   **({"pull_request_title": req.pr_title[:300]} if req.pr_title else {}), **({"branch": req.pr_branch[:250]} if req.pr_branch else {}),
+                   "issue_keys": list(dict.fromkeys(r["key"] for r in issue_refs)),
                    "change_record": req.change_record, "base_revision": base_sha, "proposed_revision": head_sha,
                    "change_type": change_type, "changed_components": changed_components,
                    "tests_in_changed_repository": [
@@ -990,15 +1005,12 @@ def _analyze(req: AnalysisRequest, store: Optional[Store] = None, persist: bool 
         if gap_rules:
             touched |= {n for n, a in g.nodes.items() if a.get("type") == "rule" and (a.get("repo"), a.get("expr") or a.get("name")) in gap_rules}
         touched.discard(None)
-        refs = []
-        if kf["link_issue_keys"] and base_sha != head_sha:
-            try:
-                for sha, msg in gitutil.commit_messages(tpath, base_sha, head_sha):
-                    refs += [{"key": k, "commit": sha, "subject": msg.splitlines()[0][:200] if msg else ""} for k in kf_issue_keys(msg)]
-            except gitutil.GitError:
-                pass
+        refs = issue_refs if kf["link_issue_keys"] else []
+        eps: dict = {}
+        for e in report["test_scope"].get("entry_points") or []:
+            eps[e.get("service")] = eps.get(e.get("service"), 0) + 1
         section, kf_unknowns = kf_business_impact(ctx["data"] if ctx else None, affected, repo_of, suite, kf, touched=touched,
-                                                  issue_refs=refs, target_repo=req.target)
+                                                  issue_refs=refs, target_repo=req.target, entry_points=eps)
         if section:
             report["business_impact"] = section
             reg = report["test_scope"].get("regression")

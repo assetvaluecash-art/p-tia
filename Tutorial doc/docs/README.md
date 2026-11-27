@@ -56,6 +56,7 @@ bridge plan, meeting transcripts, the case study, PDF copies and older HTML walk
 | Document | Format | Description |
 | :--- | :--- | :--- |
 | [Knowledge Fabric section in the web UI](../../../development/docs/plans/KF-UI-PLAN.md) | Markdown | Status, guided setup, links, gaps with one-click fixes, review, ontology, graph overlay; API additions, phases and tests. |
+| [Product mapping, one question for both retrievers, review of software links](../../../development/docs/plans/KF-PRODUCTS-RETRIEVAL-REVIEW-PLAN.md) ([Word](../../../development/docs/plans/KF-PRODUCTS-RETRIEVAL-REVIEW-PLAN.docx)) | Markdown & Word | Map code to Knowledge Fabric's domain › product line › function and roll impact up to products; route one question to Knowledge Fabric's and TIA's retrievers and merge the answers; a review queue for uncertain links, later shown in Knowledge Fabric's review screen. **TIA's side built (25 Nov 2026, see its section 8 and KF-BRIDGE.md sections 11-13); Knowledge Fabric's side not built.** |
 
 > **Tip:** double-click any `.html` file in Windows Explorer, or open it in any browser. The as-built architecture and the demo walkthrough work offline.
 

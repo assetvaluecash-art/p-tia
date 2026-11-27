@@ -88,6 +88,17 @@ class JobQueue:
             out["payload"] = r[12]
         return out
 
+    def latest(self, tenant_id: str, kinds: tuple) -> dict:
+        """The newest job of these kinds (any status) and the earliest queued one's start time: what the Knowledge Fabric status strip shows
+        (the bridge job being followed, and when the next poll runs). -> {"job": {...} | None, "next_run_at": iso | None}."""
+        with self.db.tx(tenant_id) as c:
+            r = c.execute("select id, kind, status, error, created_at, updated_at, run_after, attempts from jobs where kind = any(%s) "
+                          "order by created_at desc, group_seq desc limit 1", (list(kinds),)).fetchone()
+            n = c.execute("select min(run_after) from jobs where kind = any(%s) and status = 'queued'", (list(kinds),)).fetchone()
+        job = None if not r else {"id": str(r[0]), "kind": r[1], "status": r[2], "error": r[3], "created_at": r[4].isoformat(),
+                                  "updated_at": r[5].isoformat(), "run_after": r[6].isoformat(), "attempts": r[7]}
+        return {"job": job, "next_run_at": n[0].isoformat() if n and n[0] else None}
+
     def cancel(self, tenant_id: str, job_id: str) -> Optional[str]:
         """Queued -> cancelled immediately; running -> cancel_requested. Returns the resulting state."""
         with self.db.tx(tenant_id) as c:

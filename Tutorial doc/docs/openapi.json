@@ -545,8 +545,46 @@
     "title": "InstallationIn",
     "type": "object"
    },
+   "KfAliasIn": {
+    "additionalProperties": false,
+    "properties": {
+     "from": {
+      "description": "the TIA side: a service, a screen route or component, an entity or table",
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "From",
+      "type": "string"
+     },
+     "setting": {
+      "enum": [
+       "system_aliases",
+       "screen_aliases",
+       "data_aliases"
+      ],
+      "title": "Setting",
+      "type": "string"
+     },
+     "to": {
+      "description": "Knowledge Fabric names, or id:<64-hex entity id> to name one node exactly",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 20,
+      "minItems": 1,
+      "title": "To",
+      "type": "array"
+     }
+    },
+    "required": [
+     "setting",
+     "from",
+     "to"
+    ],
+    "title": "KfAliasIn",
+    "type": "object"
+   },
    "KfDecisionIn": {
-    "description": "POST /api/v1/kf/rule-proposals/{id}: a person's decision on a proposed (code rule, Knowledge Fabric Rule) pair.",
+    "description": "POST /api/v1/kf/rule-proposals/{id}: a person's decision on a proposed (code rule, Knowledge Fabric Rule) pair; reset undoes one.",
     "properties": {
      "comment": {
       "anyOf": [
@@ -563,7 +601,8 @@
      "decision": {
       "enum": [
        "confirm",
-       "reject"
+       "reject",
+       "reset"
       ],
       "title": "Decision",
       "type": "string"
@@ -672,6 +711,254 @@
     "title": "KfLinksIn",
     "type": "object"
    },
+   "KfProductsIn": {
+    "additionalProperties": false,
+    "description": "PUT /api/v1/kf/products/{repository}: where the repository (and, optionally, each of its services) sits. An empty list removes it.",
+    "properties": {
+     "comment": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Comment"
+     },
+     "expected_version": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "the configuration version you edited; a newer one answers 409",
+      "title": "Expected Version"
+     },
+     "places": {
+      "items": {
+       "$ref": "#/components/schemas/PlaceIn"
+      },
+      "maxItems": 5,
+      "title": "Places",
+      "type": "array"
+     },
+     "services": {
+      "additionalProperties": {
+       "items": {
+        "$ref": "#/components/schemas/PlaceIn"
+       },
+       "type": "array"
+      },
+      "description": "per-service places for services of this repository",
+      "title": "Services",
+      "type": "object"
+     }
+    },
+    "title": "KfProductsIn",
+    "type": "object"
+   },
+   "KfReviewBulkIn": {
+    "additionalProperties": false,
+    "properties": {
+     "decisions": {
+      "items": {
+       "$ref": "#/components/schemas/KfReviewBulkItem"
+      },
+      "maxItems": 200,
+      "minItems": 1,
+      "title": "Decisions",
+      "type": "array"
+     }
+    },
+    "required": [
+     "decisions"
+    ],
+    "title": "KfReviewBulkIn",
+    "type": "object"
+   },
+   "KfReviewBulkItem": {
+    "additionalProperties": false,
+    "properties": {
+     "action": {
+      "enum": [
+       "confirm",
+       "choose",
+       "confirm_with_alias",
+       "reject",
+       "defer",
+       "reset"
+      ],
+      "title": "Action",
+      "type": "string"
+     },
+     "comment": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Comment"
+     },
+     "item_id": {
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Item Id",
+      "type": "string"
+     },
+     "kf_entity_id": {
+      "anyOf": [
+       {
+        "maxLength": 200,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "the chosen candidate (choose, confirm_with_alias)",
+      "title": "Kf Entity Id"
+     },
+     "place": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PlaceIn"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "another place (product_suggestion choose, product_conflict choose)"
+     }
+    },
+    "required": [
+     "action",
+     "item_id"
+    ],
+    "title": "KfReviewBulkItem",
+    "type": "object"
+   },
+   "KfReviewDecisionIn": {
+    "additionalProperties": false,
+    "description": "POST /api/v1/kf/reviews/{item_id}/decision (docs/KF-BRIDGE.md section 12).",
+    "properties": {
+     "action": {
+      "enum": [
+       "confirm",
+       "choose",
+       "confirm_with_alias",
+       "reject",
+       "defer",
+       "reset"
+      ],
+      "title": "Action",
+      "type": "string"
+     },
+     "comment": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Comment"
+     },
+     "kf_entity_id": {
+      "anyOf": [
+       {
+        "maxLength": 200,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "the chosen candidate (choose, confirm_with_alias)",
+      "title": "Kf Entity Id"
+     },
+     "place": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PlaceIn"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "another place (product_suggestion choose, product_conflict choose)"
+     }
+    },
+    "required": [
+     "action"
+    ],
+    "title": "KfReviewDecisionIn",
+    "type": "object"
+   },
+   "KfSettingsPatchIn": {
+    "additionalProperties": false,
+    "description": "PATCH /api/v1/kf/settings: a partial change to the knowledge_fabric setting, saved as a new configuration version.",
+    "properties": {
+     "add_aliases": {
+      "items": {
+       "$ref": "#/components/schemas/KfAliasIn"
+      },
+      "maxItems": 500,
+      "title": "Add Aliases",
+      "type": "array"
+     },
+     "comment": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Comment"
+     },
+     "expected_version": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "the configuration version you edited; a newer one answers 409",
+      "title": "Expected Version"
+     },
+     "remove_aliases": {
+      "items": {
+       "$ref": "#/components/schemas/KfAliasIn"
+      },
+      "maxItems": 500,
+      "title": "Remove Aliases",
+      "type": "array"
+     },
+     "set": {
+      "additionalProperties": true,
+      "description": "settings to replace (enabled, customer_id, domains, poll_minutes, ...)",
+      "title": "Set",
+      "type": "object"
+     }
+    },
+    "title": "KfSettingsPatchIn",
+    "type": "object"
+   },
    "Neo4jRegistryIn": {
     "description": "Read the registry from Knowledge Fabric's own nodes instead of rows: the property names of its (:label) nodes.",
     "properties": {
@@ -767,6 +1054,56 @@
     "title": "PathItem",
     "type": "object"
    },
+   "PlaceIn": {
+    "additionalProperties": false,
+    "description": "A place in Knowledge Fabric's business tree: domain > product line > function > sub-function (docs/KF-BRIDGE.md section 11).",
+    "properties": {
+     "domain": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Domain",
+      "type": "string"
+     },
+     "function": {
+      "anyOf": [
+       {
+        "maxLength": 200,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Function"
+     },
+     "product_line": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Product Line",
+      "type": "string"
+     },
+     "sub_function": {
+      "anyOf": [
+       {
+        "maxLength": 200,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sub Function"
+     }
+    },
+    "required": [
+     "domain",
+     "product_line"
+    ],
+    "title": "PlaceIn",
+    "type": "object"
+   },
    "PublishIn": {
     "properties": {
      "check_run": {
@@ -820,6 +1157,19 @@
       ],
       "title": "Analysis Id"
      },
+     "customer_id": {
+      "anyOf": [
+       {
+        "maxLength": 300,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Knowledge Fabric's customer; must be this tenant's",
+      "title": "Customer Id"
+     },
      "domain": {
       "default": "",
       "title": "Domain",
@@ -834,6 +1184,32 @@
       "default": "software_tia",
       "title": "Intent",
       "type": "string"
+     },
+     "issue_key": {
+      "anyOf": [
+       {
+        "maxLength": 40,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "an issue key (PAY-4521) a change named: the newest such analysis",
+      "title": "Issue Key"
+     },
+     "product_line": {
+      "anyOf": [
+       {
+        "maxLength": 300,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "keep the business side of this product line only (name or id)",
+      "title": "Product Line"
      },
      "pull_request": {
       "anyOf": [
@@ -1054,6 +1430,81 @@
      }
     },
     "title": "RepoIn",
+    "type": "object"
+   },
+   "ResolveAnchor": {
+    "additionalProperties": false,
+    "properties": {
+     "repository": {
+      "anyOf": [
+       {
+        "maxLength": 200,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "narrows a pull request or commit to one repository",
+      "title": "Repository"
+     },
+     "type": {
+      "enum": [
+       "issue_key",
+       "pull_request",
+       "commit",
+       "repository",
+       "service",
+       "endpoint",
+       "test_case"
+      ],
+      "title": "Type",
+      "type": "string"
+     },
+     "value": {
+      "maxLength": 300,
+      "minLength": 1,
+      "title": "Value",
+      "type": "string"
+     }
+    },
+    "required": [
+     "type",
+     "value"
+    ],
+    "title": "ResolveAnchor",
+    "type": "object"
+   },
+   "ResolveIn": {
+    "additionalProperties": false,
+    "description": "POST /query/tia/resolve: structured anchors only. Free text is refused: TIA never guesses a change from a question.",
+    "properties": {
+     "anchors": {
+      "items": {
+       "$ref": "#/components/schemas/ResolveAnchor"
+      },
+      "maxItems": 50,
+      "minItems": 1,
+      "title": "Anchors",
+      "type": "array"
+     },
+     "customer_id": {
+      "anyOf": [
+       {
+        "maxLength": 300,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Customer Id"
+     }
+    },
+    "required": [
+     "anchors"
+    ],
+    "title": "ResolveIn",
     "type": "object"
    },
    "RetrievalMetadata": {
@@ -3265,7 +3716,7 @@
   },
   "/api/v1/graph/ontology": {
    "get": {
-    "description": "TIA's software ontology and the TIA <-> Knowledge Fabric bridge ontology, in Knowledge Fabric's canonical shape\n(node_types with a layer, relationship_types with allowed_triples). format=yaml returns YAML text.",
+    "description": "TIA's software ontology and the TIA <-> Knowledge Fabric bridge ontology, in Knowledge Fabric's canonical shape\n(node_types with a layer, relationship_types with allowed_triples). format=yaml returns YAML text; download=true asks the browser\nto save it as a file.",
     "operationId": "graph_ontology_api_v1_graph_ontology_get",
     "parameters": [
      {
@@ -3276,6 +3727,16 @@
        "default": "json",
        "title": "Format",
        "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "download",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "Download",
+       "type": "boolean"
       }
      }
     ],
@@ -5103,6 +5564,24 @@
     "x-tia-permission": "read"
    }
   },
+  "/api/v1/kf/catalog": {
+   "get": {
+    "description": "The Knowledge Fabric customer's business tree (domains > product lines > functions > sub-functions) as the latest bridge run read\nit: the places a repository can be mapped to.",
+    "operationId": "kf_catalog_view_api_v1_kf_catalog_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Kf Catalog View",
+    "x-tia-permission": "read"
+   }
+  },
   "/api/v1/kf/customers": {
    "get": {
     "description": "Knowledge Fabric's customers (its CustomerRoot nodes) with their tenant id, industry and domains: pick the one this TIA tenant maps to\nand save it as knowledge_fabric.customer_id.",
@@ -5121,10 +5600,106 @@
     "x-tia-permission": "config_write"
    }
   },
+  "/api/v1/kf/decisions": {
+   "get": {
+    "description": "Every decision people made on the bridge (links, business-rule pairs, product places, issue keys), newest first, with who, when\nand why; only those about code in repositories you may read.",
+    "operationId": "kf_decisions_view_api_v1_kf_decisions_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "kind",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Kind"
+      }
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "schema": {
+       "default": 200,
+       "title": "Limit",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Kf Decisions View",
+    "x-tia-permission": "read"
+   }
+  },
   "/api/v1/kf/gaps": {
    "get": {
-    "description": "What the latest bridge run could not link: services without a System, Systems without code, declared names not found, ambiguous\nnames, test cases on one side only, domains the customer does not have.",
+    "description": "What the latest bridge run could not link: services without a System, Systems without code, declared names not found, ambiguous\nnames, test cases on one side only, domains the customer does not have. suggest=true adds, to each unlinked TIA item, up to three\nclose Knowledge Fabric names (shared words), and to each unclaimed Knowledge Fabric node the TIA items it was suggested for: a\nperson links one by saving an alias; nothing is linked by a suggestion.",
     "operationId": "kf_gaps_api_v1_kf_gaps_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "suggest",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "Suggest",
+       "type": "boolean"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Kf Gaps",
+    "x-tia-permission": "read"
+   }
+  },
+  "/api/v1/kf/links": {
+   "delete": {
+    "description": "Remove every link TIA wrote into Knowledge Fabric's graph for this tenant's customer (used when turning the bridge off). Knowledge\nFabric's nodes and TIA's mirror stay. Needs Neo4j.",
+    "operationId": "kf_links_remove_api_v1_kf_links_delete",
     "responses": {
      "200": {
       "content": {
@@ -5135,11 +5710,9 @@
       "description": "Successful Response"
      }
     },
-    "summary": "Kf Gaps",
-    "x-tia-permission": "read"
-   }
-  },
-  "/api/v1/kf/links": {
+    "summary": "Kf Links Remove",
+    "x-tia-permission": "config_write"
+   },
    "get": {
     "description": "The links of the latest bridge run (service -> System, test case -> TestCase), with their evidence.",
     "operationId": "kf_links_now_api_v1_kf_links_get",
@@ -5177,6 +5750,148 @@
     },
     "summary": "Kf Links Now",
     "x-tia-permission": "read"
+   }
+  },
+  "/api/v1/kf/node": {
+   "get": {
+    "description": "One graph node's Knowledge Fabric links with the business context the latest run captured: requirements, processes, defects,\nincidents and the test cases covering them (with the TIA test case ids they are the same as).",
+    "operationId": "kf_node_view_api_v1_kf_node_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "maxLength": 1000,
+       "minLength": 1,
+       "title": "Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Kf Node View",
+    "x-tia-permission": "read"
+   }
+  },
+  "/api/v1/kf/overlay": {
+   "get": {
+    "description": "The latest run's links for the code graph view (tia_id = the graph's node id): only those whose code is in a repository you may read.",
+    "operationId": "kf_overlay_view_api_v1_kf_overlay_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Kf Overlay View",
+    "x-tia-permission": "read"
+   }
+  },
+  "/api/v1/kf/products": {
+   "get": {
+    "description": "Every repository's place in the business tree: the setting, what the latest bridge run resolved (declared, or inherited through a\nlinked System and therefore inferred), suggestions to review and the problems (places not found, conflicts, unmapped repositories).",
+    "operationId": "kf_products_view_api_v1_kf_products_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Kf Products View",
+    "x-tia-permission": "read"
+   }
+  },
+  "/api/v1/kf/products/{repository}": {
+   "put": {
+    "description": "Map a repository (and, optionally, its services) to places in the business tree, as a new configuration version. A place that\nthe next bridge run does not find in the tree is reported as a product_not_found gap.",
+    "operationId": "kf_products_put_api_v1_kf_products__repository__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "repository",
+      "required": true,
+      "schema": {
+       "title": "Repository",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-tia-actor",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Tia-Actor"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/KfProductsIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Kf Products Put",
+    "x-tia-permission": "config_write"
    }
   },
   "/api/v1/kf/relink": {
@@ -5217,6 +5932,346 @@
     },
     "summary": "Kf Relink",
     "x-tia-permission": "repo_write"
+   }
+  },
+  "/api/v1/kf/review-measures": {
+   "get": {
+    "description": "How the review is going: open items by kind and age, hours to a decision (median, 90th percentile), the share of links confirmed\nversus guessed, and the rejection rate of links found by name (with advice when most are rejected). Only your repositories count.",
+    "operationId": "kf_review_measures_view_api_v1_kf_review_measures_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Kf Review Measures View",
+    "x-tia-permission": "read"
+   }
+  },
+  "/api/v1/kf/reviews": {
+   "get": {
+    "description": "The review queue: what the bridge is not sure of, for a person to decide. status: open (default), awaiting_second, deferred,\ndecided, superseded or all; filters by kind, domain, product line (name or id) and repository.",
+    "operationId": "kf_reviews_view_api_v1_kf_reviews_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "default": "open",
+       "title": "Status",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "kind",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Kind"
+      }
+     },
+     {
+      "in": "query",
+      "name": "domain",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Domain"
+      }
+     },
+     {
+      "in": "query",
+      "name": "product_line",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Product Line"
+      }
+     },
+     {
+      "in": "query",
+      "name": "repo",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Repo"
+      }
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "schema": {
+       "default": 100,
+       "title": "Limit",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "offset",
+      "required": false,
+      "schema": {
+       "default": 0,
+       "title": "Offset",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Kf Reviews View",
+    "x-tia-permission": "read"
+   }
+  },
+  "/api/v1/kf/reviews/decisions": {
+   "post": {
+    "description": "Up to 200 decisions at once (for example, confirm every guessed link a person checked in the list). Each is recorded and audited\non its own; one that fails does not stop the others.",
+    "operationId": "kf_review_decisions_api_v1_kf_reviews_decisions_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-tia-actor",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Tia-Actor"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/KfReviewBulkIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Kf Review Decisions",
+    "x-tia-permission": "kf_review"
+   }
+  },
+  "/api/v1/kf/reviews/{item_id}": {
+   "get": {
+    "description": "One item: the question, both sides of the evidence, every candidate and why, the allowed actions and any decision.",
+    "operationId": "kf_review_view_api_v1_kf_reviews__item_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "item_id",
+      "required": true,
+      "schema": {
+       "title": "Item Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Kf Review View",
+    "x-tia-permission": "read"
+   }
+  },
+  "/api/v1/kf/reviews/{item_id}/decision": {
+   "post": {
+    "description": "Decide one item: confirm, choose (a candidate or a place), confirm_with_alias (also needs config_write), reject, defer, or reset a\ndecided one. Recorded as evidence (kf_link_decision) and audited; the bridge relinks when auto_relink is on. With review_policy\ntwo_person a positive decision waits for a second, different person (status awaiting_second).",
+    "operationId": "kf_review_decision_api_v1_kf_reviews__item_id__decision_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "item_id",
+      "required": true,
+      "schema": {
+       "title": "Item Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-tia-actor",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Tia-Actor"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/KfReviewDecisionIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Kf Review Decision",
+    "x-tia-permission": "kf_review"
+   }
+  },
+  "/api/v1/kf/reviews/{item_id}/history": {
+   "get": {
+    "operationId": "kf_review_history_view_api_v1_kf_reviews__item_id__history_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "item_id",
+      "required": true,
+      "schema": {
+       "title": "Item Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Kf Review History View",
+    "x-tia-permission": "read"
    }
   },
   "/api/v1/kf/rule-proposals": {
@@ -5328,6 +6383,80 @@
     },
     "summary": "Kf Rule Decide",
     "x-tia-permission": "repo_write"
+   }
+  },
+  "/api/v1/kf/settings": {
+   "patch": {
+    "description": "Change part of the knowledge_fabric setting (turn on, customer, domains, options) and add or remove single aliases, as a new\nconfiguration version with your comment. expected_version protects against two people editing at once (409 with the current\nversion). The bridge relinks when auto_relink is on.",
+    "operationId": "kf_settings_update_api_v1_kf_settings_patch",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-tia-actor",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Tia-Actor"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/KfSettingsPatchIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Kf Settings Update",
+    "x-tia-permission": "config_write"
+   }
+  },
+  "/api/v1/kf/status": {
+   "get": {
+    "description": "The state of the bridge for the status strip: off, never_run, running, failed or connected; the last run (when, why, how long,\nwhat was added, kept and removed), the counts of links, gaps and items to review, the bridge job being followed and the next poll.\nNames, warnings and the failure text only for a principal who may read every repository; others get the counts.",
+    "operationId": "kf_status_view_api_v1_kf_status_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Kf Status View",
+    "x-tia-permission": "read"
    }
   },
   "/api/v1/me": {
@@ -6615,6 +7744,53 @@
     "x-tia-permission": "public"
    }
   },
+  "/api/v1/webhooks/kf-review": {
+   "post": {
+    "description": "A decision made on a TIA item in Knowledge Fabric's review screen. Authenticated by an HMAC-SHA256 signature of the body\n(X-KF-Signature: sha256=..., secret TIA_KF_REVIEW_WEBHOOK_SECRET); the item's batch names the TIA tenant, whose knowledge_fabric\ncustomer must match. The first decision recorded in TIA wins: a later one answers 409.",
+    "operationId": "kf_review_webhook_api_v1_webhooks_kf_review_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-kf-signature",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Kf-Signature"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [],
+    "summary": "Kf Review Webhook",
+    "x-tia-permission": "public"
+   }
+  },
   "/auth/logout": {
    "post": {
     "operationId": "logout_auth_logout_post",
@@ -6732,6 +7908,44 @@
      }
     },
     "summary": "Kf Query",
+    "x-tia-permission": "read"
+   }
+  },
+  "/query/tia/resolve": {
+   "post": {
+    "description": "Exact lookup of the anchors a router found in a question (docs/KF-BRIDGE.md section 13): issue keys and pull requests and commits\nto the analyses that name them, repository, service, endpoint (METHOD /route) and written test case names to what TIA knows. Nothing\nfuzzy; an anchor that matches nothing is listed under unresolved. Only what the caller may read is returned.",
+    "operationId": "kf_query_resolve_query_tia_resolve_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ResolveIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Kf Query Resolve",
     "x-tia-permission": "read"
    }
   }

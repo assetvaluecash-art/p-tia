@@ -379,17 +379,70 @@ def kf_domains(driver, customer_id: str, tenant_id: Optional[str], database: Opt
 
 def kf_index(driver, customer_id: str, tenant_id: Optional[str], domains: list, labels: tuple = ("System", "TestCase"),
              database: Optional[str] = None) -> dict:
-    """The customer's nodes of each label in the given domains: {label: [{entity_id, name, aliases, domain}]}."""
+    """The customer's nodes of each label in the given domains: {label: [{entity_id, name, aliases, domain, description, product_lines,
+    functions}]}. product_lines / functions: where the node sits in Knowledge Fabric's business tree (its PART_OF chain), which the bridge
+    uses to break a tie between two nodes of one name (docs/KF-BRIDGE.md section 11)."""
     out = {}
     with driver.session(database=database) as s:
         for label in labels:
             assert NAME.match(label)
             q = (f"MATCH (n:{label}) WHERE n.customer_id = $c AND ($t IS NULL OR n.tenant_id = $t) AND n.domain IN $domains "
-                 "AND n.entity_id IS NOT NULL RETURN n.entity_id AS entity_id, n.name AS name, coalesce(n.aliases, []) AS aliases, n.domain AS domain, "
-                 "n.description AS description "
+                 "AND n.entity_id IS NOT NULL "
+                 "OPTIONAL MATCH (n)-[:PART_OF*1..3]->(pl:ProductLine) WHERE pl.customer_id = $c "
+                 "WITH n, collect(DISTINCT pl.name) AS pls "
+                 "OPTIONAL MATCH (n)-[:PART_OF*1..2]->(fn:Function) WHERE fn.customer_id = $c "
+                 "WITH n, pls, collect(DISTINCT fn.name) AS fns "
+                 "RETURN n.entity_id AS entity_id, n.name AS name, coalesce(n.aliases, []) AS aliases, n.domain AS domain, "
+                 "n.description AS description, [x IN pls WHERE x IS NOT NULL] AS product_lines, [x IN fns WHERE x IS NOT NULL] AS functions "
                  "ORDER BY domain, entity_id")
-            out[label] = s.execute_read(lambda tx, q=q: [r.data() for r in tx.run(q, c=customer_id, t=tenant_id, domains=list(domains))])
+            rows = s.execute_read(lambda tx, q=q: [r.data() for r in tx.run(q, c=customer_id, t=tenant_id, domains=list(domains))])
+            for r in rows:
+                r["product_lines"], r["functions"] = sorted(r["product_lines"]), sorted(r["functions"])
+            out[label] = rows
     return out
+
+
+_CATALOG_Q = """
+MATCH (d:DomainRoot) WHERE d.customer_id = $c AND ($t IS NULL OR d.tenant_id IS NULL OR d.tenant_id = $t)
+OPTIONAL MATCH (pl:ProductLine)-[:PART_OF]->(d) WHERE pl.customer_id = $c
+OPTIONAL MATCH (fn:Function)-[:PART_OF]->(pl) WHERE fn.customer_id = $c
+OPTIONAL MATCH (sf:SubFunction)-[:PART_OF]->(fn) WHERE sf.customer_id = $c
+RETURN d.domain AS domain, pl.name AS pl, pl.entity_id AS pl_id, pl.product_line_id AS pl_pid, coalesce(pl.aliases, []) AS pl_al,
+       fn.name AS fn, fn.entity_id AS fn_id, coalesce(fn.aliases, []) AS fn_al, sf.name AS sf, sf.entity_id AS sf_id, coalesce(sf.aliases, []) AS sf_al
+"""
+
+
+def kf_catalog(driver, customer_id: str, tenant_id: Optional[str], database: Optional[str] = None) -> dict:
+    """The customer's business tree, read from the PART_OF edges Knowledge Fabric writes (never from a function's product_line_id property,
+    which keeps only the last of its product lines): {"domains": [{"domain", "product_lines": [{"name", "entity_id", "product_line_id",
+    "aliases", "functions": [{"name", "entity_id", "aliases", "sub_functions": [...]}]}]}], "functions_present": bool}. A product line that
+    Knowledge Fabric's review writer created carries a product_line_id but no entity_id."""
+    with driver.session(database=database) as s:
+        rows = s.execute_read(lambda tx: [r.data() for r in tx.run(_CATALOG_Q, c=customer_id, t=tenant_id)])
+    doms: dict = {}
+    for r in rows:
+        d = doms.setdefault(r["domain"], {"domain": r["domain"], "product_lines": {}})
+        if not r["pl"]:
+            continue
+        pid = r["pl_pid"] or f"DOMAIN:{r['domain']}|PRODUCT_LINE:{r['pl']}"
+        pl = d["product_lines"].setdefault(pid, {"name": r["pl"], "entity_id": r["pl_id"], "product_line_id": pid,
+                                                 "aliases": sorted(set(r["pl_al"])), "functions": {}})
+        if not r["fn"]:
+            continue
+        fn = pl["functions"].setdefault(r["fn_id"] or r["fn"], {"name": r["fn"], "entity_id": r["fn_id"], "aliases": sorted(set(r["fn_al"])),
+                                                              "sub_functions": {}})
+        if r["sf"]:
+            fn["sub_functions"].setdefault(r["sf_id"] or r["sf"], {"name": r["sf"], "entity_id": r["sf_id"], "aliases": sorted(set(r["sf_al"]))})
+    out, functions = [], False
+    for dn in sorted(doms):
+        pls = []
+        for pl in sorted(doms[dn]["product_lines"].values(), key=lambda x: x["name"]):
+            fns = [{**f, "sub_functions": sorted(f["sub_functions"].values(), key=lambda x: x["name"])}
+                   for f in sorted(pl["functions"].values(), key=lambda x: x["name"])]
+            functions = functions or bool(fns)
+            pls.append({**pl, "functions": fns})
+        out.append({"domain": dn, "product_lines": pls})
+    return {"domains": out, "functions_present": functions}
 
 
 def kf_fingerprint(driver, customer_id: str, tenant_id: Optional[str], database: Optional[str] = None) -> str:
@@ -432,10 +485,14 @@ def write_bridge(driver, tenant: str, customer_id: str, kf_tenant_id: Optional[s
             raise ValueError(f"not a bridge relationship: ({src_label})-[:{ln['rel']}]->({ln['to_label']})")
         if not NAME.match(src_label):
             raise ValueError(f"not a TIA label: {src_label}")
-        rows.append({"src": ln["from"], "src_label": src_label, "dst": ln["to"], "label": ln["to_label"], "rel": ln["rel"],
+        to_key = ln.get("to_key") or "entity_id"
+        if to_key not in ("entity_id", "product_line_id"):
+            raise ValueError(f"not a Knowledge Fabric key property: {to_key}")
+        rows.append({"src": ln["from"], "src_label": src_label, "dst": ln["to"], "label": ln["to_label"], "rel": ln["rel"], "to_key": to_key,
                      "bkey": f"{tenant}|{ln['from']}|{ln['rel']}|{ln['to']}",
                      "props": {"status": ln["status"], "strategy": ln["strategy"], "rule": ln.get("rule"), "source": ln["source"],
-                               "id_check": ln["id_check"], "domain": ln["domain"]}})
+                               "id_check": ln["id_check"], "domain": ln["domain"],
+                               **{k: ln.get(k) for k in ("product_line", "product_line_id", "level", "decided_by", "decided_at")}}})
     now = _dt.now(_tz.utc).isoformat()
     common = {"tenant": tenant, "customer": customer_id, "kft": kf_tenant_id, "gv": meta.get("tia_graph_version"),
               "fp": meta.get("kf_fingerprint"), "bv": BRIDGE_VERSION, "at": now}
@@ -444,10 +501,10 @@ def write_bridge(driver, tenant: str, customer_id: str, kf_tenant_id: Optional[s
             "MATCH (:TiaNode {tenant: $tenant})-[x]->() WHERE x.bridge = true AND x.kf_customer_id = $customer RETURN x.bkey AS k",
             tenant=tenant, customer=customer_id)]))
         written = set()
-        for (src_label, rel, label) in sorted({(r["src_label"], r["rel"], r["label"]) for r in rows}):
-            batch = [r for r in rows if r["rel"] == rel and r["label"] == label and r["src_label"] == src_label]
+        for (src_label, rel, label, to_key) in sorted({(r["src_label"], r["rel"], r["label"], r["to_key"]) for r in rows}):
+            batch = [r for r in rows if r["rel"] == rel and r["label"] == label and r["src_label"] == src_label and r["to_key"] == to_key]
             q = (f"UNWIND $rows AS r MATCH (a:{src_label} {{key: r.src}}) "
-                 f"MATCH (b:{label} {{entity_id: r.dst}}) WHERE b.customer_id = $customer "
+                 f"MATCH (b:{label} {{{to_key}: r.dst}}) WHERE b.customer_id = $customer "
                  f"MERGE (a)-[x:{rel} {{bkey: r.bkey}}]->(b) "
                  "SET x += r.props, x.bridge = true, x.owner = 'tia', x.tenant = $tenant, x.kf_customer_id = $customer, x.kf_tenant_id = $kft, "
                  "x.tia_graph_version = $gv, x.kf_fingerprint = $fp, x.bridge_version = $bv, x.linked_at = coalesce(x.linked_at, $at) "
